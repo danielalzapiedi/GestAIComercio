@@ -17,7 +17,6 @@ public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         b.Property(x => x.UserName).HasMaxLength(200);
         b.Property(x => x.RowVersion).IsRowVersion();
         b.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
-        b.HasOne(x => x.Property).WithMany().HasForeignKey(x => x.PropertyId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => new { x.PropertyId, x.CreatedAtUtc });
     }
 }

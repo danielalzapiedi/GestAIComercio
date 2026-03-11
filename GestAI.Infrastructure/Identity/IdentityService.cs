@@ -4,18 +4,11 @@ using Microsoft.AspNetCore.Identity;
 
 namespace GestAI.Infrastructure.Identity;
 
-public class IdentityService : IIdentityService
+public class IdentityService(UserManager<User> userManager) : IIdentityService
 {
-    private readonly UserManager<User> _userManager;
-
-    public IdentityService(UserManager<User> userManager)
-    {
-        _userManager = userManager;
-    }
-
     public async Task<(bool Success, string? UserId, string? Error)> FindUserIdByEmailAsync(string email, CancellationToken ct)
     {
-        var user = await _userManager.FindByEmailAsync(email);
+        var user = await userManager.FindByEmailAsync(email);
         return (true, user?.Id, null);
     }
 
@@ -24,7 +17,7 @@ public class IdentityService : IIdentityService
 
     public async Task<(bool Success, string? UserId, string? Error)> CreateUserIfNotExistsAsync(string email, string password, CancellationToken ct, string firstName, string lastName, bool isActive, int? defaultPropertyId, int defaultAccountId)
     {
-        var user = await _userManager.FindByEmailAsync(email);
+        var user = await userManager.FindByEmailAsync(email);
         if (user is not null) return (true, user.Id, null);
 
         user = new User
@@ -35,10 +28,9 @@ public class IdentityService : IIdentityService
             Nombre = string.IsNullOrWhiteSpace(firstName) ? email : firstName,
             Apellido = string.IsNullOrWhiteSpace(lastName) ? "Usuario" : lastName,
             IsActive = isActive,
-            DefaultPropertyId = defaultPropertyId,
             DefaultAccountId = defaultAccountId
         };
-        var res = await _userManager.CreateAsync(user, password);
+        var res = await userManager.CreateAsync(user, password);
 
         if (!res.Succeeded)
             return (false, null, string.Join(" | ", res.Errors.Select(e => e.Description)));

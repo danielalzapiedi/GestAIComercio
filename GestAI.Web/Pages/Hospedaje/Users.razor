@@ -62,8 +62,30 @@ else
         _loaded = true;
     }
 
-    private void NewUser(){ _form = new UpsertAccountUserCommand(null,"","","",true,InternalUserRole.Admin,null,"Temp123$"); _showForm = true; }
-    private void Edit(AccountUserListItemDto u){ _form = new UpsertAccountUserCommand(u.UserId,u.DisplayName,"",u.Email,u.IsActive,u.Role,null,null); _showForm = true; }
+    private void NewUser()
+    {
+        _form = new UpsertAccountUserCommand
+        {
+            IsActive = true,
+            Role = InternalUserRole.Admin,
+            Password = "Temp123$"
+        };
+        _showForm = true;
+    }
+
+    private void Edit(AccountUserListItemDto u)
+    {
+        _form = new UpsertAccountUserCommand
+        {
+            UserId = u.UserId,
+            Nombre = u.DisplayName,
+            Apellido = string.Empty,
+            Email = u.Email,
+            IsActive = u.IsActive,
+            Role = u.Role
+        };
+        _showForm = true;
+    }
 
     private async Task Save()
     {

@@ -6,7 +6,6 @@ public sealed record ModuleAccessDto(SaasModule Module, bool Allowed);
 
 public sealed record CurrentUserAccessDto(
     int? AccountId,
-    int? DefaultPropertyId,
     InternalUserRole? Role,
     bool IsOwner,
     bool IsActive,
@@ -28,10 +27,7 @@ public sealed record AccountSummaryDto(
     bool IncludesOperations,
     int CurrentProperties,
     int CurrentUnits,
-    int CurrentUsers,
-    List<PropertyUsageItemDto> Properties);
-
-public sealed record PropertyUsageItemDto(int Id, string Name, bool IsActive, int UnitsCount);
+    int CurrentUsers);
 
 public sealed record UpdateAccountCommand(string Name, int? PlanDefinitionId) : MediatR.IRequest<GestAI.Application.Common.AppResult>;
 
@@ -41,8 +37,6 @@ public sealed record AccountUserListItemDto(
     string Email,
     bool IsActive,
     InternalUserRole Role,
-    int? DefaultPropertyId,
-    string? DefaultPropertyName,
     DateTime? LastLoginAtUtc,
     DateTime InvitedAtUtc);
 
@@ -53,7 +47,6 @@ public sealed record UpsertAccountUserCommand(
     string Email,
     bool IsActive,
     InternalUserRole Role,
-    int? DefaultPropertyId,
     string? Password) : MediatR.IRequest<GestAI.Application.Common.AppResult<string>>;
 
 public sealed record ToggleAccountUserStatusCommand(string UserId, bool IsActive) : MediatR.IRequest<GestAI.Application.Common.AppResult>;

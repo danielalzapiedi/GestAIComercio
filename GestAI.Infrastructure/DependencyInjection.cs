@@ -1,7 +1,5 @@
 using System.Text;
 using GestAI.Infrastructure.Security;
-using GestAI.Infrastructure.Ai;
-using GestAI.Application.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -16,8 +14,6 @@ public static class DependencyInjection
         config.GetSection("Jwt").Bind(jwt);
         services.AddSingleton(jwt);
         services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IBookingAssistantService, MockBookingAssistantService>();
-        services.AddScoped<IQuoteSuggestionService, MockQuoteSuggestionService>();
 
         services.AddAuthentication(options =>
         {

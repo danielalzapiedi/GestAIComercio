@@ -13,6 +13,5 @@ public class User : IdentityUser
 
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAtUtc { get; set; }
-    public int? DefaultPropertyId { get; set; }
     public int DefaultAccountId { get; set; }
 }

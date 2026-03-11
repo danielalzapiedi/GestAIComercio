@@ -14,20 +14,6 @@ public class AppDbContext : IdentityDbContext<User>, IAppDbContext
     public DbSet<AccountUser> AccountUsers => Set<AccountUser>();
     public DbSet<AccountSubscriptionPlan> AccountSubscriptionPlans => Set<AccountSubscriptionPlan>();
     public DbSet<SaasPlanDefinition> SaasPlanDefinitions => Set<SaasPlanDefinition>();
-    public DbSet<Property> Properties => Set<Property>();
-    public DbSet<Unit> Units => Set<Unit>();
-    public DbSet<Guest> Guests => Set<Guest>();
-    public DbSet<Booking> Bookings => Set<Booking>();
-    public DbSet<BookingEvent> BookingEvents => Set<BookingEvent>();
-    public DbSet<Payment> Payments => Set<Payment>();
-    public DbSet<BlockedDate> BlockedDates => Set<BlockedDate>();
-    public DbSet<RatePlan> RatePlans => Set<RatePlan>();
-    public DbSet<SeasonalRate> SeasonalRates => Set<SeasonalRate>();
-    public DbSet<DateRangeRate> DateRangeRates => Set<DateRangeRate>();
-    public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
-    public DbSet<Promotion> Promotions => Set<Promotion>();
-    public DbSet<SavedQuote> SavedQuotes => Set<SavedQuote>();
-    public DbSet<OperationalTask> OperationalTasks => Set<OperationalTask>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     DbSet<User> IAppDbContext.Users => Set<User>();
 

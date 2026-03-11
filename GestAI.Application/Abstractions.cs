@@ -11,20 +11,6 @@ public interface IAppDbContext
     DbSet<AccountUser> AccountUsers { get; }
     DbSet<AccountSubscriptionPlan> AccountSubscriptionPlans { get; }
     DbSet<SaasPlanDefinition> SaasPlanDefinitions { get; }
-    DbSet<Property> Properties { get; }
-    DbSet<Unit> Units { get; }
-    DbSet<Guest> Guests { get; }
-    DbSet<Booking> Bookings { get; }
-    DbSet<BookingEvent> BookingEvents { get; }
-    DbSet<Payment> Payments { get; }
-    DbSet<BlockedDate> BlockedDates { get; }
-    DbSet<RatePlan> RatePlans { get; }
-    DbSet<SeasonalRate> SeasonalRates { get; }
-    DbSet<DateRangeRate> DateRangeRates { get; }
-    DbSet<MessageTemplate> MessageTemplates { get; }
-    DbSet<Promotion> Promotions { get; }
-    DbSet<SavedQuote> SavedQuotes { get; }
-    DbSet<OperationalTask> OperationalTasks { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<User> Users { get; }
     DatabaseFacade Database { get; }
@@ -54,16 +40,12 @@ public interface ICurrentUser
 public interface IUserAccessService
 {
     Task<int?> GetCurrentAccountIdAsync(CancellationToken ct);
-    Task<int?> GetDefaultPropertyIdAsync(CancellationToken ct);
-    Task<bool> HasPropertyAccessAsync(int propertyId, CancellationToken ct);
-    Task<GestAI.Domain.Entities.AccountUser?> GetMembershipAsync(int accountId, CancellationToken ct);
+    Task<AccountUser?> GetMembershipAsync(int accountId, CancellationToken ct);
     Task<bool> HasModuleAccessAsync(int accountId, GestAI.Domain.Enums.SaasModule module, CancellationToken ct);
 }
 
 public interface ISaasPlanService
 {
-    Task<(bool Success, string? ErrorCode, string? Message)> ValidatePropertyCreationAsync(int accountId, CancellationToken ct);
-    Task<(bool Success, string? ErrorCode, string? Message)> ValidateUnitCreationAsync(int accountId, CancellationToken ct);
     Task<(bool Success, string? ErrorCode, string? Message)> ValidateUserCreationAsync(int accountId, CancellationToken ct);
 }
 
@@ -84,35 +66,3 @@ public interface IAccountResolver
     Task<int?> GetCurrentAccountIdAsync(string userId, CancellationToken ct);
     Task<bool> HasAccessAsync(string userId, int accountId, CancellationToken ct);
 }
-
-public interface IBookingAssistantService
-{
-    Task<string> GenerateGuestMessageAsync(BookingAssistantRequest request, CancellationToken ct);
-}
-
-public interface IQuoteSuggestionService
-{
-    Task<QuoteSuggestionResult> SuggestAsync(QuoteSuggestionRequest request, CancellationToken ct);
-}
-
-public sealed record BookingAssistantRequest(
-    string GuestName,
-    string PropertyName,
-    string UnitName,
-    DateOnly CheckInDate,
-    DateOnly CheckOutDate,
-    decimal BalanceDue,
-    string TemplateBody);
-
-public sealed record QuoteSuggestionRequest(
-    int PropertyId,
-    int? UnitId,
-    DateOnly CheckInDate,
-    DateOnly CheckOutDate,
-    int Adults,
-    int Children);
-
-public sealed record QuoteSuggestionResult(
-    decimal SuggestedNightlyRate,
-    decimal SuggestedTotal,
-    string Summary);

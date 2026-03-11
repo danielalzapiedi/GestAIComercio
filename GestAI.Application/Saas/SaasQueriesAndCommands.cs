@@ -8,48 +8,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GestAI.Application.Saas;
 
-public sealed class GetCurrentUserAccessQueryHandler : IRequestHandler<GetCurrentUserAccessQuery, AppResult<CurrentUserAccessDto>>
+public sealed class GetCurrentUserAccessQueryHandler(IAppDbContext db, ICurrentUser current, IUserAccessService access)
+    : IRequestHandler<GetCurrentUserAccessQuery, AppResult<CurrentUserAccessDto>>
 {
-    private readonly IAppDbContext _db;
-    private readonly ICurrentUser _current;
-    private readonly IUserAccessService _access;
-
-    public GetCurrentUserAccessQueryHandler(IAppDbContext db, ICurrentUser current, IUserAccessService access)
-    {
-        _db = db;
-        _current = current;
-        _access = access;
-    }
-
     public async Task<AppResult<CurrentUserAccessDto>> Handle(GetCurrentUserAccessQuery request, CancellationToken ct)
     {
-        var user = await _db.Users.AsNoTracking().FirstAsync(x => x.Id == _current.UserId, ct);
-        var accountId = await _access.GetCurrentAccountIdAsync(ct);
+        var user = await db.Users.AsNoTracking().FirstAsync(x => x.Id == current.UserId, ct);
+        var accountId = await access.GetCurrentAccountIdAsync(ct);
         InternalUserRole? role = null;
         var isOwner = false;
         SaasPlanDefinition? plan = null;
 
         if (accountId.HasValue)
         {
-            var accountData = await _db.Accounts.AsNoTracking()
+            var accountData = await db.Accounts.AsNoTracking()
                 .Where(x => x.Id == accountId.Value)
                 .Select(x => new
                 {
-                    IsOwner = x.OwnerUserId == _current.UserId,
-                    Role = x.Users.Where(u => u.UserId == _current.UserId && u.IsActive).Select(u => (InternalUserRole?)u.Role).FirstOrDefault(),
+                    IsOwner = x.OwnerUserId == current.UserId,
+                    Role = x.Users.Where(u => u.UserId == current.UserId && u.IsActive).Select(u => (InternalUserRole?)u.Role).FirstOrDefault(),
                     Plan = x.SubscriptionPlans.Where(p => p.IsActive).OrderByDescending(p => p.StartedAtUtc)
-                        .Select(p => new SaasPlanDefinition
-                        {
-                            Id = p.PlanDefinition.Id,
-                            Code = p.PlanDefinition.Code,
-                            Name = p.PlanDefinition.Name,
-                            MaxProperties = p.PlanDefinition.MaxProperties,
-                            MaxUnits = p.PlanDefinition.MaxUnits,
-                            MaxUsers = p.PlanDefinition.MaxUsers,
-                            IncludesReports = p.PlanDefinition.IncludesReports,
-                            IncludesPublicPortal = p.PlanDefinition.IncludesPublicPortal,
-                            IncludesOperations = p.PlanDefinition.IncludesOperations
-                        }).FirstOrDefault()
+                        .Select(p => p.PlanDefinition)
+                        .FirstOrDefault()
                 })
                 .FirstOrDefaultAsync(ct);
 
@@ -65,27 +45,19 @@ public sealed class GetCurrentUserAccessQueryHandler : IRequestHandler<GetCurren
             .Select(module => new ModuleAccessDto(module, SaasPermissionMap.HasAccess(role, plan, module, isOwner)))
             .ToList();
 
-        return AppResult<CurrentUserAccessDto>.Ok(new CurrentUserAccessDto(accountId, user.DefaultPropertyId, role, isOwner, user.IsActive, modules));
+        return AppResult<CurrentUserAccessDto>.Ok(new CurrentUserAccessDto(accountId, role, isOwner, user.IsActive, modules));
     }
 }
 
-public sealed class GetAccountSummaryQueryHandler : IRequestHandler<GetAccountSummaryQuery, AppResult<AccountSummaryDto>>
+public sealed class GetAccountSummaryQueryHandler(IAppDbContext db, IUserAccessService access)
+    : IRequestHandler<GetAccountSummaryQuery, AppResult<AccountSummaryDto>>
 {
-    private readonly IAppDbContext _db;
-    private readonly IUserAccessService _access;
-
-    public GetAccountSummaryQueryHandler(IAppDbContext db, IUserAccessService access)
-    {
-        _db = db;
-        _access = access;
-    }
-
     public async Task<AppResult<AccountSummaryDto>> Handle(GetAccountSummaryQuery request, CancellationToken ct)
     {
-        var accountId = await _access.GetCurrentAccountIdAsync(ct);
+        var accountId = await access.GetCurrentAccountIdAsync(ct);
         if (!accountId.HasValue) return AppResult<AccountSummaryDto>.Fail("account_required", "No se encontró una cuenta activa.");
 
-        var account = await _db.Accounts.AsNoTracking()
+        var account = await db.Accounts.AsNoTracking()
             .Where(x => x.Id == accountId.Value)
             .Select(x => new
             {
@@ -96,7 +68,6 @@ public sealed class GetAccountSummaryQueryHandler : IRequestHandler<GetAccountSu
                 Plan = x.SubscriptionPlans.Where(p => p.IsActive).OrderByDescending(p => p.StartedAtUtc)
                     .Select(p => new
                     {
-                        p.PlanDefinitionId,
                         p.StartedAtUtc,
                         p.IsActive,
                         p.PlanDefinition.Name,
@@ -107,15 +78,13 @@ public sealed class GetAccountSummaryQueryHandler : IRequestHandler<GetAccountSu
                         p.PlanDefinition.IncludesReports,
                         p.PlanDefinition.IncludesOperations
                     }).FirstOrDefault(),
-                Properties = x.Properties.OrderBy(p => p.Name).Select(p => new PropertyUsageItemDto(p.Id, p.Name, p.IsActive, p.Units.Count())).ToList(),
-                UsersCount = x.Users.Count(),
-                UnitsCount = x.Properties.SelectMany(p => p.Units).Count()
+                UsersCount = x.Users.Count()
             })
             .FirstOrDefaultAsync(ct);
 
         if (account is null || account.Plan is null) return AppResult<AccountSummaryDto>.Fail("account_required", "No se encontró el resumen de cuenta.");
 
-        var dto = new AccountSummaryDto(
+        return AppResult<AccountSummaryDto>.Ok(new AccountSummaryDto(
             account.Id,
             account.Name,
             account.IsActive,
@@ -129,125 +98,58 @@ public sealed class GetAccountSummaryQueryHandler : IRequestHandler<GetAccountSu
             account.Plan.MaxUsers,
             account.Plan.IncludesReports,
             account.Plan.IncludesOperations,
-            account.Properties.Count,
-            account.UnitsCount,
-            account.UsersCount,
-            account.Properties);
-
-        return AppResult<AccountSummaryDto>.Ok(dto);
+            0,
+            0,
+            account.UsersCount));
     }
 }
 
 public sealed class UpdateAccountCommandValidator : AbstractValidator<UpdateAccountCommand>
 {
-    public UpdateAccountCommandValidator()
-    {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
-    }
+    public UpdateAccountCommandValidator() => RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
 }
 
-public sealed class UpdateAccountCommandHandler : IRequestHandler<UpdateAccountCommand, AppResult>
+public sealed class UpdateAccountCommandHandler(IAppDbContext db, IUserAccessService access, IAuditService audit)
+    : IRequestHandler<UpdateAccountCommand, AppResult>
 {
-    private readonly IAppDbContext _db;
-    private readonly IUserAccessService _access;
-    private readonly IAuditService _audit;
-
-    public UpdateAccountCommandHandler(IAppDbContext db, IUserAccessService access, IAuditService audit)
-    {
-        _db = db;
-        _access = access;
-        _audit = audit;
-    }
-
     public async Task<AppResult> Handle(UpdateAccountCommand request, CancellationToken ct)
     {
-        var accountId = await _access.GetCurrentAccountIdAsync(ct);
+        var accountId = await access.GetCurrentAccountIdAsync(ct);
         if (!accountId.HasValue) return AppResult.Fail("account_required", "No se encontró una cuenta activa.");
-        if (!await _access.HasModuleAccessAsync(accountId.Value, SaasModule.Configuration, ct))
-            return AppResult.Fail("forbidden", "No tenés permisos para administrar la cuenta.");
 
-        var account = await _db.Accounts.FirstAsync(x => x.Id == accountId.Value, ct);
+        var account = await db.Accounts.FirstOrDefaultAsync(x => x.Id == accountId.Value, ct);
+        if (account is null) return AppResult.Fail("not_found", "Cuenta no encontrada.");
+
         account.Name = request.Name.Trim();
-        var auditMessages = new List<string> { $"Cuenta actualizada: {account.Name}" };
-
-        if (request.PlanDefinitionId.HasValue)
-        {
-            var currentPlan = await _db.AccountSubscriptionPlans.FirstOrDefaultAsync(x => x.AccountId == accountId.Value && x.IsActive, ct);
-            if (currentPlan is null) return AppResult.Fail("plan_required", "La cuenta no tiene plan activo.");
-            if (currentPlan.PlanDefinitionId != request.PlanDefinitionId.Value)
-            {
-                currentPlan.IsActive = false;
-                currentPlan.ChangedAtUtc = DateTime.UtcNow;
-                _db.AccountSubscriptionPlans.Add(new AccountSubscriptionPlan
-                {
-                    AccountId = accountId.Value,
-                    PlanDefinitionId = request.PlanDefinitionId.Value,
-                    IsActive = true,
-                    StartedAtUtc = DateTime.UtcNow,
-                    ChangedAtUtc = DateTime.UtcNow
-                });
-                var planName = await _db.SaasPlanDefinitions.Where(x => x.Id == request.PlanDefinitionId.Value).Select(x => x.Name).FirstOrDefaultAsync(ct);
-                auditMessages.Add($"Plan cambiado a {planName}");
-            }
-        }
-
-        await _db.SaveChangesAsync(ct);
-        await _audit.WriteAsync(accountId.Value, null, "Account", account.Id, "updated", string.Join(". ", auditMessages), ct);
+        await db.SaveChangesAsync(ct);
+        await audit.WriteAsync(account.Id, null, "Account", account.Id, "updated", $"Cuenta actualizada: {account.Name}", ct);
         return AppResult.Ok();
     }
 }
 
-public sealed class GetAccountUsersQueryHandler : IRequestHandler<GetAccountUsersQuery, AppResult<List<AccountUserListItemDto>>>
+public sealed class GetAccountUsersQueryHandler(IAppDbContext db, IUserAccessService access)
+    : IRequestHandler<GetAccountUsersQuery, AppResult<List<AccountUserListItemDto>>>
 {
-    private readonly IAppDbContext _db;
-    private readonly IUserAccessService _access;
-
-    public GetAccountUsersQueryHandler(IAppDbContext db, IUserAccessService access)
-    {
-        _db = db;
-        _access = access;
-    }
-
     public async Task<AppResult<List<AccountUserListItemDto>>> Handle(GetAccountUsersQuery request, CancellationToken ct)
     {
-        var accountId = await _access.GetCurrentAccountIdAsync(ct);
+        var accountId = await access.GetCurrentAccountIdAsync(ct);
         if (!accountId.HasValue) return AppResult<List<AccountUserListItemDto>>.Fail("account_required", "No se encontró una cuenta activa.");
-        if (!await _access.HasModuleAccessAsync(accountId.Value, SaasModule.Users, ct))
-            return AppResult<List<AccountUserListItemDto>>.Fail("forbidden", "No tenés permisos para ver usuarios.");
 
-        var rawItems = await _db.AccountUsers.AsNoTracking()
+        var users = await db.AccountUsers.AsNoTracking()
             .Where(x => x.AccountId == accountId.Value)
-            .OrderBy(x => x.Role).ThenBy(x => x.User.Nombre).ThenBy(x => x.User.Apellido)
-            .Select(x => new
-            {
+            .OrderBy(x => x.User.Nombre)
+            .ThenBy(x => x.User.Apellido)
+            .Select(x => new AccountUserListItemDto(
                 x.UserId,
-                x.User.Nombre,
-                x.User.Apellido,
-                Email = x.User.Email ?? string.Empty,
-                IsActive = x.IsActive && x.User.IsActive,
+                $"{x.User.Nombre} {x.User.Apellido}".Trim(),
+                x.User.Email!,
+                x.IsActive,
                 x.Role,
-                x.User.DefaultPropertyId,
                 x.User.LastLoginAtUtc,
-                x.InvitedAtUtc
-            })
+                x.InvitedAtUtc))
             .ToListAsync(ct);
 
-        var propertyNames = await _db.Properties.AsNoTracking()
-            .Where(x => x.AccountId == accountId.Value)
-            .ToDictionaryAsync(x => x.Id, x => x.Name, ct);
-
-        var items = rawItems.Select(x => new AccountUserListItemDto(
-            x.UserId,
-            (x.Nombre + " " + x.Apellido).Trim(),
-            x.Email,
-            x.IsActive,
-            x.Role,
-            x.DefaultPropertyId,
-            x.DefaultPropertyId.HasValue && propertyNames.TryGetValue(x.DefaultPropertyId.Value, out var propertyName) ? propertyName : null,
-            x.LastLoginAtUtc,
-            x.InvitedAtUtc)).ToList();
-
-        return AppResult<List<AccountUserListItemDto>>.Ok(items);
+        return AppResult<List<AccountUserListItemDto>>.Ok(users);
     }
 }
 
@@ -255,80 +157,51 @@ public sealed class UpsertAccountUserCommandValidator : AbstractValidator<Upsert
 {
     public UpsertAccountUserCommandValidator()
     {
-        RuleFor(x => x.Nombre).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Apellido).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(200);
-        RuleFor(x => x.Password).NotEmpty().MinimumLength(6).When(x => string.IsNullOrWhiteSpace(x.UserId));
+        RuleFor(x => x.Nombre).NotEmpty().MaximumLength(80);
+        RuleFor(x => x.Apellido).NotEmpty().MaximumLength(80);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(180);
+        RuleFor(x => x.Password)
+            .NotEmpty().MinimumLength(8)
+            .When(x => string.IsNullOrWhiteSpace(x.UserId));
     }
 }
 
-public sealed class UpsertAccountUserCommandHandler : IRequestHandler<UpsertAccountUserCommand, AppResult<string>>
+public sealed class UpsertAccountUserCommandHandler(IAppDbContext db, IUserAccessService access, ISaasPlanService planService, IIdentityService identity, IAuditService audit)
+    : IRequestHandler<UpsertAccountUserCommand, AppResult<string>>
 {
-    private readonly IAppDbContext _db;
-    private readonly IIdentityService _identity;
-    private readonly IUserAccessService _access;
-    private readonly ISaasPlanService _plan;
-    private readonly IAuditService _audit;
-
-    public UpsertAccountUserCommandHandler(IAppDbContext db, IIdentityService identity, IUserAccessService access, ISaasPlanService plan, IAuditService audit)
-    {
-        _db = db;
-        _identity = identity;
-        _access = access;
-        _plan = plan;
-        _audit = audit;
-    }
-
     public async Task<AppResult<string>> Handle(UpsertAccountUserCommand request, CancellationToken ct)
     {
-        var accountId = await _access.GetCurrentAccountIdAsync(ct);
+        var accountId = await access.GetCurrentAccountIdAsync(ct);
         if (!accountId.HasValue) return AppResult<string>.Fail("account_required", "No se encontró una cuenta activa.");
-        if (!await _access.HasModuleAccessAsync(accountId.Value, SaasModule.Users, ct))
-            return AppResult<string>.Fail("forbidden", "No tenés permisos para administrar usuarios.");
 
-        if (request.DefaultPropertyId.HasValue)
+        if (request.UserId is null)
         {
-            var propertyValid = await _db.Properties.AsNoTracking().AnyAsync(x => x.Id == request.DefaultPropertyId.Value && x.AccountId == accountId.Value, ct);
-            if (!propertyValid) return AppResult<string>.Fail("invalid_property", "El hospedaje por defecto no pertenece a la cuenta.");
-        }
+            var validate = await planService.ValidateUserCreationAsync(accountId.Value, ct);
+            if (!validate.Success) return AppResult<string>.Fail(validate.ErrorCode!, validate.Message!);
 
-        if (string.IsNullOrWhiteSpace(request.UserId))
-        {
-            var limit = await _plan.ValidateUserCreationAsync(accountId.Value, ct);
-            if (!limit.Success) return AppResult<string>.Fail(limit.ErrorCode!, limit.Message!);
+            var create = await identity.CreateUserIfNotExistsAsync(request.Email.Trim(), request.Password!, ct, request.Nombre.Trim(), request.Apellido.Trim(), request.IsActive, null, accountId.Value);
+            if (!create.Success || string.IsNullOrWhiteSpace(create.UserId))
+                return AppResult<string>.Fail("identity_error", create.Error ?? "No se pudo crear el usuario.");
 
-            var existing = await _identity.FindUserIdByEmailAsync(request.Email.Trim(), ct);
-            if (!string.IsNullOrWhiteSpace(existing.UserId))
-                return AppResult<string>.Fail("email_exists", "Ya existe un usuario con ese email.");
-
-            var create = await _identity.CreateUserIfNotExistsAsync(request.Email.Trim(), request.Password!, ct, request.Nombre.Trim(), request.Apellido.Trim(), request.IsActive, request.DefaultPropertyId, accountId.Value);
-            if (!create.Success || string.IsNullOrWhiteSpace(create.UserId)) return AppResult<string>.Fail("create_user_failed", create.Error ?? "No se pudo crear el usuario.");
-
-            _db.AccountUsers.Add(new AccountUser
+            db.AccountUsers.Add(new AccountUser
             {
                 AccountId = accountId.Value,
                 UserId = create.UserId,
                 Role = request.Role,
                 IsActive = request.IsActive,
-                CanManageBookings = true,
-                CanManageGuests = true,
-                CanManagePayments = request.Role is InternalUserRole.Admin or InternalUserRole.Owner or InternalUserRole.Reception,
-                CanViewReports = request.Role is InternalUserRole.Admin or InternalUserRole.Owner,
                 CanManageConfiguration = request.Role is InternalUserRole.Admin or InternalUserRole.Owner,
                 InvitedAtUtc = DateTime.UtcNow
             });
-            await _db.SaveChangesAsync(ct);
-            await _audit.WriteAsync(accountId.Value, request.DefaultPropertyId, "AccountUser", null, "created", $"Usuario creado: {request.Nombre} {request.Apellido} ({request.Email}) - rol {request.Role}", ct);
+            await db.SaveChangesAsync(ct);
+            await audit.WriteAsync(accountId.Value, null, "AccountUser", null, "created", $"Usuario creado: {request.Nombre} {request.Apellido} ({request.Email}) - rol {request.Role}", ct);
             return AppResult<string>.Ok(create.UserId);
         }
 
-        var membership = await _db.AccountUsers.Include(x => x.User).FirstOrDefaultAsync(x => x.AccountId == accountId.Value && x.UserId == request.UserId, ct);
+        var membership = await db.AccountUsers.Include(x => x.User).FirstOrDefaultAsync(x => x.AccountId == accountId.Value && x.UserId == request.UserId, ct);
         if (membership is null) return AppResult<string>.Fail("not_found", "Usuario no encontrado.");
 
         membership.Role = request.Role;
         membership.IsActive = request.IsActive;
-        membership.CanManagePayments = request.Role is InternalUserRole.Admin or InternalUserRole.Owner or InternalUserRole.Reception;
-        membership.CanViewReports = request.Role is InternalUserRole.Admin or InternalUserRole.Owner;
         membership.CanManageConfiguration = request.Role is InternalUserRole.Admin or InternalUserRole.Owner;
         membership.User.Nombre = request.Nombre.Trim();
         membership.User.Apellido = request.Apellido.Trim();
@@ -337,84 +210,49 @@ public sealed class UpsertAccountUserCommandHandler : IRequestHandler<UpsertAcco
         membership.User.NormalizedEmail = request.Email.Trim().ToUpperInvariant();
         membership.User.NormalizedUserName = request.Email.Trim().ToUpperInvariant();
         membership.User.IsActive = request.IsActive;
-        membership.User.DefaultPropertyId = request.DefaultPropertyId;
-        await _db.SaveChangesAsync(ct);
-        await _audit.WriteAsync(accountId.Value, request.DefaultPropertyId, "AccountUser", null, "updated", $"Usuario actualizado: {request.Nombre} {request.Apellido} ({request.Email}) - rol {request.Role} - activo: {(request.IsActive ? "sí" : "no")}", ct);
+        await db.SaveChangesAsync(ct);
+        await audit.WriteAsync(accountId.Value, null, "AccountUser", null, "updated", $"Usuario actualizado: {request.Nombre} {request.Apellido} ({request.Email}) - rol {request.Role} - activo: {(request.IsActive ? "sí" : "no")}", ct);
         return AppResult<string>.Ok(membership.UserId);
     }
 }
 
-public sealed class ToggleAccountUserStatusCommandHandler : IRequestHandler<ToggleAccountUserStatusCommand, AppResult>
+public sealed class ToggleAccountUserStatusCommandHandler(IAppDbContext db, IUserAccessService access, IAuditService audit)
+    : IRequestHandler<ToggleAccountUserStatusCommand, AppResult>
 {
-    private readonly IAppDbContext _db;
-    private readonly IUserAccessService _access;
-    private readonly IAuditService _audit;
-
-    public ToggleAccountUserStatusCommandHandler(IAppDbContext db, IUserAccessService access, IAuditService audit)
-    {
-        _db = db;
-        _access = access;
-        _audit = audit;
-    }
-
     public async Task<AppResult> Handle(ToggleAccountUserStatusCommand request, CancellationToken ct)
     {
-        var accountId = await _access.GetCurrentAccountIdAsync(ct);
+        var accountId = await access.GetCurrentAccountIdAsync(ct);
         if (!accountId.HasValue) return AppResult.Fail("account_required", "No se encontró una cuenta activa.");
-        if (!await _access.HasModuleAccessAsync(accountId.Value, SaasModule.Users, ct))
+        if (!await access.HasModuleAccessAsync(accountId.Value, SaasModule.Users, ct))
             return AppResult.Fail("forbidden", "No tenés permisos para administrar usuarios.");
 
-        var membership = await _db.AccountUsers.Include(x => x.User).FirstOrDefaultAsync(x => x.AccountId == accountId.Value && x.UserId == request.UserId, ct);
+        var membership = await db.AccountUsers.Include(x => x.User).FirstOrDefaultAsync(x => x.AccountId == accountId.Value && x.UserId == request.UserId, ct);
         if (membership is null) return AppResult.Fail("not_found", "Usuario no encontrado.");
 
         membership.IsActive = request.IsActive;
         membership.User.IsActive = request.IsActive;
-        await _db.SaveChangesAsync(ct);
-        await _audit.WriteAsync(accountId.Value, membership.User.DefaultPropertyId, "AccountUser", null, request.IsActive ? "activated" : "deactivated", $"Usuario {(request.IsActive ? "activado" : "desactivado")}: {membership.User.Nombre} {membership.User.Apellido}", ct);
+        await db.SaveChangesAsync(ct);
+        await audit.WriteAsync(accountId.Value, null, "AccountUser", null, request.IsActive ? "activated" : "deactivated", $"Usuario {(request.IsActive ? "activado" : "desactivado")}: {membership.User.Nombre} {membership.User.Apellido}", ct);
         return AppResult.Ok();
     }
 }
 
-public sealed class GetAccountAuditQueryHandler : IRequestHandler<GetAccountAuditQuery, AppResult<List<AccountAuditItemDto>>>
+public sealed class GetAccountAuditQueryHandler(IAppDbContext db, IUserAccessService access)
+    : IRequestHandler<GetAccountAuditQuery, AppResult<List<AccountAuditItemDto>>>
 {
-    private readonly IAppDbContext _db;
-    private readonly IUserAccessService _access;
-
-    public GetAccountAuditQueryHandler(IAppDbContext db, IUserAccessService access)
-    {
-        _db = db;
-        _access = access;
-    }
-
     public async Task<AppResult<List<AccountAuditItemDto>>> Handle(GetAccountAuditQuery request, CancellationToken ct)
     {
-        var accountId = await _access.GetCurrentAccountIdAsync(ct);
+        var accountId = await access.GetCurrentAccountIdAsync(ct);
         if (!accountId.HasValue) return AppResult<List<AccountAuditItemDto>>.Fail("account_required", "No se encontró una cuenta activa.");
 
-        var query = _db.AuditLogs.AsNoTracking()
-            .Where(x => x.AccountId == accountId.Value);
+        var query = db.AuditLogs.AsNoTracking().Where(x => x.AccountId == accountId.Value);
 
-        if (!string.IsNullOrWhiteSpace(request.EntityName))
-            query = query.Where(x => x.EntityName == request.EntityName);
+        if (!string.IsNullOrWhiteSpace(request.EntityName)) query = query.Where(x => x.EntityName == request.EntityName);
+        if (!string.IsNullOrWhiteSpace(request.UserName)) query = query.Where(x => x.UserName != null && x.UserName.Contains(request.UserName));
+        if (request.From.HasValue) query = query.Where(x => x.CreatedAtUtc >= request.From.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        if (request.To.HasValue) query = query.Where(x => x.CreatedAtUtc < request.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 
-        if (!string.IsNullOrWhiteSpace(request.UserName))
-            query = query.Where(x => x.UserName != null && x.UserName.Contains(request.UserName));
-
-        if (request.From.HasValue)
-        {
-            var fromUtc = request.From.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-            query = query.Where(x => x.CreatedAtUtc >= fromUtc);
-        }
-
-        if (request.To.HasValue)
-        {
-            var toUtcExclusive = request.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-            query = query.Where(x => x.CreatedAtUtc < toUtcExclusive);
-        }
-
-        var items = await query
-            .OrderByDescending(x => x.CreatedAtUtc)
-            .Take(request.Take)
+        var items = await query.OrderByDescending(x => x.CreatedAtUtc).Take(request.Take)
             .Select(x => new AccountAuditItemDto(x.CreatedAtUtc, x.EntityName, x.Action, x.Summary ?? string.Empty, x.UserName))
             .ToListAsync(ct);
         return AppResult<List<AccountAuditItemDto>>.Ok(items);
