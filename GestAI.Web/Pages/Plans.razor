@@ -1,0 +1,26 @@
+@page "/plans"
+@inject ApiClient Api
+@using GestAI.Web.Dtos
+
+<h1>Plans</h1>
+
+@if (_summary is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div class="card"><div class="card-body">
+        <p><strong>Plan actual:</strong> @_summary.PlanName (@_summary.PlanCode)</p>
+        <ul>
+            <li>Máximo usuarios: @_summary.MaxUsers</li>
+            <li>Máximo entidades: @_summary.MaxUnits</li>
+            <li>Features: Reportes=@_summary.IncludesReports, Operaciones=@_summary.IncludesOperations</li>
+        </ul>
+    </div></div>
+}
+
+@code {
+    private AccountSummaryDto? _summary;
+    protected override async Task OnInitializedAsync() => _summary = (await Api.GetAsync<AppResult<AccountSummaryDto>>("api/saas/account/summary"))?.Data;
+}

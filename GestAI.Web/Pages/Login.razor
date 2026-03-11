@@ -16,7 +16,7 @@
                         <div class="d-flex justify-content-center py-4">
                             <a href="/" class="logo d-flex align-items-center w-auto">
                                 <img src="assets/img/logo.png" alt="">
-                                <span class="d-none d-lg-block">GestAI Booking</span>
+                                <span class="d-none d-lg-block">SaaS Starter Kit</span>
                             </a>
                         </div>
 
@@ -65,7 +65,7 @@
                         </div>
 
                         <div class="credits">
-                            GestAI Booking · gestión operativa para hospedajes
+                            SaaS Starter Kit · base reutilizable multi-tenant
                         </div>
 
                     </div>
@@ -123,9 +123,9 @@
     private static string NormalizeReturnUrl(string? url)
     {
         // seguridad básica: solo rutas internas
-        if (string.IsNullOrWhiteSpace(url)) return "/setup";
-        if (!url.StartsWith("/")) return "/setup";
-        if (url.StartsWith("//")) return "/setup";
+        if (string.IsNullOrWhiteSpace(url)) return "/dashboard";
+        if (!url.StartsWith("/")) return "/dashboard";
+        if (url.StartsWith("//")) return "/dashboard";
         return url;
     }
 

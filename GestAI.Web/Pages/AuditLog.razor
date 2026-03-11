@@ -1,0 +1,27 @@
+@page "/audit-log"
+@inject ApiClient Api
+@using GestAI.Web.Dtos
+
+<h1>Audit Log</h1>
+
+@if (_items is null)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <table class="table">
+        <thead><tr><th>Fecha</th><th>Entidad</th><th>Acción</th><th>Resumen</th><th>Usuario</th></tr></thead>
+        <tbody>
+        @foreach (var i in _items)
+        {
+            <tr><td>@i.CreatedAtUtc.ToLocalTime()</td><td>@i.EntityName</td><td>@i.Action</td><td>@i.Summary</td><td>@i.UserName</td></tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<AccountAuditItemDto>? _items;
+    protected override async Task OnInitializedAsync() => _items = (await Api.GetAsync<AppResult<List<AccountAuditItemDto>>>("api/saas/account/audit?take=50"))?.Data ?? new();
+}

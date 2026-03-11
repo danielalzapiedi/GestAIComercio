@@ -1,34 +1,53 @@
-# GestAI Booking MVP3 · Refinamiento final
+# GestAI SaaS Starter Template
 
-## Requisitos
-- .NET 9 SDK
-- SQL Server
-- Herramienta `dotnet-ef` instalada si vas a correr migraciones
+Base SaaS reutilizable construida con:
 
-## Ejecución local
-1. Restaurar paquetes:
-   `dotnet restore GestAI.sln`
-2. Compilar la solución:
-   `dotnet build GestAI.sln`
-3. Ejecutar tests:
-   `dotnet test GestAI.sln`
-4. Actualizar la base de datos si corresponde:
-   `dotnet ef database update --project GestAI.Infrastructure.Persistence --startup-project GestAI.Api`
-5. Levantar API:
-   `dotnet run --project GestAI.Api`
-6. Levantar Blazor WebAssembly:
-   `dotnet run --project GestAI.Web`
+- .NET 9
+- ASP.NET Core Web API
+- Blazor WebAssembly
+- Clean Architecture
+- CQRS con MediatR
+- EF Core + SQL Server
+- Multi-tenant por Account
 
-## Qué incluye este refinamiento
-- Reorganización del menú lateral en secciones operativas, comerciales, de gestión y cuenta.
-- Limpieza de branding residual del template y unificación del lenguaje a español.
-- Mejora visual del dashboard, agenda, detalle de reserva, listados y reportes.
-- Auditoría visible con filtros por entidad, usuario y fechas.
-- Reportes ampliados con KPIs, ocupación por unidad, reservas por estado y métricas de señas.
-- Estados vacíos más claros y consistentes.
-- Tests base para tarifas, promociones, solapamientos y cambio de estado de reserva.
+## Estructura
 
-## Notas
-- La arquitectura original se mantuvo.
-- No se integraron IA, bots, WhatsApp ni servicios externos nuevos.
-- Antes de empaquetar para entrega conviene ejecutar los comandos de build/test en una máquina con .NET 9 instalado.
+- `GestAI.Domain`: entidades core SaaS (Account, AccountUser, planes, auditoría, usuarios).
+- `GestAI.Application`: casos de uso y CQRS (acceso, cuenta, usuarios, auditoría).
+- `GestAI.Infrastructure`: servicios de seguridad/identity y servicios transversales.
+- `GestAI.Infrastructure.Persistence`: DbContext, configuraciones EF Core y migraciones.
+- `GestAI.Api`: endpoints REST para auth + administración SaaS.
+- `GestAI.Web`: UI Blazor WASM con dashboard y administración base.
+
+## Módulos incluidos
+
+- Autenticación (login/logout)
+- Dashboard SaaS
+- Account Settings
+- Users (listar/crear/editar/activar/desactivar)
+- Plans (visión de límites/features del plan activo)
+- Audit Log
+
+## Cómo ejecutar
+
+```bash
+dotnet restore
+dotnet build
+dotnet test
+dotnet run --project GestAI.Api
+```
+
+Luego ejecutar el frontend:
+
+```bash
+dotnet run --project GestAI.Web
+```
+
+## Cómo extender con un nuevo dominio
+
+1. Crear entidades del dominio en `GestAI.Domain/Entities`.
+2. Agregar comandos/queries en `GestAI.Application/<Modulo>` con MediatR.
+3. Registrar persistencia/configuración EF en `GestAI.Infrastructure.Persistence`.
+4. Exponer endpoints en `GestAI.Api/Controllers`.
+5. Crear páginas Blazor en `GestAI.Web/Pages` y proteger navegación según permisos.
+6. Mantener toda operación bajo contexto de cuenta (`Account`) y usuario actual.

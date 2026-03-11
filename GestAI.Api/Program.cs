@@ -90,8 +90,8 @@ using (var scope = app.Services.CreateScope())
         new DbInitializer.SeedOptions(
             AdminEmail: "admin@local.test",
             AdminPassword: "Admin123$",
-            PropertyName: "Alma de Lago (Demo)",
-            UnitNames: new[] { "Cabaña 1", "Cabaña 2", "Cabaña 3" }
+            PropertyName: "Tenant Demo",
+            UnitNames: new[] { "Workspace A", "Workspace B" }
         )
     );
 }
