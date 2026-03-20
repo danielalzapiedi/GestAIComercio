@@ -117,6 +117,9 @@
                     @if (CanAccess(SaasModule.Products))
                     {
                         <li class="nav-item"><NavLink class="nav-link" href="/products" @onclick="CloseSidebar"><i class="bi bi-box"></i><span>Productos</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/inventory" @onclick="CloseSidebar"><i class="bi bi-boxes"></i><span>Inventario</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/price-lists" @onclick="CloseSidebar"><i class="bi bi-tags"></i><span>Listas de precios</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/products/import" @onclick="CloseSidebar"><i class="bi bi-upload"></i><span>Importación</span></NavLink></li>
                     }
                     @if (CanAccess(SaasModule.Customers))
                     {

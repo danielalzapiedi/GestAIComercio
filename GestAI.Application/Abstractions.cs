@@ -18,6 +18,10 @@ public interface IAppDbContext
     DbSet<ProductCategory> ProductCategories { get; }
     DbSet<Product> Products { get; }
     DbSet<ProductVariant> ProductVariants { get; }
+    DbSet<ProductWarehouseStock> ProductWarehouseStocks { get; }
+    DbSet<StockMovement> StockMovements { get; }
+    DbSet<PriceList> PriceLists { get; }
+    DbSet<PriceListItem> PriceListItems { get; }
     DbSet<Customer> Customers { get; }
     DbSet<Supplier> Suppliers { get; }
     DbSet<User> Users { get; }

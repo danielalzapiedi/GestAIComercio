@@ -1,0 +1,260 @@
+@page "/inventory"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Inventario</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Inventario por depósito</div>
+        <div class="page-hero-subtitle">Consolidá stock actual, depósitos involucrados y movimientos recientes desde una misma superficie operativa.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-boxes"></i> @(_overview?.DistinctSkus ?? 0) SKUs</span>
+        <span class="page-hero-chip"><i class="bi bi-box-seam"></i> @(_overview?.WarehousesWithStock ?? 0) depósitos con stock</span>
+    </div>
+</section>
+
+@if (!_loaded)
+{
+    <div class="card"><div class="card-body">Cargando inventario...</div></div>
+}
+else
+{
+    <div class="row g-3 ui-summary-grid mb-1">
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Unidades visibles</div><div class="ui-stat-value">@(_overview?.TotalUnits ?? 0)</div><div class="ui-stat-foot">Suma del stock listado según filtros actuales.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">SKUs</div><div class="ui-stat-value">@(_overview?.DistinctSkus ?? 0)</div><div class="ui-stat-foot">Productos y variantes con stock visible.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Bajo mínimo</div><div class="ui-stat-value">@(_overview?.LowStockCount ?? 0)</div><div class="ui-stat-foot">SKUs por debajo del stock mínimo consolidado.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Movimientos recientes</div><div class="ui-stat-value">@_movements.Count</div><div class="ui-stat-foot">Últimos eventos auditados de inventario.</div></div></div></div>
+    </div>
+
+    <div class="card ui-filter-card"><div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-lg-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Producto, variante o código" /></div>
+            <div class="col-md-4 col-lg-3"><label class="form-label">Depósito</label><select class="form-select" @bind="_selectedWarehouseId"><option value="0">Todos</option>@foreach (var warehouse in _seed.Warehouses){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
+            <div class="col-md-4 col-lg-3"><label class="form-label">SKU</label><select class="form-select" @bind="_selectedSkuKey"><option value="">Todos</option>@foreach (var sku in _seed.Skus){<option value="@ToSkuKey(sku)">@sku.Label</option>}</select></div>
+            <div class="col-md-6 col-lg-1"><button class="btn btn-outline-primary w-100" @onclick="SearchAsync">Buscar</button></div>
+            <div class="col-md-6 col-lg-1 text-md-end ui-table-meta">Stock y trazabilidad</div>
+        </div>
+    </div></div>
+
+    <div class="ui-split-layout">
+        <div>
+            @if (_overview is null || _overview.Items.Count == 0)
+            {
+                <EmptyState Title="No hay stock para mostrar"
+                            Description="Registrá movimientos para empezar a consolidar stock por depósito."
+                            Icon="bi-boxes">
+                    <button class="btn btn-primary" @onclick="ResetFiltersAsync">Limpiar filtros</button>
+                </EmptyState>
+            }
+            else
+            {
+                <div class="card ui-data-card mb-3">
+                    <div class="card-body">
+                        <div class="ui-card-header">
+                            <div>
+                                <div class="ui-card-eyebrow">Disponibilidad por depósito</div>
+                                <h5 class="ui-card-title">Stock actual</h5>
+                                <div class="ui-card-subtitle">Cada fila conserva stock del depósito y consolidado total del SKU.</div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped ui-compact-table">
+                                <thead><tr><th>SKU</th><th>Depósito</th><th>Stock depósito</th><th>Total SKU</th><th>Mínimo</th><th>Estado</th><th>Último movimiento</th></tr></thead>
+                                <tbody>
+                                @foreach (var item in _overview!.Items)
+                                {
+                                    <tr>
+                                        <td><div class="ui-product-main"><span class="ui-product-name">@item.SkuName</span><span class="ui-product-meta">@item.InternalCode</span></div></td>
+                                        <td>@item.WarehouseName</td>
+                                        <td class="fw-semibold">@item.QuantityOnHand</td>
+                                        <td>@item.TotalQuantity</td>
+                                        <td>@item.MinimumStock</td>
+                                        <td><StatusBadge Text="@(item.IsLowStock ? "Bajo mínimo" : "OK")" CssClass="@(item.IsLowStock ? "ui-badge ui-badge-warning" : "ui-badge ui-badge-primary")" /></td>
+                                        <td>@(item.LastMovementAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Sin movimientos")</td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card ui-data-card">
+                    <div class="card-body">
+                        <div class="ui-card-header">
+                            <div>
+                                <div class="ui-card-eyebrow">Trazabilidad</div>
+                                <h5 class="ui-card-title">Movimientos recientes</h5>
+                                <div class="ui-card-subtitle">Ingresos, egresos, ajustes y transferencias con motivo explícito.</div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped ui-compact-table">
+                                <thead><tr><th>Fecha</th><th>SKU</th><th>Tipo</th><th>Depósito</th><th>Cantidad</th><th>Motivo</th></tr></thead>
+                                <tbody>
+                                @foreach (var movement in _movements)
+                                {
+                                    <tr>
+                                        <td>@movement.OccurredAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                                        <td><div class="ui-product-main"><span class="ui-product-name">@movement.SkuName</span><span class="ui-product-meta">@movement.InternalCode</span></div></td>
+                                        <td><StatusBadge Text="@MovementLabel(movement.MovementType)" /></td>
+                                        <td>@movement.WarehouseName@(string.IsNullOrWhiteSpace(movement.CounterpartWarehouseName) ? string.Empty : $" → {movement.CounterpartWarehouseName}")</td>
+                                        <td class="fw-semibold @(movement.QuantityDelta >= 0 ? "text-success" : "text-danger")">@movement.QuantityDelta</td>
+                                        <td><div class="ui-table-stack"><span>@movement.Reason</span><span class="ui-table-meta">@(string.IsNullOrWhiteSpace(movement.Note) ? "Sin observación" : movement.Note)</span></div></td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="ui-section-grid">
+            <div class="card ui-form-card">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Registrar movimiento</div>
+                            <h5 class="ui-card-title">Nuevo movimiento auditado</h5>
+                            <div class="ui-card-subtitle">El stock no se pisa manualmente: siempre queda trazado por movimiento.</div>
+                        </div>
+                    </div>
+                    <div class="ui-form-section">
+                        <div class="row g-3">
+                            <div class="col-12"><label class="form-label">SKU</label><select class="form-select" @bind="_movementSkuKey">@foreach (var sku in _seed.Skus){<option value="@ToSkuKey(sku)">@sku.Label</option>}</select></div>
+                            <div class="col-md-6"><label class="form-label">Depósito</label><select class="form-select" @bind="_movement.WarehouseId">@foreach (var warehouse in _seed.Warehouses){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
+                            <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" @bind="_movement.MovementType">@foreach (var type in Enum.GetValues<StockMovementType>()){<option value="@type">@MovementLabel(type)</option>}</select></div>
+                            @if (_movement.MovementType == StockMovementType.TransferOut)
+                            {
+                                <div class="col-12"><label class="form-label">Depósito destino</label><select class="form-select" @bind="_movement.CounterpartWarehouseId"><option value="">Seleccionar</option>@foreach (var warehouse in _seed.Warehouses.Where(x => x.Id != _movement.WarehouseId)){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
+                            }
+                            <div class="col-md-6"><label class="form-label">Cantidad</label><input class="form-control" type="number" step="0.01" @bind="_movement.Quantity" /></div>
+                            <div class="col-md-6"><label class="form-label">Fecha</label><input class="form-control" type="datetime-local" @bind="_movementDateLocal" /></div>
+                            <div class="col-12"><label class="form-label">Motivo</label><input class="form-control" @bind="_movement.Reason" placeholder="Recepción, conteo, merma, traslado, etc." /></div>
+                            <div class="col-12"><label class="form-label">Observación</label><textarea class="form-control ui-preview-textarea" @bind="_movement.Note"></textarea></div>
+                        </div>
+                    </div>
+                    <div class="ui-action-bar">
+                        <button class="btn btn-primary" @onclick="SaveMovementAsync">Registrar movimiento</button>
+                        <span class="ui-table-meta">@_message</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Decisión técnica</div>
+                            <h5 class="ui-card-title">Modelo elegido para Release 2</h5>
+                        </div>
+                    </div>
+                    <div class="ui-list-stack">
+                        <div class="ui-check-card"><i class="bi bi-diagram-3 text-primary"></i><div><strong>Stock por depósito y SKU</strong><div class="ui-table-meta">El stock vive en una tabla específica por producto/variante + depósito.</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-journal-check text-primary"></i><div><strong>Trazabilidad obligatoria</strong><div class="ui-table-meta">El stock actual se alimenta desde movimientos auditados.</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-arrow-left-right text-primary"></i><div><strong>Transferencias preparadas</strong><div class="ui-table-meta">Una transferencia genera egreso e ingreso vinculados entre depósitos.</div></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private InventorySeedDataDto _seed = new(new List<LookupDto>(), new List<InventorySkuLookupDto>(), new List<LookupDto>());
+    private InventoryOverviewDto? _overview;
+    private List<StockMovementListItemDto> _movements = new();
+    private bool _loaded;
+    private string _search = string.Empty;
+    private int _selectedWarehouseId;
+    private string _selectedSkuKey = string.Empty;
+    private string _movementSkuKey = string.Empty;
+    private string _message = "Los movimientos impactan stock consolidado y trazabilidad.";
+    private string _movementDateLocal = DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
+    private RecordStockMovementCommand _movement = new() { Quantity = 1, MovementType = StockMovementType.Inbound, Reason = "Ingreso operativo" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSeedAsync();
+        await LoadAsync();
+        EnsureMovementDefaults();
+    }
+
+    private async Task LoadSeedAsync()
+    {
+        _seed = (await Api.GetAsync<AppResult<InventorySeedDataDto>>("api/commerce/inventory/seed"))?.Data ?? new InventorySeedDataDto(new List<LookupDto>(), new List<InventorySkuLookupDto>(), new List<LookupDto>());
+        if (_seed.Skus.Count > 0 && string.IsNullOrWhiteSpace(_movementSkuKey))
+            _movementSkuKey = ToSkuKey(_seed.Skus[0]);
+        if (_seed.Warehouses.Count > 0 && _movement.WarehouseId == 0)
+            _movement.WarehouseId = _seed.Warehouses[0].Id;
+    }
+
+    private async Task LoadAsync()
+    {
+        _loaded = false;
+        var (productId, variantId) = ParseSkuKey(_selectedSkuKey);
+        _overview = (await Api.GetAsync<AppResult<InventoryOverviewDto>>($"api/commerce/inventory/stocks?warehouseId={ToQuery(_selectedWarehouseId)}&productId={ToQuery(productId)}&productVariantId={ToQuery(variantId)}&search={Uri.EscapeDataString(_search ?? string.Empty)}"))?.Data;
+        _movements = (await Api.GetAsync<AppResult<List<StockMovementListItemDto>>>($"api/commerce/inventory/movements?warehouseId={ToQuery(_selectedWarehouseId)}&productId={ToQuery(productId)}&productVariantId={ToQuery(variantId)}&take=25"))?.Data?.ToList() ?? new();
+        _loaded = true;
+    }
+
+    private async Task SearchAsync() => await LoadAsync();
+
+    private async Task SaveMovementAsync()
+    {
+        var (productId, variantId) = ParseSkuKey(_movementSkuKey);
+        _movement.ProductId = productId;
+        _movement.ProductVariantId = variantId;
+        _movement.OccurredAtUtc = DateTime.TryParse(_movementDateLocal, out var occurredAt) ? occurredAt : DateTime.Now;
+        var result = await Api.PostAsync<RecordStockMovementCommand, AppResult<int>>("api/commerce/inventory/movements", _movement);
+        _message = result?.Success == true ? "Movimiento registrado correctamente." : result?.Message ?? "No se pudo registrar el movimiento.";
+        if (result?.Success == true)
+        {
+            _movement.Note = null;
+            _movement.Quantity = 1;
+            await LoadAsync();
+        }
+    }
+
+    private async Task ResetFiltersAsync()
+    {
+        _search = string.Empty;
+        _selectedWarehouseId = 0;
+        _selectedSkuKey = string.Empty;
+        await LoadAsync();
+    }
+
+    private void EnsureMovementDefaults()
+    {
+        if (_seed.Warehouses.Count > 0 && _movement.WarehouseId == 0)
+            _movement.WarehouseId = _seed.Warehouses[0].Id;
+    }
+
+    private static string ToSkuKey(InventorySkuLookupDto sku) => $"{sku.ProductId}:{sku.ProductVariantId?.ToString() ?? "0"}";
+
+    private static (int ProductId, int? VariantId) ParseSkuKey(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return (0, null);
+        var parts = value.Split(':');
+        var productId = int.Parse(parts[0]);
+        var variantId = parts.Length > 1 && int.TryParse(parts[1], out var parsedVariant) && parsedVariant > 0 ? parsedVariant : null;
+        return (productId, variantId);
+    }
+
+    private static string MovementLabel(StockMovementType type) => type switch
+    {
+        StockMovementType.Inbound => "Ingreso",
+        StockMovementType.Outbound => "Egreso",
+        StockMovementType.Adjustment => "Ajuste",
+        StockMovementType.TransferOut => "Transferencia salida",
+        StockMovementType.TransferIn => "Transferencia entrada",
+        _ => type.ToString()
+    };
+
+    private static string ToQuery(int value) => value > 0 ? value.ToString() : string.Empty;
+    private static string ToQuery(int? value) => value.HasValue && value.Value > 0 ? value.Value.ToString() : string.Empty;
+}

@@ -1,0 +1,271 @@
+@page "/price-lists"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Listas de precios</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Listas de precios</div>
+        <div class="page-hero-subtitle">Administrá múltiples listas, precios por producto o variante y actualizaciones masivas con criterio controlado.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-tags"></i> @(_result?.TotalCount ?? 0) listas</span>
+        <button class="btn btn-primary" @onclick="NewList">Nueva lista</button>
+    </div>
+</section>
+
+@if (!_loaded)
+{
+    <div class="card"><div class="card-body">Cargando listas...</div></div>
+}
+else
+{
+    <div class="row g-3 ui-summary-grid mb-1">
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Listas</div><div class="ui-stat-value">@(_result?.TotalCount ?? 0)</div><div class="ui-stat-foot">Listas de precios disponibles para la cuenta.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Activas</div><div class="ui-stat-value">@((_result?.Items.Count(x => x.IsActive)) ?? 0)</div><div class="ui-stat-foot">Listas activas en la página actual.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Ítems</div><div class="ui-stat-value">@_items.Count</div><div class="ui-stat-foot">Precios manuales cargados en la lista seleccionada.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Modo</div><div class="ui-stat-value">@SelectedModeLabel</div><div class="ui-stat-foot">Base para cálculo o mantenimiento manual.</div></div></div></div>
+    </div>
+
+    <div class="ui-split-layout">
+        <div>
+            <div class="card ui-data-card mb-3">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Pricing</div>
+                            <h5 class="ui-card-title">Listas disponibles</h5>
+                            <div class="ui-card-subtitle">Cada lista define si trabaja a nivel producto o variante.</div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped ui-compact-table">
+                            <thead><tr><th>Nombre</th><th>Base</th><th>Alcance</th><th>Ítems</th><th>Estado</th><th></th></tr></thead>
+                            <tbody>
+                            @foreach (var item in _result?.Items ?? Enumerable.Empty<PriceListListItemDto>())
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@item.Name</td>
+                                    <td>@BaseModeLabel(item.BaseMode)</td>
+                                    <td>@TargetTypeLabel(item.TargetType)</td>
+                                    <td>@item.ItemsCount</td>
+                                    <td><StatusBadge IsActive="@item.IsActive" /></td>
+                                    <td><button class="btn btn-sm btn-outline-primary" @onclick="() => EditListAsync(item.Id)">Abrir</button></td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            @if (_selectedList is not null)
+            {
+                <div class="card ui-data-card">
+                    <div class="card-body">
+                        <div class="ui-card-header">
+                            <div>
+                                <div class="ui-card-eyebrow">Detalle de lista</div>
+                                <h5 class="ui-card-title">@_selectedList.Name</h5>
+                                <div class="ui-card-subtitle">@BaseModeLabel(_selectedList.BaseMode) · @TargetTypeLabel(_selectedList.TargetType)</div>
+                            </div>
+                        </div>
+                        @if (_items.Count == 0)
+                        {
+                            <EmptyState Title="La lista todavía no tiene precios"
+                                        Description="Podés cargar ítems manuales o aplicar una actualización masiva para inicializarla."
+                                        Icon="bi-tags">
+                                <button class="btn btn-outline-primary" @onclick="FocusManualPrice">Cargar primer precio</button>
+                            </EmptyState>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-striped ui-compact-table">
+                                    <thead><tr><th>SKU</th><th>Base</th><th>Precio lista</th><th>Estado</th></tr></thead>
+                                    <tbody>
+                                    @foreach (var item in _items)
+                                    {
+                                        <tr>
+                                            <td><div class="ui-product-main"><span class="ui-product-name">@item.SkuName</span><span class="ui-product-meta">@item.InternalCode</span></div></td>
+                                            <td>@item.BasePrice.ToString("C")</td>
+                                            <td class="fw-semibold">@item.Price.ToString("C")</td>
+                                            <td><StatusBadge IsActive="@item.IsActive" /></td>
+                                        </tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="ui-section-grid">
+            <div class="card ui-form-card">
+                <div class="card-body">
+                    <div class="ui-card-header"><div><div class="ui-card-eyebrow">Editor</div><h5 class="ui-card-title">@(_form.Id == 0 ? "Nueva lista" : "Editar lista")</h5><div class="ui-card-subtitle">Definí nombre, criterio base y alcance del pricing.</div></div></div>
+                    <div class="ui-form-section">
+                        <div class="row g-3">
+                            <div class="col-12"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
+                            <div class="col-md-6"><label class="form-label">Base</label><select class="form-select" @bind="_form.BaseMode">@foreach (var mode in Enum.GetValues<PriceListBaseMode>()){<option value="@mode">@BaseModeLabel(mode)</option>}</select></div>
+                            <div class="col-md-6"><label class="form-label">Alcance</label><select class="form-select" @bind="_form.TargetType">@foreach (var target in Enum.GetValues<PriceListTargetType>()){<option value="@target">@TargetTypeLabel(target)</option>}</select></div>
+                            <div class="col-12"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Lista activa" : "Lista inactiva")</span></div></div>
+                        </div>
+                    </div>
+                    <div class="ui-action-bar"><button class="btn btn-primary" @onclick="SaveListAsync">Guardar lista</button><span class="ui-table-meta">@_message</span></div>
+                </div>
+            </div>
+
+            @if (_selectedList is not null)
+            {
+                <div class="card ui-form-card" id="manual-price-panel">
+                    <div class="card-body">
+                        <div class="ui-card-header"><div><div class="ui-card-eyebrow">Precio manual</div><h5 class="ui-card-title">Cargar o ajustar ítem</h5><div class="ui-card-subtitle">Sobrescribí precios puntuales para la lista seleccionada.</div></div></div>
+                        <div class="ui-form-section">
+                            <div class="row g-3">
+                                <div class="col-12"><label class="form-label">SKU</label><select class="form-select" @bind="_selectedItemSkuKey">@foreach (var sku in CurrentSkuOptions){<option value="@ToSkuKey(sku)">@sku.Label</option>}</select></div>
+                                <div class="col-md-6"><label class="form-label">Precio</label><input class="form-control" type="number" step="0.01" @bind="_itemForm.Price" /></div>
+                                <div class="col-md-6"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_itemForm.IsActive" /><span>@(_itemForm.IsActive ? "Ítem activo" : "Ítem inactivo")</span></div></div>
+                            </div>
+                        </div>
+                        <div class="ui-action-bar"><button class="btn btn-outline-primary" @onclick="SaveItemAsync">Guardar precio</button></div>
+                    </div>
+                </div>
+
+                <div class="card ui-form-card">
+                    <div class="card-body">
+                        <div class="ui-card-header"><div><div class="ui-card-eyebrow">Actualización masiva</div><h5 class="ui-card-title">Aplicar criterio a toda la lista</h5><div class="ui-card-subtitle">Ideal para inicializar o ajustar precios de forma segura.</div></div></div>
+                        <div class="ui-form-section">
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label">Tipo de ajuste</label><select class="form-select" @bind="_bulkForm.AdjustmentType">@foreach (var type in Enum.GetValues<BulkPriceAdjustmentType>()){<option value="@type">@(type == BulkPriceAdjustmentType.Percentage ? "Porcentaje" : "Monto fijo")</option>}</select></div>
+                                <div class="col-md-6"><label class="form-label">Valor</label><input class="form-control" type="number" step="0.01" @bind="_bulkForm.Value" /></div>
+                                <div class="col-md-6"><label class="form-label">Categoría</label><select class="form-select" @bind="_bulkForm.CategoryId"><option value="">Todas</option>@foreach (var category in _seed.Categories){<option value="@category.Id">@category.Name</option>}</select></div>
+                                <div class="col-md-6"><label class="form-label d-block">Cobertura</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_bulkForm.IncludeInactiveProducts" /><span>Incluir productos inactivos</span></div></div>
+                            </div>
+                        </div>
+                        <div class="ui-action-bar"><button class="btn btn-primary" @onclick="ApplyBulkUpdateAsync">Aplicar actualización</button></div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private PagedResult<PriceListListItemDto>? _result;
+    private PriceListSeedDataDto _seed = new(new List<LookupDto>(), new List<InventorySkuLookupDto>(), new List<InventorySkuLookupDto>());
+    private PriceListDetailDto? _selectedList;
+    private List<PriceListItemDto> _items = new();
+    private bool _loaded;
+    private string _message = "Release 2 prepara múltiples listas sin romper el precio base existente.";
+    private PriceListUpsertCommand _form = new() { BaseMode = PriceListBaseMode.SalePrice, TargetType = PriceListTargetType.Product, IsActive = true };
+    private PriceListItemUpsertCommand _itemForm = new() { IsActive = true };
+    private BulkPriceUpdateCommand _bulkForm = new() { AdjustmentType = BulkPriceAdjustmentType.Percentage, Value = 10m };
+    private string _selectedItemSkuKey = string.Empty;
+
+    private IEnumerable<InventorySkuLookupDto> CurrentSkuOptions => _selectedList?.TargetType == PriceListTargetType.Variant ? _seed.VariantSkus : _seed.ProductSkus;
+    private string SelectedModeLabel => _selectedList is null ? "Sin lista" : BaseModeLabel(_selectedList.BaseMode);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSeedAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadSeedAsync()
+    {
+        _seed = (await Api.GetAsync<AppResult<PriceListSeedDataDto>>("api/commerce/price-lists/seed"))?.Data ?? new PriceListSeedDataDto(new List<LookupDto>(), new List<InventorySkuLookupDto>(), new List<InventorySkuLookupDto>());
+    }
+
+    private async Task LoadAsync()
+    {
+        _loaded = false;
+        _result = (await Api.GetAsync<AppResult<PagedResult<PriceListListItemDto>>>("api/commerce/price-lists?page=1&pageSize=20"))?.Data;
+        _loaded = true;
+    }
+
+    private void NewList()
+    {
+        _form = new PriceListUpsertCommand { BaseMode = PriceListBaseMode.SalePrice, TargetType = PriceListTargetType.Product, IsActive = true };
+        _selectedList = null;
+        _items.Clear();
+    }
+
+    private async Task EditListAsync(int id)
+    {
+        _selectedList = (await Api.GetAsync<AppResult<PriceListDetailDto>>($"api/commerce/price-lists/{id}"))?.Data;
+        if (_selectedList is null)
+            return;
+
+        _form = new PriceListUpsertCommand { Id = _selectedList.Id, Name = _selectedList.Name, BaseMode = _selectedList.BaseMode, TargetType = _selectedList.TargetType, IsActive = _selectedList.IsActive };
+        _items = (await Api.GetAsync<AppResult<List<PriceListItemDto>>>($"api/commerce/price-lists/{id}/items"))?.Data?.ToList() ?? new();
+        _selectedItemSkuKey = CurrentSkuOptions.FirstOrDefault() is { } sku ? ToSkuKey(sku) : string.Empty;
+    }
+
+    private async Task SaveListAsync()
+    {
+        if (_form.Id == 0)
+        {
+            var created = await Api.PostAsync<PriceListUpsertCommand, AppResult<int>>("api/commerce/price-lists", new PriceListUpsertCommand { Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
+            _message = created?.Success == true ? "Lista creada correctamente." : created?.Message ?? "No se pudo crear la lista.";
+            if (created?.Success == true && created?.Data is int newId)
+                await EditListAsync(newId);
+        }
+        else
+        {
+            var updated = await Api.PutAsync<PriceListUpsertCommand, AppResult>($"api/commerce/price-lists/{_form.Id}", new PriceListUpsertCommand { Id = _form.Id, Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
+            _message = updated?.Success == true ? "Lista actualizada correctamente." : updated?.Message ?? "No se pudo actualizar la lista.";
+            if (updated?.Success == true)
+                await EditListAsync(_form.Id);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task SaveItemAsync()
+    {
+        if (_selectedList is null) return;
+        var (productId, variantId) = ParseSkuKey(_selectedItemSkuKey);
+        _itemForm.PriceListId = _selectedList.Id;
+        _itemForm.ProductId = productId;
+        _itemForm.ProductVariantId = variantId;
+        var result = await Api.PostAsync<PriceListItemUpsertCommand, AppResult<int>>($"api/commerce/price-lists/{_selectedList.Id}/items", _itemForm);
+        _message = result?.Success == true ? "Precio guardado correctamente." : result?.Message ?? "No se pudo guardar el precio.";
+        if (result?.Success == true)
+            await EditListAsync(_selectedList.Id);
+    }
+
+    private async Task ApplyBulkUpdateAsync()
+    {
+        if (_selectedList is null) return;
+        _bulkForm.PriceListId = _selectedList.Id;
+        var result = await Api.PostAsync<BulkPriceUpdateCommand, AppResult<BulkPriceUpdateResultDto>>($"api/commerce/price-lists/{_selectedList.Id}/bulk-update", _bulkForm);
+        _message = result?.Success == true ? result.Data?.Summary ?? "Actualización aplicada." : result?.Message ?? "No se pudo aplicar la actualización.";
+        if (result?.Success == true)
+            await EditListAsync(_selectedList.Id);
+    }
+
+    private void FocusManualPrice() { }
+
+    private static string ToSkuKey(InventorySkuLookupDto sku) => $"{sku.ProductId}:{sku.ProductVariantId?.ToString() ?? "0"}";
+    private static (int ProductId, int? VariantId) ParseSkuKey(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return (0, null);
+        var parts = value.Split(':');
+        var productId = int.Parse(parts[0]);
+        var variantId = parts.Length > 1 && int.TryParse(parts[1], out var parsedVariant) && parsedVariant > 0 ? parsedVariant : null;
+        return (productId, variantId);
+    }
+
+    private static string BaseModeLabel(PriceListBaseMode mode) => mode switch
+    {
+        PriceListBaseMode.Cost => "Costo",
+        PriceListBaseMode.Manual => "Manual",
+        _ => "Precio de venta"
+    };
+
+    private static string TargetTypeLabel(PriceListTargetType target) => target == PriceListTargetType.Variant ? "Variantes" : "Productos";
+}
