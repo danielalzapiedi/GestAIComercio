@@ -138,8 +138,8 @@
                         <div class="ui-form-section-title">Cabecera</div>
                         <div class="row g-3">
                             <div class="col-md-6"><label class="form-label">Cliente</label><select class="form-select" @bind="_form.CustomerId"><option value="0">Seleccionar cliente</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
-                            <div class="col-md-3"><label class="form-label">Fecha</label><input class="form-control" type="date" @bind="_issuedAtText" /></div>
-                            <div class="col-md-3"><label class="form-label">Vencimiento</label><input class="form-control" type="date" @bind="_validUntilText" /></div>
+                            <div class="col-md-3"><label class="form-label">Fecha</label><input class="form-control" type="date" @bind-value="_issuedAtDate" /></div>
+                            <div class="col-md-3"><label class="form-label">Vencimiento</label><input class="form-control" type="date" @bind-value="_validUntilDate" /></div>
                             <div class="col-md-6"><label class="form-label">Estado</label><select class="form-select" @bind="_form.Status">@foreach (var status in Enum.GetValues<QuoteStatus>()){<option value="@status">@QuoteStatusLabel(status)</option>}</select></div>
                             <div class="col-md-6"><label class="form-label">Observaciones</label><input class="form-control" @bind="_form.Observations" placeholder="Notas comerciales, alcance, condiciones" /></div>
                         </div>
@@ -233,8 +233,8 @@
     private int _page = 1;
     private const int PageSize = 10;
     private string _editingNumber = string.Empty;
-    private string _issuedAtText = DateTime.UtcNow.ToString("yyyy-MM-dd");
-    private string _validUntilText = string.Empty;
+    private DateTime _issuedAtDate = DateTime.UtcNow.Date;
+    private DateTime? _validUntilDate;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
     private int ConvertibleCount => _result?.Items.Count(x => x.CanConvertToSale) ?? 0;
@@ -276,8 +276,8 @@
     private void NewItem()
     {
         _form = new QuoteUpsertCommand { Status = QuoteStatus.Draft, IssuedAtUtc = DateTime.UtcNow };
-        _issuedAtText = DateTime.UtcNow.ToString("yyyy-MM-dd");
-        _validUntilText = string.Empty;
+        _issuedAtDate = DateTime.UtcNow.Date;
+        _validUntilDate = null;
         _quickSearch = string.Empty;
         _editingNumber = "borrador";
         _showForm = true;
@@ -305,16 +305,16 @@
                 UnitPrice = x.UnitPrice
             }).ToList()
         };
-        _issuedAtText = detail.IssuedAtUtc.ToString("yyyy-MM-dd");
-        _validUntilText = detail.ValidUntilUtc?.ToString("yyyy-MM-dd") ?? string.Empty;
+        _issuedAtDate = detail.IssuedAtUtc;
+        _validUntilDate = detail.ValidUntilUtc;
         _editingNumber = detail.Number;
         _showForm = true;
     }
 
     private async Task Save()
     {
-        _form.IssuedAtUtc = ParseDate(_issuedAtText, DateTime.UtcNow);
-        _form.ValidUntilUtc = string.IsNullOrWhiteSpace(_validUntilText) ? null : ParseDate(_validUntilText, DateTime.UtcNow);
+        _form.IssuedAtUtc = _issuedAtDate;
+        _form.ValidUntilUtc = _validUntilDate;
         var body = new
         {
             _form.Id,
@@ -338,10 +338,10 @@
     private async Task Convert(int id)
     {
         var result = await Api.PostAsync<object, AppResult<int>>($"api/commerce/quotes/{id}/convert-to-sale", new { quoteId = id, saleStatus = SaleStatus.Draft, issuedAtUtc = DateTime.UtcNow, observations = (string?)null });
-        if (result?.Success == true && result.Data.HasValue)
+        if (result?.Success == true && result.Data is > 0)
         {
             await Load();
-            Navigation.NavigateTo($"/sales/{result.Data.Value}");
+            Navigation.NavigateTo($"/sales/{result.Data}");
         }
     }
 
@@ -372,8 +372,6 @@
     private async Task PrevPage() { if (_page > 1) { _page--; await Load(); } }
     private async Task NextPage() { if (_page < TotalPages) { _page++; await Load(); } }
 
-    private static DateTime ParseDate(string value, DateTime fallback)
-        => DateTime.TryParse(value, out var parsed) ? parsed : fallback;
 
     private static string QuoteStatusLabel(QuoteStatus status) => status switch
     {

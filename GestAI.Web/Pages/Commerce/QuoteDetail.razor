@@ -96,8 +96,8 @@ else
     private async Task Convert()
     {
         var result = await Api.PostAsync<object, AppResult<int>>($"api/commerce/quotes/{Id}/convert-to-sale", new { quoteId = Id, saleStatus = SaleStatus.Draft, issuedAtUtc = DateTime.UtcNow, observations = (string?)null });
-        if (result?.Success == true && result.Data.HasValue)
-            Navigation.NavigateTo($"/sales/{result.Data.Value}");
+        if (result?.Success == true && result.Data is > 0)
+            Navigation.NavigateTo($"/sales/{result.Data}");
     }
 
     private static string QuoteStatusLabel(QuoteStatus status) => status switch

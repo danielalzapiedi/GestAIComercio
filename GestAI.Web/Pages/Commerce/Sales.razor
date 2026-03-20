@@ -109,7 +109,7 @@
                     <div class="ui-form-section-title">Cabecera</div>
                     <div class="row g-3">
                         <div class="col-md-6"><label class="form-label">Cliente</label><select class="form-select" @bind="_form.CustomerId"><option value="0">Seleccionar cliente</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
-                        <div class="col-md-3"><label class="form-label">Fecha</label><input class="form-control" type="date" @bind="_issuedAtText" /></div>
+                        <div class="col-md-3"><label class="form-label">Fecha</label><input class="form-control" type="date" @bind-value="_issuedAtDate" /></div>
                         <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_form.Status">@foreach (var status in Enum.GetValues<SaleStatus>()){<option value="@status">@SaleStatusLabel(status)</option>}</select></div>
                         <div class="col-12"><label class="form-label">Observaciones</label><input class="form-control" @bind="_form.Observations" placeholder="Condiciones, canal, referencia interna" /></div>
                     </div>
@@ -170,7 +170,7 @@
     private int _page = 1;
     private const int PageSize = 10;
     private string _editingNumber = string.Empty;
-    private string _issuedAtText = DateTime.UtcNow.ToString("yyyy-MM-dd");
+    private DateTime _issuedAtDate = DateTime.UtcNow.Date;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
     private decimal VisibleTotal => _result?.Items.Sum(x => x.Total) ?? 0m;
@@ -208,7 +208,7 @@
     private void NewItem()
     {
         _form = new SaleUpsertCommand { Status = SaleStatus.Draft, IssuedAtUtc = DateTime.UtcNow };
-        _issuedAtText = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        _issuedAtDate = DateTime.UtcNow.Date;
         _quickSearch = string.Empty;
         _editingNumber = "borrador";
         _showForm = true;
@@ -227,14 +227,14 @@
             Observations = detail.Observations,
             Items = detail.Items.Select(x => new CommercialLineFormModel { ProductId = x.ProductId, ProductVariantId = x.ProductVariantId, Description = x.Description, InternalCode = x.InternalCode, Quantity = x.Quantity, UnitPrice = x.UnitPrice }).ToList()
         };
-        _issuedAtText = detail.IssuedAtUtc.ToString("yyyy-MM-dd");
+        _issuedAtDate = detail.IssuedAtUtc;
         _editingNumber = detail.Number;
         _showForm = true;
     }
 
     private async Task Save()
     {
-        _form.IssuedAtUtc = DateTime.TryParse(_issuedAtText, out var parsed) ? parsed : DateTime.UtcNow;
+        _form.IssuedAtUtc = _issuedAtDate;
         var body = new
         {
             _form.Id,

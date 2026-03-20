@@ -28,7 +28,7 @@ else
                 <div class="ui-card-header"><div><div class="ui-card-eyebrow">Carga operacional</div><h5 class="ui-card-title">Venta rápida</h5><div class="ui-card-subtitle">Elegí cliente, buscá SKUs y cerrá la venta con la menor cantidad de pasos.</div></div></div>
                 <div class="row g-3 mb-3">
                     <div class="col-md-6"><label class="form-label">Cliente</label><select class="form-select" @bind="_customerId"><option value="0">Seleccionar cliente</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
-                    <div class="col-md-3"><label class="form-label">Fecha</label><input class="form-control" type="date" @bind="_issuedAtText" /></div>
+                    <div class="col-md-3"><label class="form-label">Fecha</label><input class="form-control" type="date" @bind-value="_issuedAtDate" /></div>
                     <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status">@foreach (var status in Enum.GetValues<SaleStatus>()){<option value="@status">@SaleStatusLabel(status)</option>}</select></div>
                     <div class="col-12"><label class="form-label">Observaciones</label><input class="form-control" @bind="_observations" placeholder="Referencia operativa opcional" /></div>
                 </div>
@@ -105,7 +105,7 @@ else
     private bool _loaded;
     private string _search = string.Empty;
     private int _customerId;
-    private string _issuedAtText = DateTime.UtcNow.ToString("yyyy-MM-dd");
+    private DateTime _issuedAtDate = DateTime.UtcNow.Date;
     private SaleStatus _status = SaleStatus.Confirmed;
     private string? _observations;
 
@@ -142,18 +142,17 @@ else
 
     private async Task Save()
     {
-        var issuedAtUtc = DateTime.TryParse(_issuedAtText, out var parsed) ? parsed : DateTime.UtcNow;
         var result = await Api.PostAsync<object, AppResult<int>>("api/commerce/sales/quick", new
         {
             customerId = _customerId,
             status = _status,
-            issuedAtUtc,
+            issuedAtUtc = _issuedAtDate,
             observations = _observations,
             items = _lines.Select(x => new { x.ProductId, x.ProductVariantId, x.Quantity }).ToList()
         });
 
-        if (result?.Success == true && result.Data.HasValue)
-            Navigation.NavigateTo($"/sales/{result.Data.Value}");
+        if (result?.Success == true && result.Data is > 0)
+            Navigation.NavigateTo($"/sales/{result.Data}");
     }
 
     private void Clear()

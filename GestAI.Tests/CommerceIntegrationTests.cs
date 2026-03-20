@@ -95,10 +95,13 @@ public sealed class CommerceIntegrationTests
         }), CancellationToken.None);
 
         var convert = new ConvertQuoteToSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
-        var result = await convert.Handle(new ConvertQuoteToSaleCommand(quoteResult.Data!.Value, SaleStatus.Confirmed, DateTime.UtcNow, null), CancellationToken.None);
+        Assert.NotNull(quoteResult.Data);
+        var quoteId = quoteResult.Data!;
+
+        var result = await convert.Handle(new ConvertQuoteToSaleCommand(quoteId, SaleStatus.Confirmed, DateTime.UtcNow, null), CancellationToken.None);
 
         Assert.True(result.Success);
-        var quote = await db.Quotes.SingleAsync(x => x.Id == quoteResult.Data!.Value);
+        var quote = await db.Quotes.SingleAsync(x => x.Id == quoteId);
         var sale = await db.Sales.Include(x => x.Items).SingleAsync(x => x.Id == result.Data);
         Assert.Equal(QuoteStatus.Converted, quote.Status);
         Assert.Equal(quote.Id, sale.SourceQuoteId);
