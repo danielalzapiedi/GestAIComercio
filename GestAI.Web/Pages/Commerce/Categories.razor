@@ -92,6 +92,7 @@
     private bool _showForm;
     private int _page = 1;
     private const int PageSize = 10;
+    private const int ParentOptionsPageSize = 100;
     private CategoryUpsertCommand _form = new();
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
@@ -105,7 +106,7 @@
         _loaded = false;
         var active = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&isActive={_status}";
         _result = (await Api.GetAsync<AppResult<PagedResult<CategoryListItemDto>>>($"api/commerce/categories?search={Uri.EscapeDataString(_search ?? string.Empty)}{active}&page={_page}&pageSize={PageSize}"))?.Data;
-        _allCategories = (await Api.GetAsync<AppResult<PagedResult<CategoryListItemDto>>>("api/commerce/categories?pageSize=200"))?.Data?.Items.ToList() ?? new();
+        _allCategories = (await Api.GetAsync<AppResult<PagedResult<CategoryListItemDto>>>($"api/commerce/categories?pageSize={ParentOptionsPageSize}"))?.Data?.Items.ToList() ?? new();
         _tree = (await Api.GetAsync<AppResult<List<CategoryTreeItemDto>>>("api/commerce/categories/tree"))?.Data ?? new();
         _loaded = true;
     }
