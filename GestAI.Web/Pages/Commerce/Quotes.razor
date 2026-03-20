@@ -33,7 +33,7 @@
     </div>
 </div></div>
 
-<div class="ui-split-layout">
+<div class="ui-split-layout ui-split-layout-focus-editor">
     <div>
         @if (!_loaded)
         {
@@ -108,37 +108,20 @@
     </div>
 
     <div class="ui-section-grid">
-        <div class="card">
+        <div class="card ui-form-card" id="quotes-editor">
             <div class="card-body">
                 <div class="ui-card-header">
                     <div>
-                        <div class="ui-card-eyebrow">Lectura operativa</div>
-                        <h5 class="ui-card-title">Trazabilidad rápida</h5>
-                        <div class="ui-card-subtitle">En este release el presupuesto queda listo para convertirse a venta sin perder snapshot de líneas.</div>
-                    </div>
-                </div>
-                <div class="ui-list-stack">
-                    <div class="ui-check-card"><i class="bi bi-arrow-left-right text-primary"></i><div><strong>Conversión controlada</strong><div class="ui-table-meta">Un presupuesto genera una venta y queda trazado.</div></div></div>
-                    <div class="ui-check-card"><i class="bi bi-calendar-event text-primary"></i><div><strong>Vigencia</strong><div class="ui-table-meta">La fecha de vencimiento condiciona si todavía puede convertirse.</div></div></div>
-                    <div class="ui-check-card"><i class="bi bi-receipt text-primary"></i><div><strong>Snapshot</strong><div class="ui-table-meta">Descripción, código, cantidades y precios quedan congelados por documento.</div></div></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card ui-form-card">
-            <div class="card-body">
-                <div class="ui-card-header">
-                    <div>
-                        <div class="ui-card-eyebrow">Editor</div>
+                        <div class="ui-card-eyebrow">Carga guiada</div>
                         <h5 class="ui-card-title">@(_form.Id == 0 ? "Nuevo presupuesto" : $"Editar {_editingNumber}")</h5>
-                        <div class="ui-card-subtitle">Documento comercial con cabecera, detalle y totales consistentes.</div>
+                        <div class="ui-card-subtitle">Armá el presupuesto desde un panel único y visible, sin perder de vista el total ni la vigencia.</div>
                     </div>
                 </div>
 
                 @if (!_showForm)
                 {
                     <EmptyState Title="Seleccioná una acción"
-                                Description="Creá un presupuesto nuevo o editá uno ya emitido desde la tabla principal."
+                                Description="Usá Nuevo presupuesto para abrir el formulario listo para completar, o editá uno existente desde el listado."
                                 Icon="bi-pencil-square">
                         <button class="btn btn-primary" type="button" @onclick="NewItem">Nuevo presupuesto</button>
                     </EmptyState>
@@ -226,6 +209,23 @@
                 }
             </div>
         </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="ui-card-header">
+                    <div>
+                        <div class="ui-card-eyebrow">Ayuda rápida</div>
+                        <h5 class="ui-card-title">Cómo armar un presupuesto</h5>
+                        <div class="ui-card-subtitle">La guía queda debajo para priorizar primero la tarea principal.</div>
+                    </div>
+                </div>
+                <div class="ui-list-stack">
+                    <div class="ui-check-card"><i class="bi bi-1-circle text-primary"></i><div><strong>Elegí cliente y fechas</strong><div class="ui-table-meta">La vigencia ayuda a decidir si todavía puede convertirse a venta.</div></div></div>
+                    <div class="ui-check-card"><i class="bi bi-2-circle text-primary"></i><div><strong>Sumá los ítems</strong><div class="ui-table-meta">Podés usar búsqueda rápida o cargar una línea manual para empezar.</div></div></div>
+                    <div class="ui-check-card"><i class="bi bi-3-circle text-primary"></i><div><strong>Convertí cuando esté listo</strong><div class="ui-table-meta">El presupuesto mantiene su trazabilidad y luego puede pasar a venta.</div></div></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -286,7 +286,15 @@
 
     private void NewItem()
     {
-        _form = new QuoteUpsertCommand { Status = QuoteStatus.Draft, IssuedAtUtc = DateTime.UtcNow };
+        _form = new QuoteUpsertCommand
+        {
+            Status = QuoteStatus.Draft,
+            IssuedAtUtc = DateTime.UtcNow,
+            Items = new List<CommercialLineFormModel>
+            {
+                new() { Quantity = 1 }
+            }
+        };
         _issuedAtDate = DateTime.UtcNow.Date;
         _validUntilDate = null;
         _quickSearch = string.Empty;

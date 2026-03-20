@@ -668,6 +668,10 @@ body {
     gap: 1.2rem;
 }
 
+.ui-split-layout-focus-editor .ui-form-card {
+    scroll-margin-top: 110px;
+}
+
 .ui-data-card {
     overflow: hidden;
 }
@@ -1025,6 +1029,14 @@ body {
     .ui-split-layout,
     .ui-auth-shell {
         grid-template-columns: 1fr;
+    }
+
+    .ui-split-layout-focus-editor > :first-child {
+        order: 2;
+    }
+
+    .ui-split-layout-focus-editor > :last-child {
+        order: 1;
     }
 
     .ui-auth-hero {

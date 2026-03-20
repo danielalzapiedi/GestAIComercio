@@ -33,7 +33,7 @@
     </div>
 </div></div>
 
-<div class="ui-split-layout">
+<div class="ui-split-layout ui-split-layout-focus-editor">
     <div>
         @if (!_loaded)
         {
@@ -93,23 +93,12 @@
     </div>
 
     <div class="ui-section-grid">
-        <div class="card">
-            <div class="card-body">
-                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Operación</div><h5 class="ui-card-title">Base del circuito</h5><div class="ui-card-subtitle">La venta ya queda preparada para integrarse más adelante con stock y cobranzas.</div></div></div>
-                <div class="ui-list-stack">
-                    <div class="ui-check-card"><i class="bi bi-link-45deg text-primary"></i><div><strong>Trazabilidad</strong><div class="ui-table-meta">Si viene de presupuesto, se mantiene la referencia al origen.</div></div></div>
-                    <div class="ui-check-card"><i class="bi bi-lightning text-primary"></i><div><strong>Carga rápida</strong><div class="ui-table-meta">Acceso dedicado para ventas ágiles desde catálogo activo.</div></div></div>
-                    <div class="ui-check-card"><i class="bi bi-journal-check text-primary"></i><div><strong>Estados</strong><div class="ui-table-meta">Borrador, confirmada, completada o cancelada.</div></div></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card ui-form-card"><div class="card-body">
-            <div class="ui-card-header"><div><div class="ui-card-eyebrow">Editor</div><h5 class="ui-card-title">@(_form.Id == 0 ? "Nueva venta" : $"Editar {_editingNumber}")</h5><div class="ui-card-subtitle">Venta manual con detalle editable y total automático.</div></div></div>
+        <div class="card ui-form-card" id="sales-editor"><div class="card-body">
+            <div class="ui-card-header"><div><div class="ui-card-eyebrow">Carga guiada</div><h5 class="ui-card-title">@(_form.Id == 0 ? "Nueva venta" : $"Editar {_editingNumber}")</h5><div class="ui-card-subtitle">Completá cliente, fecha e ítems en un solo panel visible desde el primer click.</div></div></div>
             @if (!_showForm)
             {
                 <EmptyState Title="Seleccioná una acción"
-                            Description="Podés crear una venta manual o editar una existente desde la tabla."
+                            Description="Usá Nueva venta para abrir el formulario listo para completar, o editá una operación existente desde la tabla."
                             Icon="bi-pencil-square">
                     <button class="btn btn-primary" type="button" @onclick="NewItem">Nueva venta</button>
                 </EmptyState>
@@ -164,6 +153,17 @@
                 <div class="ui-action-bar"><div class="ui-inline-actions"><button class="btn btn-primary" type="button" @onclick="Save">Guardar</button><button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Cancelar</button></div><div class="ui-table-stack text-end"><span class="fw-semibold">Total @FormTotal.ToString("C")</span><span class="ui-table-meta">@(_form.Items.Count == 1 ? "1 ítem" : $"{_form.Items.Count} ítems")</span></div></div>
             }
         </div></div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Ayuda rápida</div><h5 class="ui-card-title">Cómo cargar una venta</h5><div class="ui-card-subtitle">La guía queda debajo para no tapar la acción principal.</div></div></div>
+                <div class="ui-list-stack">
+                    <div class="ui-check-card"><i class="bi bi-1-circle text-primary"></i><div><strong>Elegí el cliente</strong><div class="ui-table-meta">Podés dejar la venta en borrador y completarla más tarde.</div></div></div>
+                    <div class="ui-check-card"><i class="bi bi-2-circle text-primary"></i><div><strong>Completá los ítems</strong><div class="ui-table-meta">La venta nueva ya abre con una línea lista para editar.</div></div></div>
+                    <div class="ui-check-card"><i class="bi bi-3-circle text-primary"></i><div><strong>Guardá o seguí por carga rápida</strong><div class="ui-table-meta">Si necesitás velocidad, la carga rápida sigue disponible desde el botón superior.</div></div></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

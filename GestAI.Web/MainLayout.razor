@@ -95,32 +95,7 @@
                         <li class="nav-item"><NavLink class="nav-link" href="/platform/tenants" @onclick="CloseSidebar"><i class="bi bi-building-gear"></i><span>Tenants</span></NavLink></li>
                     }
 
-                    <li class="nav-heading">Organización</li>
-                    @if (CanAccess(SaasModule.Branches))
-                    {
-                        <li class="nav-item"><NavLink class="nav-link" href="/branches" @onclick="CloseSidebar"><i class="bi bi-shop"></i><span>Sucursales</span></NavLink></li>
-                    }
-                    @if (CanAccess(SaasModule.Warehouses))
-                    {
-                        <li class="nav-item"><NavLink class="nav-link" href="/warehouses" @onclick="CloseSidebar"><i class="bi bi-box-seam"></i><span>Depósitos</span></NavLink></li>
-                    }
-                    @if (CanAccess(SaasModule.Users))
-                    {
-                        <li class="nav-item"><NavLink class="nav-link" href="/users" @onclick="CloseSidebar"><i class="bi bi-people"></i><span>Usuarios</span></NavLink></li>
-                    }
-
-                    <li class="nav-heading">Catálogos</li>
-                    @if (CanAccess(SaasModule.Categories))
-                    {
-                        <li class="nav-item"><NavLink class="nav-link" href="/categories" @onclick="CloseSidebar"><i class="bi bi-diagram-3"></i><span>Categorías</span></NavLink></li>
-                    }
-                    @if (CanAccess(SaasModule.Products))
-                    {
-                        <li class="nav-item"><NavLink class="nav-link" href="/products" @onclick="CloseSidebar"><i class="bi bi-box"></i><span>Productos</span></NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="/inventory" @onclick="CloseSidebar"><i class="bi bi-boxes"></i><span>Inventario</span></NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="/price-lists" @onclick="CloseSidebar"><i class="bi bi-tags"></i><span>Listas de precios</span></NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="/products/import" @onclick="CloseSidebar"><i class="bi bi-upload"></i><span>Importación</span></NavLink></li>
-                    }
+                    <li class="nav-heading">Operación diaria</li>
                     @if (CanAccess(SaasModule.Customers))
                     {
                         <li class="nav-item"><NavLink class="nav-link" href="/customers" @onclick="CloseSidebar"><i class="bi bi-person-vcard"></i><span>Clientes</span></NavLink></li>
@@ -132,7 +107,32 @@
                     @if (CanAccess(SaasModule.Sales))
                     {
                         <li class="nav-item"><NavLink class="nav-link" href="/sales" @onclick="CloseSidebar"><i class="bi bi-receipt-cutoff"></i><span>Ventas</span></NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="/sales/quick" @onclick="CloseSidebar"><i class="bi bi-lightning-charge"></i><span>Carga rápida</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Products))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/inventory" @onclick="CloseSidebar"><i class="bi bi-boxes"></i><span>Inventario</span></NavLink></li>
+                    }
+
+                    <li class="nav-heading">Catálogo y stock</li>
+                    @if (CanAccess(SaasModule.Categories))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/categories" @onclick="CloseSidebar"><i class="bi bi-diagram-3"></i><span>Categorías</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Products))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/products" @onclick="CloseSidebar"><i class="bi bi-box"></i><span>Productos</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/price-lists" @onclick="CloseSidebar"><i class="bi bi-tags"></i><span>Listas de precios</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/products/import" @onclick="CloseSidebar"><i class="bi bi-upload"></i><span>Importación</span></NavLink></li>
+                    }
+
+                    <li class="nav-heading">Administración</li>
+                    @if (CanAccess(SaasModule.Branches))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/branches" @onclick="CloseSidebar"><i class="bi bi-shop"></i><span>Sucursales</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Warehouses))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/warehouses" @onclick="CloseSidebar"><i class="bi bi-box-seam"></i><span>Depósitos</span></NavLink></li>
                     }
                     @if (CanAccess(SaasModule.Suppliers))
                     {
@@ -140,14 +140,6 @@
                     }
 
                     <li class="nav-heading">Configuración</li>
-                    @if (CanAccess(SaasModule.Configuration))
-                    {
-                        <li class="nav-item"><NavLink class="nav-link" href="/account" @onclick="CloseSidebar"><i class="bi bi-building"></i><span>Cuenta</span></NavLink></li>
-                    }
-                    @if (CanAccess(SaasModule.Plans))
-                    {
-                        <li class="nav-item"><NavLink class="nav-link" href="/plans" @onclick="CloseSidebar"><i class="bi bi-card-checklist"></i><span>Plan</span></NavLink></li>
-                    }
                     @if (CanAccess(SaasModule.AuditLog))
                     {
                         <li class="nav-item"><NavLink class="nav-link" href="/audit-log" @onclick="CloseSidebar"><i class="bi bi-journal-text"></i><span>Auditoría</span></NavLink></li>
