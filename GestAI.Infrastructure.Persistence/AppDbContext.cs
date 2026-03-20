@@ -30,12 +30,18 @@ public class AppDbContext : IdentityDbContext<User>, IAppDbContext
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleItem> SaleItems => Set<SaleItem>();
+    public DbSet<CustomerAccountMovement> CustomerAccountMovements => Set<CustomerAccountMovement>();
+    public DbSet<CustomerAccountAllocation> CustomerAccountAllocations => Set<CustomerAccountAllocation>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<PurchaseDocument> PurchaseDocuments => Set<PurchaseDocument>();
     public DbSet<PurchaseDocumentItem> PurchaseDocumentItems => Set<PurchaseDocumentItem>();
     public DbSet<GoodsReceipt> GoodsReceipts => Set<GoodsReceipt>();
     public DbSet<GoodsReceiptItem> GoodsReceiptItems => Set<GoodsReceiptItem>();
     public DbSet<SupplierAccountMovement> SupplierAccountMovements => Set<SupplierAccountMovement>();
+    public DbSet<SupplierAccountAllocation> SupplierAccountAllocations => Set<SupplierAccountAllocation>();
+    public DbSet<CashRegister> CashRegisters => Set<CashRegister>();
+    public DbSet<CashSession> CashSessions => Set<CashSession>();
+    public DbSet<CashMovement> CashMovements => Set<CashMovement>();
     DbSet<User> IAppDbContext.Users => Set<User>();
 
     public async Task<IDbContextTransactionAdapter> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken ct = default)

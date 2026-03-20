@@ -151,7 +151,7 @@ internal static class PurchasingSupplyHelpers
     public static async Task UpsertSupplierMovementAsync(IAppDbContext db, PurchaseDocument document, ICurrentUser current, CancellationToken ct)
     {
         var movement = await db.SupplierAccountMovements.FirstOrDefaultAsync(x => x.AccountId == document.AccountId && x.PurchaseDocumentId == document.Id, ct);
-        var debit = document.Status == PurchaseDocumentStatus.Cancelled ? 0m : document.Total;
+        var debit = FinancialHelpers.PurchaseGeneratesDebt(document.Status) ? document.Total : 0m;
         if (movement is null)
         {
             movement = new SupplierAccountMovement
@@ -160,6 +160,7 @@ internal static class PurchasingSupplyHelpers
                 SupplierId = document.SupplierId,
                 PurchaseDocumentId = document.Id,
                 MovementType = SupplierAccountMovementType.PurchaseDocument,
+                PaymentMethod = PaymentMethod.AccountCredit,
                 ReferenceNumber = document.Number,
                 IssuedAtUtc = document.IssuedAtUtc,
                 DebitAmount = debit,
@@ -173,6 +174,7 @@ internal static class PurchasingSupplyHelpers
         }
 
         movement.SupplierId = document.SupplierId;
+        movement.PaymentMethod = PaymentMethod.AccountCredit;
         movement.ReferenceNumber = document.Number;
         movement.IssuedAtUtc = document.IssuedAtUtc;
         movement.DebitAmount = debit;

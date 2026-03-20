@@ -28,7 +28,6 @@ public enum BulkPriceAdjustmentType
     FixedAmount = 1
 }
 
-
 public enum QuoteStatus
 {
     Draft = 0,
@@ -46,7 +45,6 @@ public enum SaleStatus
     Completed = 2,
     Cancelled = 3
 }
-
 
 public enum PurchaseDocumentType
 {
@@ -68,4 +66,43 @@ public enum SupplierAccountMovementType
     PurchaseDocument = 0,
     Payment = 1,
     Adjustment = 2
+}
+
+public enum CustomerAccountMovementType
+{
+    SaleDocument = 0,
+    Collection = 1,
+    Adjustment = 2
+}
+
+public enum CashSessionStatus
+{
+    Open = 0,
+    Closed = 1
+}
+
+public enum CashMovementDirection
+{
+    In = 0,
+    Out = 1
+}
+
+public enum CashMovementOriginType
+{
+    Opening = 0,
+    Manual = 1,
+    CustomerCollection = 2,
+    SupplierPayment = 3,
+    ClosingAdjustment = 4
+}
+
+public enum PaymentMethod
+{
+    Cash = 0,
+    Transfer = 1,
+    DebitCard = 2,
+    CreditCard = 3,
+    Check = 4,
+    AccountCredit = 5,
+    Other = 6
 }

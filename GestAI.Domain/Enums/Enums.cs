@@ -29,7 +29,8 @@ public enum SaasModule
     Suppliers = 11,
     Quotes = 12,
     Sales = 13,
-    Purchases = 14
+    Purchases = 14,
+    Cash = 15
 }
 
 public enum UnitOfMeasure

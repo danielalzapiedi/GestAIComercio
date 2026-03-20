@@ -4,16 +4,16 @@ using GestAI.Domain.Enums;
 
 namespace GestAI.Domain.Entities.Commerce;
 
-public sealed class SupplierAccountMovement : AuditableEntity
+public sealed class CustomerAccountMovement : AuditableEntity
 {
     public int AccountId { get; set; }
     public Account Account { get; set; } = null!;
-    public int SupplierId { get; set; }
-    public Supplier Supplier { get; set; } = null!;
-    public SupplierAccountMovementType MovementType { get; set; } = SupplierAccountMovementType.PurchaseDocument;
+    public int CustomerId { get; set; }
+    public Customer Customer { get; set; } = null!;
+    public CustomerAccountMovementType MovementType { get; set; } = CustomerAccountMovementType.SaleDocument;
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
-    public int? PurchaseDocumentId { get; set; }
-    public PurchaseDocument? PurchaseDocument { get; set; }
+    public int? SaleId { get; set; }
+    public Sale? Sale { get; set; }
     public int? CashMovementId { get; set; }
     public CashMovement? CashMovement { get; set; }
     public string ReferenceNumber { get; set; } = string.Empty;
@@ -22,6 +22,6 @@ public sealed class SupplierAccountMovement : AuditableEntity
     public decimal CreditAmount { get; set; }
     public string Description { get; set; } = string.Empty;
     public string? Note { get; set; }
-    public ICollection<SupplierAccountAllocation> AllocationsAsSource { get; set; } = new List<SupplierAccountAllocation>();
-    public ICollection<SupplierAccountAllocation> AllocationsAsTarget { get; set; } = new List<SupplierAccountAllocation>();
+    public ICollection<CustomerAccountAllocation> AllocationsAsSource { get; set; } = new List<CustomerAccountAllocation>();
+    public ICollection<CustomerAccountAllocation> AllocationsAsTarget { get; set; } = new List<CustomerAccountAllocation>();
 }

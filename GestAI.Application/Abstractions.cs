@@ -27,12 +27,18 @@ public interface IAppDbContext
     DbSet<QuoteItem> QuoteItems { get; }
     DbSet<Sale> Sales { get; }
     DbSet<SaleItem> SaleItems { get; }
+    DbSet<CustomerAccountMovement> CustomerAccountMovements { get; }
+    DbSet<CustomerAccountAllocation> CustomerAccountAllocations { get; }
     DbSet<Supplier> Suppliers { get; }
     DbSet<PurchaseDocument> PurchaseDocuments { get; }
     DbSet<PurchaseDocumentItem> PurchaseDocumentItems { get; }
     DbSet<GoodsReceipt> GoodsReceipts { get; }
     DbSet<GoodsReceiptItem> GoodsReceiptItems { get; }
     DbSet<SupplierAccountMovement> SupplierAccountMovements { get; }
+    DbSet<SupplierAccountAllocation> SupplierAccountAllocations { get; }
+    DbSet<CashRegister> CashRegisters { get; }
+    DbSet<CashSession> CashSessions { get; }
+    DbSet<CashMovement> CashMovements { get; }
     DbSet<User> Users { get; }
     DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken ct = default);

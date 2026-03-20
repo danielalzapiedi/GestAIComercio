@@ -111,7 +111,12 @@
                     @if (CanAccess(SaasModule.Purchases))
                     {
                         <li class="nav-item"><NavLink class="nav-link" href="/purchases" @onclick="CloseSidebar"><i class="bi bi-bag-check"></i><span>Compras</span></NavLink></li>
-                        <li class="nav-item"><NavLink class="nav-link" href="/supplier-accounts" @onclick="CloseSidebar"><i class="bi bi-journal-richtext"></i><span>Ctas. proveedores</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Cash))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/cash" @onclick="CloseSidebar"><i class="bi bi-cash-stack"></i><span>Caja</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/customer-current-accounts" @onclick="CloseSidebar"><i class="bi bi-person-lines-fill"></i><span>Ctas. clientes</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/supplier-current-accounts" @onclick="CloseSidebar"><i class="bi bi-journal-richtext"></i><span>Ctas. proveedores</span></NavLink></li>
                     }
                     @if (CanAccess(SaasModule.Products))
                     {

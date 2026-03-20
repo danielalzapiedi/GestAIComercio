@@ -757,6 +757,168 @@ public sealed class CommerceIntegrationTests
         Assert.Equal(2, result.Data.MovementsCount);
     }
 
+    [Fact]
+    public async Task CreateSale_PersistsCustomerAccountMovement_ForConfirmedSale()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-customer-account@test");
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente CC", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.Customers.Add(customer);
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+
+        var product = new Product
+        {
+            AccountId = fixture.Account.Id,
+            Name = "Producto saldo",
+            InternalCode = "SAL-1",
+            Description = "Producto",
+            CategoryId = category.Id,
+            Brand = "Marca",
+            UnitOfMeasure = UnitOfMeasure.Unit,
+            Cost = 10,
+            SalePrice = 25,
+            MinimumStock = 0,
+            IsActive = true
+        };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var handler = new CreateSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var result = await handler.Handle(new CreateSaleCommand(customer.Id, SaleStatus.Confirmed, DateTime.UtcNow, "Cuenta corriente", new[]
+        {
+            new CommercialLineInput(product.Id, null, null, 2, 25, 1)
+        }), CancellationToken.None);
+
+        Assert.True(result.Success);
+        var movement = await db.CustomerAccountMovements.SingleAsync(x => x.SaleId == result.Data);
+        Assert.Equal(50m, movement.DebitAmount);
+        Assert.Equal(0m, movement.CreditAmount);
+        Assert.Equal(CustomerAccountMovementType.SaleDocument, movement.MovementType);
+    }
+
+    [Fact]
+    public async Task DraftPurchase_DoesNotImpactSupplierCurrentAccount()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-draft-purchase@test");
+
+        var supplier = new Supplier { AccountId = fixture.Account.Id, Name = "Proveedor Draft", TaxId = "30-555", Phone = "111", IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.Suppliers.Add(supplier);
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+
+        var product = new Product
+        {
+            AccountId = fixture.Account.Id,
+            Name = "Producto compra",
+            InternalCode = "BUY-DRAFT",
+            Description = "Producto",
+            CategoryId = category.Id,
+            Brand = "Marca",
+            UnitOfMeasure = UnitOfMeasure.Unit,
+            Cost = 5,
+            SalePrice = 10,
+            MinimumStock = 0,
+            IsActive = true
+        };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var handler = new CreatePurchaseDocumentCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var result = await handler.Handle(new CreatePurchaseDocumentCommand(supplier.Id, PurchaseDocumentType.PurchaseDocument, PurchaseDocumentStatus.Draft, DateTime.UtcNow, null, null, new[]
+        {
+            new PurchaseLineInput(product.Id, null, null, 2, 10, 1)
+        }), CancellationToken.None);
+
+        Assert.True(result.Success);
+        var movement = await db.SupplierAccountMovements.SingleAsync(x => x.PurchaseDocumentId == result.Data);
+        Assert.Equal(0m, movement.DebitAmount);
+    }
+
+    [Fact]
+    public async Task GetCustomerCurrentAccount_ReturnsPendingAfterPartialAllocation()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-partial-collection@test");
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Parcial", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        db.Customers.Add(customer);
+        await db.SaveChangesAsync();
+
+        var saleMovement = new CustomerAccountMovement
+        {
+            AccountId = fixture.Account.Id,
+            CustomerId = customer.Id,
+            MovementType = CustomerAccountMovementType.SaleDocument,
+            PaymentMethod = PaymentMethod.AccountCredit,
+            ReferenceNumber = "V-000001",
+            IssuedAtUtc = DateTime.UtcNow.AddDays(-2),
+            DebitAmount = 100m,
+            CreditAmount = 0m,
+            Description = "Venta V-000001",
+            SaleId = 1,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedByUserId = fixture.CurrentUser.UserId
+        };
+        var collectionMovement = new CustomerAccountMovement
+        {
+            AccountId = fixture.Account.Id,
+            CustomerId = customer.Id,
+            MovementType = CustomerAccountMovementType.Collection,
+            PaymentMethod = PaymentMethod.Cash,
+            ReferenceNumber = "COB-000001",
+            IssuedAtUtc = DateTime.UtcNow.AddDays(-1),
+            DebitAmount = 0m,
+            CreditAmount = 40m,
+            Description = "Cobro parcial",
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedByUserId = fixture.CurrentUser.UserId
+        };
+        db.CustomerAccountMovements.AddRange(saleMovement, collectionMovement);
+        await db.SaveChangesAsync();
+
+        db.CustomerAccountAllocations.Add(new CustomerAccountAllocation
+        {
+            AccountId = fixture.Account.Id,
+            SourceMovementId = collectionMovement.Id,
+            TargetMovementId = saleMovement.Id,
+            AppliedAtUtc = DateTime.UtcNow,
+            Amount = 40m,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedByUserId = fixture.CurrentUser.UserId
+        });
+        await db.SaveChangesAsync();
+
+        var handler = new GetCustomerCurrentAccountByCustomerIdQueryHandler(db, fixture.Access);
+        var result = await handler.Handle(new GetCustomerCurrentAccountByCustomerIdQuery(customer.Id), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(60m, result.Data!.PendingDocumentsAmount);
+        Assert.Single(result.Data.PendingDocuments);
+        Assert.Equal(60m, result.Data.PendingDocuments.Single().PendingAmount);
+    }
+
+    [Fact]
+    public async Task OpenCashSession_CreatesOpeningSessionAndMovement()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-cash@test");
+
+        var handler = new OpenCashSessionCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var result = await handler.Handle(new OpenCashSessionCommand(150m, "Inicio turno mañana"), CancellationToken.None);
+
+        Assert.True(result.Success);
+        var session = await db.CashSessions.Include(x => x.Movements).SingleAsync(x => x.Id == result.Data);
+        Assert.Equal(CashSessionStatus.Open, session.Status);
+        Assert.Equal(150m, session.OpeningBalance);
+        Assert.Single(session.Movements);
+        Assert.Equal(CashMovementOriginType.Opening, session.Movements.Single().OriginType);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

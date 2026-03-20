@@ -1,0 +1,194 @@
+@page "/cash"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Caja</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Caja operativa</div>
+        <div class="page-hero-subtitle">Control de apertura/cierre, saldo actual y trazabilidad de ingresos y egresos vinculados a la operatoria diaria.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-safe2"></i> @(_dashboard?.Register.Name ?? "Caja principal")</span>
+        <span class="page-hero-chip"><i class="bi bi-wallet2"></i> @(_dashboard?.CurrentBalance ?? 0m).ToString("C")</span>
+    </div>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")">@_message</div>
+}
+
+@if (_dashboard is null)
+{
+    <div class="card ui-data-card"><div class="card-body">Cargando caja...</div></div>
+}
+else
+{
+    <div class="row g-3 ui-summary-grid mb-3">
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Saldo actual</div><div class="ui-stat-value">@_dashboard.CurrentBalance.ToString("C")</div><div class="ui-stat-foot">Saldo consolidado de la caja principal.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Ingresos</div><div class="ui-stat-value">@_dashboard.TotalIn.ToString("C")</div><div class="ui-stat-foot">Movimientos de entrada registrados.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Egresos</div><div class="ui-stat-value">@_dashboard.TotalOut.ToString("C")</div><div class="ui-stat-foot">Salidas de caja registradas.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Estado</div><div class="ui-stat-value">@(_dashboard.OpenSession is null ? "Cerrada" : "Abierta")</div><div class="ui-stat-foot">@(_dashboard.OpenSession is null ? "Abrí una caja para operar." : $"Desde {_dashboard.OpenSession.OpenedAtUtc.ToLocalTime():dd/MM HH:mm}")</div></div></div></div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-xl-4">
+            <div class="card ui-data-card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Apertura / cierre</div><h5 class="ui-card-title">Sesión de caja</h5><div class="ui-card-subtitle">Una sola sesión abierta por caja, preparada para crecer a múltiples cajas.</div></div></div>
+                @if (_dashboard.OpenSession is null)
+                {
+                    <div class="mb-3 small text-muted">No hay una sesión abierta. Registrá el saldo inicial para comenzar a operar.</div>
+                    <div class="mb-3"><label class="form-label">Saldo inicial</label><input type="number" step="0.01" class="form-control" @bind="_open.OpeningBalance" /></div>
+                    <div class="mb-3"><label class="form-label">Observación</label><textarea class="form-control" rows="3" @bind="_open.Note"></textarea></div>
+                    <button class="btn btn-primary" @onclick="OpenCash">Abrir caja</button>
+                }
+                else
+                {
+                    <div class="border rounded-3 p-3 mb-3 bg-light-subtle">
+                        <div class="small text-muted">Saldo esperado actual</div>
+                        <div class="h4 mb-0">@_dashboard.OpenSession.CurrentBalance.ToString("C")</div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><div class="border rounded-3 p-2"><div class="small text-muted">Apertura</div><div class="fw-semibold">@_dashboard.OpenSession.OpeningBalance.ToString("C")</div></div></div>
+                        <div class="col-6"><div class="border rounded-3 p-2"><div class="small text-muted">Abierta por</div><div class="fw-semibold">@_dashboard.OpenSession.OpenedByUserId</div></div></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Saldo contado al cierre</label><input type="number" step="0.01" class="form-control" @bind="_close.ClosingBalanceDeclared" /></div>
+                    <div class="mb-3"><label class="form-label">Observación de cierre</label><textarea class="form-control" rows="3" @bind="_close.Note"></textarea></div>
+                    <button class="btn btn-outline-danger" @onclick="CloseCash">Cerrar caja</button>
+                }
+            </div></div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card ui-data-card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Ingreso / egreso</div><h5 class="ui-card-title">Movimiento manual</h5><div class="ui-card-subtitle">Para gastos menores, retiros, adelantos o ingresos sin cuenta corriente.</div></div></div>
+                <div class="mb-3"><label class="form-label">Tipo</label><select class="form-select" @bind="_manual.Direction"><option value="@CashMovementDirection.In">Ingreso</option><option value="@CashMovementDirection.Out">Egreso</option></select></div>
+                <div class="mb-3"><label class="form-label">Importe</label><input type="number" step="0.01" class="form-control" @bind="_manual.Amount" /></div>
+                <div class="mb-3"><label class="form-label">Concepto</label><input class="form-control" @bind="_manual.Concept" /></div>
+                <div class="mb-3"><label class="form-label">Fecha</label><input type="datetime-local" class="form-control" @bind="_manualDate" /></div>
+                <div class="mb-3"><label class="form-label">Observaciones</label><textarea class="form-control" rows="3" @bind="_manual.Observations"></textarea></div>
+                <button class="btn btn-primary" @onclick="SaveManualMovement" disabled="@(_dashboard.OpenSession is null)">Registrar movimiento</button>
+                @if (_dashboard.OpenSession is null)
+                {
+                    <div class="small text-muted mt-2">Necesitás una caja abierta para registrar movimientos.</div>
+                }
+            </div></div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card ui-data-card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Acciones principales</div><h5 class="ui-card-title">Flujos vinculados</h5><div class="ui-card-subtitle">Los cobros y pagos impactan caja y cuentas corrientes desde sus pantallas específicas.</div></div></div>
+                <div class="d-grid gap-2">
+                    <a class="btn btn-outline-primary" href="/customer-current-accounts"><i class="bi bi-person-lines-fill me-2"></i>Ir a cuentas corrientes de clientes</a>
+                    <a class="btn btn-outline-primary" href="/supplier-current-accounts"><i class="bi bi-journal-richtext me-2"></i>Ir a cuentas corrientes de proveedores</a>
+                </div>
+                <hr />
+                <div class="small text-muted">Decisión de diseño: la release opera sobre una caja principal preparada para crecer a múltiples cajas mediante <strong>CashRegister</strong> + <strong>CashSession</strong>.</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="card ui-data-card"><div class="card-body">
+        <div class="ui-card-header"><div><div class="ui-card-eyebrow">Trazabilidad</div><h5 class="ui-card-title">Últimos movimientos</h5><div class="ui-card-subtitle">Cada cobro, pago o ajuste queda visible con referencia, tercero y concepto.</div></div></div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead><tr><th>Fecha</th><th>Referencia</th><th>Origen</th><th>Tercero</th><th>Concepto</th><th>Ingreso</th><th>Egreso</th></tr></thead>
+                <tbody>
+                @foreach (var item in _dashboard.RecentMovements)
+                {
+                    <tr>
+                        <td>@item.OccurredAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@item.ReferenceNumber</td>
+                        <td>@OriginLabel(item.OriginType)</td>
+                        <td>@(item.CustomerName ?? item.SupplierName ?? "-")</td>
+                        <td><div class="ui-table-stack"><span class="fw-semibold">@item.Concept</span><span class="ui-table-meta">@item.Observations</span></div></td>
+                        <td>@(item.Direction == CashMovementDirection.In ? item.Amount.ToString("C") : "-")</td>
+                        <td>@(item.Direction == CashMovementDirection.Out ? item.Amount.ToString("C") : "-")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div></div>
+}
+
+@code {
+    private CashDashboardDto? _dashboard;
+    private OpenCashSessionCommand _open = new();
+    private CloseCashSessionCommand _close = new();
+    private CreateCashManualMovementCommand _manual = new();
+    private DateTime _manualDate = DateTime.UtcNow;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _dashboard = (await Api.GetAsync<AppResult<CashDashboardDto>>("api/commerce/cash"))?.Data;
+        _manualDate = DateTime.UtcNow;
+        if (_dashboard?.OpenSession is not null)
+            _close.ClosingBalanceDeclared = _dashboard.OpenSession.CurrentBalance;
+    }
+
+    private async Task OpenCash()
+    {
+        await Execute(async () => await Api.PostAsync<OpenCashSessionCommand, AppResult<int>>("api/commerce/cash/open", _open));
+        _open = new();
+    }
+
+    private async Task CloseCash()
+    {
+        await Execute(async () => await Api.PostAsync<CloseCashSessionCommand, AppResult>("api/commerce/cash/close", _close));
+        _close = new();
+    }
+
+    private async Task SaveManualMovement()
+    {
+        _manual.OccurredAtUtc = DateTime.SpecifyKind(_manualDate, DateTimeKind.Local).ToUniversalTime();
+        await Execute(async () => await Api.PostAsync<CreateCashManualMovementCommand, AppResult<int>>("api/commerce/cash/movements", _manual));
+        _manual = new();
+        _manualDate = DateTime.UtcNow;
+    }
+
+    private async Task Execute(Func<Task<object?>> action)
+    {
+        _message = null;
+        _isError = false;
+        try
+        {
+            var response = await action();
+            if (response is AppResult result && !result.Success)
+            {
+                _isError = true;
+                _message = result.Message;
+                return;
+            }
+
+            if (response is AppResult<int> resultInt && !resultInt.Success)
+            {
+                _isError = true;
+                _message = resultInt.Message;
+                return;
+            }
+
+            _message = "Operación registrada correctamente.";
+            await Load();
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = ex.Message;
+        }
+    }
+
+    private static string OriginLabel(CashMovementOriginType origin) => origin switch
+    {
+        CashMovementOriginType.Opening => "Apertura",
+        CashMovementOriginType.Manual => "Manual",
+        CashMovementOriginType.CustomerCollection => "Cobro",
+        CashMovementOriginType.SupplierPayment => "Pago",
+        CashMovementOriginType.ClosingAdjustment => "Ajuste de cierre",
+        _ => origin.ToString()
+    };
+}

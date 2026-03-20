@@ -1,0 +1,232 @@
+@page "/customer-current-accounts"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Cuentas corrientes de clientes</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Cuentas corrientes de clientes</div>
+        <div class="page-hero-subtitle">Seguimiento de deuda, cobros e imputaciones por venta para responder cuánto debe cada cliente y qué sigue pendiente.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-person-lines-fill"></i> @_items.Count clientes</span>
+        <span class="page-hero-chip"><i class="bi bi-receipt"></i> @_items.Sum(x => x.OpenDocumentsCount) comprobantes abiertos</span>
+    </div>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")">@_message</div>
+}
+
+<div class="row g-3 ui-summary-grid mb-3">
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Saldo cliente</div><div class="ui-stat-value">@_items.Sum(x => x.Balance).ToString("C")</div><div class="ui-stat-foot">Exposición total de ventas pendientes.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Débito acumulado</div><div class="ui-stat-value">@_items.Sum(x => x.Debit).ToString("C")</div><div class="ui-stat-foot">Ventas que impactaron cuenta corriente.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Cobros registrados</div><div class="ui-stat-value">@_items.Sum(x => x.Credit).ToString("C")</div><div class="ui-stat-foot">Cobros aplicados o a cuenta.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Clientes con saldo</div><div class="ui-stat-value">@_items.Count(x => x.Balance > 0m)</div><div class="ui-stat-foot">Con deuda pendiente de cancelar.</div></div></div></div>
+</div>
+
+<div class="card ui-filter-card mb-3"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-6"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Cliente o documento" /></div>
+        <div class="col-md-3"><label class="form-label">Vista</label><select class="form-select" @bind="_onlyWithBalance"><option value="false">Todos</option><option value="true">Solo con saldo</option></select></div>
+        <div class="col-md-3"><button class="btn btn-outline-primary" type="button" @onclick="Load">Actualizar</button></div>
+    </div>
+</div></div>
+
+<div class="row g-3">
+    <div class="col-xl-6">
+        <div class="card ui-data-card"><div class="card-body">
+            <div class="ui-card-header"><div><div class="ui-card-eyebrow">Cartera</div><h5 class="ui-card-title">Saldos por cliente</h5><div class="ui-card-subtitle">El saldo surge de ventas confirmadas/completadas menos cobros registrados.</div></div></div>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead><tr><th>Cliente</th><th>Débito</th><th>Crédito</th><th>Saldo</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var item in _items)
+                    {
+                        <tr>
+                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.PartyName</span><span class="ui-table-meta">@item.TaxIdentifier · @item.OpenDocumentsCount documentos abiertos</span></div></td>
+                            <td>@item.Debit.ToString("C")</td>
+                            <td>@item.Credit.ToString("C")</td>
+                            <td class="fw-semibold">@item.Balance.ToString("C")</td>
+                            <td><button class="btn btn-sm btn-outline-secondary" type="button" @onclick="() => Select(item.PartyId)">Ver detalle</button></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div></div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card ui-data-card"><div class="card-body">
+            <div class="ui-card-header"><div><div class="ui-card-eyebrow">Cobro / imputación</div><h5 class="ui-card-title">Registrar cobro</h5><div class="ui-card-subtitle">El cobro puede quedar a cuenta o imputarse parcial/totalmente a una o varias ventas.</div></div></div>
+            @if (_selected is null)
+            {
+                <EmptyState Title="Elegí un cliente" Description="Seleccioná un cliente para ver su composición de saldo y cargar un cobro." Icon="bi-person-lines-fill" />
+            }
+            else
+            {
+                <div class="border rounded-3 p-3 mb-3 bg-light-subtle"><div class="small text-muted">Saldo actual de @_selected.PartyName</div><div class="h4 mb-0">@_selected.Balance.ToString("C")</div></div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6"><label class="form-label">Fecha</label><input type="datetime-local" class="form-control" @bind="_collectionDate" /></div>
+                    <div class="col-md-6"><label class="form-label">Importe</label><input type="number" step="0.01" class="form-control" @bind="_collection.Amount" /></div>
+                    <div class="col-md-6"><label class="form-label">Medio</label><select class="form-select" @bind="_collection.PaymentMethod">@foreach (var method in Enum.GetValues<PaymentMethod>()){<option value="@method">@PaymentMethodLabel(method)</option>}</select></div>
+                    <div class="col-md-6"><label class="form-label">Impacta caja</label><select class="form-select" @bind="_collection.ImpactCash"><option value="true">Sí</option><option value="false">No</option></select></div>
+                    <div class="col-12"><label class="form-label">Concepto</label><input class="form-control" @bind="_collection.Concept" /></div>
+                    <div class="col-12"><label class="form-label">Observaciones</label><textarea class="form-control" rows="3" @bind="_collection.Observations"></textarea></div>
+                </div>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Comprobante</th><th>Total</th><th>Aplicado</th><th>Pendiente</th><th>Imputar</th></tr></thead>
+                        <tbody>
+                        @foreach (var doc in _selected.PendingDocuments)
+                        {
+                            <tr>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@doc.ReferenceNumber</span><span class="ui-table-meta">@doc.Description</span></div></td>
+                                <td>@doc.Total.ToString("C")</td>
+                                <td>@doc.AppliedAmount.ToString("C")</td>
+                                <td class="fw-semibold">@doc.PendingAmount.ToString("C")</td>
+                                <td><input type="number" step="0.01" class="form-control form-control-sm" @bind="GetAllocation(doc.DocumentId).Amount" /></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="small text-muted">Total imputado: @CurrentAllocationTotal.ToString("C")</div>
+                    <button class="btn btn-primary" @onclick="SaveCollection">Registrar cobro</button>
+                </div>
+            }
+        </div></div>
+    </div>
+</div>
+
+@if (_selected is not null)
+{
+    <div class="row g-3 mt-1">
+        <div class="col-xl-7">
+            <div class="card ui-data-card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Trazabilidad</div><h5 class="ui-card-title">Movimientos</h5><div class="ui-card-subtitle">Origen del saldo, cobros registrados y remanente pendiente por movimiento.</div></div></div>
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead><tr><th>Fecha</th><th>Referencia</th><th>Débito</th><th>Crédito</th><th>Aplicado</th><th>Pendiente</th></tr></thead>
+                        <tbody>
+                        @foreach (var movement in _selected.Movements)
+                        {
+                            <tr>
+                                <td>@movement.IssuedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@movement.ReferenceNumber</span><span class="ui-table-meta">@movement.Description</span></div></td>
+                                <td>@movement.DebitAmount.ToString("C")</td>
+                                <td>@movement.CreditAmount.ToString("C")</td>
+                                <td>@movement.AppliedAmount.ToString("C")</td>
+                                <td class="fw-semibold">@movement.PendingAmount.ToString("C")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div></div>
+        </div>
+        <div class="col-xl-5">
+            <div class="card ui-data-card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Imputaciones</div><h5 class="ui-card-title">Aplicaciones recientes</h5><div class="ui-card-subtitle">Cada cobro deja trazabilidad de qué comprobantes canceló.</div></div></div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Fecha</th><th>Desde</th><th>Hacia</th><th>Importe</th></tr></thead>
+                        <tbody>
+                        @foreach (var allocation in _selected.RecentAllocations)
+                        {
+                            <tr>
+                                <td>@allocation.AppliedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                                <td>@allocation.SourceReference</td>
+                                <td>@allocation.TargetReference</td>
+                                <td>@allocation.Amount.ToString("C")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div></div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CurrentAccountListItemDto> _items = new();
+    private CurrentAccountSummaryDto? _selected;
+    private string _search = string.Empty;
+    private bool _onlyWithBalance = true;
+    private CreateCustomerCollectionCommand _collection = new() { ImpactCash = true, Concept = "Cobro de cliente" };
+    private DateTime _collectionDate = DateTime.UtcNow;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _items = (await Api.GetAsync<AppResult<List<CurrentAccountListItemDto>>>($"api/commerce/customer-current-accounts?search={Uri.EscapeDataString(_search ?? string.Empty)}&onlyWithBalance={_onlyWithBalance.ToString().ToLowerInvariant()}"))?.Data ?? new();
+        if (_selected is not null)
+            await Select(_selected.PartyId);
+    }
+
+    private async Task Select(int customerId)
+    {
+        _selected = (await Api.GetAsync<AppResult<CurrentAccountSummaryDto>>($"api/commerce/customer-current-accounts/{customerId}"))?.Data;
+        if (_selected is not null)
+        {
+            _collection = new CreateCustomerCollectionCommand
+            {
+                CustomerId = _selected.PartyId,
+                ImpactCash = true,
+                Concept = $"Cobro de {_selected.PartyName}",
+                PaymentMethod = PaymentMethod.Cash
+            };
+            _collectionDate = DateTime.UtcNow;
+            foreach (var doc in _selected.PendingDocuments)
+                _collection.Allocations.Add(new AllocationInputDto { DocumentId = doc.DocumentId });
+        }
+    }
+
+    private AllocationInputDto GetAllocation(int documentId)
+    {
+        var item = _collection.Allocations.FirstOrDefault(x => x.DocumentId == documentId);
+        if (item is null)
+        {
+            item = new AllocationInputDto { DocumentId = documentId };
+            _collection.Allocations.Add(item);
+        }
+        return item;
+    }
+
+    private decimal CurrentAllocationTotal => _collection.Allocations.Sum(x => x.Amount);
+
+    private async Task SaveCollection()
+    {
+        if (_selected is null) return;
+        _collection.CustomerId = _selected.PartyId;
+        _collection.CollectedAtUtc = DateTime.SpecifyKind(_collectionDate, DateTimeKind.Local).ToUniversalTime();
+        _collection.Allocations = _collection.Allocations.Where(x => x.Amount > 0m).ToList();
+        var result = await Api.PostAsync<CreateCustomerCollectionCommand, AppResult<int>>("api/commerce/customer-collections", _collection);
+        _isError = !(result?.Success ?? false);
+        _message = result?.Message ?? (_isError ? "No se pudo registrar el cobro." : "Cobro registrado correctamente.");
+        if (!_isError)
+        {
+            await Load();
+            await Select(_selected.PartyId);
+        }
+    }
+
+    private static string PaymentMethodLabel(PaymentMethod method) => method switch
+    {
+        PaymentMethod.Cash => "Efectivo",
+        PaymentMethod.Transfer => "Transferencia",
+        PaymentMethod.DebitCard => "Tarjeta débito",
+        PaymentMethod.CreditCard => "Tarjeta crédito",
+        PaymentMethod.Check => "Cheque",
+        PaymentMethod.AccountCredit => "Cuenta corriente",
+        PaymentMethod.Other => "Otro",
+        _ => method.ToString()
+    };
+}

@@ -586,6 +586,7 @@ public sealed class CreateSaleCommandHandler(IAppDbContext db, IUserAccessServic
         db.Sales.Add(sale);
         await db.SaveChangesAsync(ct);
         sale.Number = CommercialCircuitHelpers.BuildSaleNumber(sale.Id);
+        await FinancialHelpers.UpsertCustomerMovementAsync(db, sale, current, ct);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync(scope.AccountId, null, "Sale", sale.Id, "created", $"Venta {sale.Number} creada", ct);
         return AppResult<int>.Ok(sale.Id);
@@ -616,6 +617,7 @@ public sealed class UpdateSaleCommandHandler(IAppDbContext db, IUserAccessServic
         sale.Observations = string.IsNullOrWhiteSpace(request.Observations) ? null : request.Observations.Trim();
         CommerceFeatureHelpers.TouchUpdate(sale, current);
         CommercialCircuitHelpers.ApplySaleLines(sale, prepared, current);
+        await FinancialHelpers.UpsertCustomerMovementAsync(db, sale, current, ct);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync(scope.AccountId, null, "Sale", sale.Id, "updated", $"Venta {sale.Number} actualizada", ct);
         return AppResult.Ok();

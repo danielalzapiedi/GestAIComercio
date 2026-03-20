@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace GestAI.Infrastructure.Persistence.Configurations.Commerce;
 
-public sealed class SupplierAccountMovementConfiguration : IEntityTypeConfiguration<SupplierAccountMovement>
+public sealed class CustomerAccountMovementConfiguration : IEntityTypeConfiguration<CustomerAccountMovement>
 {
-    public void Configure(EntityTypeBuilder<SupplierAccountMovement> b)
+    public void Configure(EntityTypeBuilder<CustomerAccountMovement> b)
     {
-        b.ToTable("SupplierAccountMovements");
+        b.ToTable("CustomerAccountMovements");
         b.HasKey(x => x.Id);
         b.Property(x => x.MovementType).HasConversion<int>();
         b.Property(x => x.PaymentMethod).HasConversion<int>();
@@ -20,12 +20,12 @@ public sealed class SupplierAccountMovementConfiguration : IEntityTypeConfigurat
         b.Property(x => x.CreatedByUserId).HasMaxLength(450).IsRequired();
         b.Property(x => x.ModifiedByUserId).HasMaxLength(450);
         b.Property(x => x.RowVersion).IsRowVersion();
-        b.HasIndex(x => new { x.AccountId, x.SupplierId, x.IssuedAtUtc });
-        b.HasIndex(x => new { x.AccountId, x.PurchaseDocumentId }).IsUnique().HasFilter("[PurchaseDocumentId] IS NOT NULL");
+        b.HasIndex(x => new { x.AccountId, x.CustomerId, x.IssuedAtUtc });
+        b.HasIndex(x => new { x.AccountId, x.SaleId }).IsUnique().HasFilter("[SaleId] IS NOT NULL");
         b.HasIndex(x => new { x.AccountId, x.CashMovementId }).IsUnique().HasFilter("[CashMovementId] IS NOT NULL");
         b.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
-        b.HasOne(x => x.Supplier).WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
-        b.HasOne(x => x.PurchaseDocument).WithMany(x => x.SupplierAccountMovements).HasForeignKey(x => x.PurchaseDocumentId).OnDelete(DeleteBehavior.Restrict);
-        b.HasOne(x => x.CashMovement).WithOne(x => x.SupplierAccountMovement).HasForeignKey<SupplierAccountMovement>(x => x.CashMovementId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.Sale).WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.CashMovement).WithOne(x => x.CustomerAccountMovement).HasForeignKey<CustomerAccountMovement>(x => x.CashMovementId).OnDelete(DeleteBehavior.Restrict);
     }
 }
