@@ -4,85 +4,181 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<section class="page-hero">
-    <div>
-        <div class="page-hero-title">Dashboard</div>
-        <div class="page-hero-subtitle">Una vista rápida del estado de tu cuenta, plan y capacidad operativa.</div>
-    </div>
-    <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-lightning-charge"></i> Resumen ejecutivo</span>
-        <span class="page-hero-chip"><i class="bi bi-shield-check"></i> Datos de cuenta</span>
-    </div>
-</section>
-
 @if (_summary is null)
 {
     <div class="card"><div class="card-body">Cargando dashboard...</div></div>
 }
 else
 {
+    <section class="page-hero">
+        <div>
+            <div class="page-hero-title">Dashboard</div>
+            <div class="page-hero-subtitle">Una vista clara del estado de tu cuenta, la ocupación del plan y la capacidad operativa disponible para seguir creciendo.</div>
+        </div>
+        <div class="page-hero-meta">
+            <span class="page-hero-chip"><i class="bi bi-stars"></i> @_summary.PlanName</span>
+            <StatusBadge Text="@_summary.PlanStatus" />
+            <span class="page-hero-chip"><i class="bi bi-calendar-event"></i> Desde @_summary.StartedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</span>
+        </div>
+    </section>
+
     <div class="row g-3 ui-summary-grid">
         <div class="col-md-6 col-xl-3">
             <div class="card ui-stat-card"><div class="card-body">
                 <div class="ui-stat-label">Cuenta</div>
                 <div class="ui-stat-value">@_summary.Name</div>
-                <div class="ui-stat-foot">Tenant activo para tu operación diaria.</div>
+                <div class="ui-stat-foot">@(_summary.IsActive ? "Cuenta operativa y habilitada para el tenant." : "Cuenta con revisión pendiente o sin activación.")</div>
             </div></div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card ui-stat-card"><div class="card-body">
                 <div class="ui-stat-label">Plan actual</div>
                 <div class="ui-stat-value">@_summary.PlanName</div>
-                <div class="ui-stat-foot">Código @(_summary.PlanCode).</div>
+                <div class="ui-stat-foot">Código @(_summary.PlanCode) · Estado @(_summary.PlanStatus).</div>
             </div></div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card ui-stat-card"><div class="card-body">
                 <div class="ui-stat-label">Usuarios</div>
                 <div class="ui-stat-value">@_summary.CurrentUsers / @_summary.MaxUsers</div>
-                <div class="ui-stat-foot">Capacidad de usuarios utilizada.</div>
+                <div class="ui-stat-foot">@UsersUsage% de capacidad utilizada.</div>
             </div></div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card ui-stat-card"><div class="card-body">
-                <div class="ui-stat-label">Suscripción</div>
-                <div class="ui-stat-value">@_summary.PlanStatus</div>
-                <div class="ui-stat-foot">Inicio: @_summary.StartedAtUtc.ToLocalTime().ToString("dd/MM/yyyy").</div>
+                <div class="ui-stat-label">Entidades operativas</div>
+                <div class="ui-stat-value">@_summary.CurrentUnits / @_summary.MaxUnits</div>
+                <div class="ui-stat-foot">@UnitsUsage% de ocupación sobre el plan.</div>
             </div></div>
         </div>
     </div>
 
     <div class="row g-3 mt-1">
-        <div class="col-lg-7">
-            <div class="card h-100">
+        <div class="col-xl-7">
+            <div class="card h-100 ui-highlight-card">
                 <div class="card-body">
                     <div class="ui-card-header">
                         <div>
-                            <h5 class="ui-card-title">Capacidad del plan</h5>
-                            <div class="ui-card-subtitle">Límites operativos incluidos en tu suscripción actual.</div>
+                            <div class="ui-card-eyebrow">Capacidad y ocupación</div>
+                            <h5 class="ui-card-title">Salud operativa del tenant</h5>
+                            <div class="ui-card-subtitle">Lectura rápida de la ocupación real frente a los límites del plan.</div>
                         </div>
+                        <StatusBadge Text="@HealthLabel" CssClass="@HealthCssClass" />
                     </div>
-                    <div class="ui-list-stack">
-                        <div class="ui-check-card"><i class="bi bi-building text-primary"></i><div><strong>Espacios / tenants</strong><div class="ui-table-meta">Máximo: @_summary.MaxProperties</div></div></div>
-                        <div class="ui-check-card"><i class="bi bi-box-seam text-primary"></i><div><strong>Entidades operativas</strong><div class="ui-table-meta">Máximo: @_summary.MaxUnits</div></div></div>
-                        <div class="ui-check-card"><i class="bi bi-people text-primary"></i><div><strong>Usuarios del tenant</strong><div class="ui-table-meta">Máximo: @_summary.MaxUsers</div></div></div>
+
+                    <div class="ui-meter-list">
+                        <div class="ui-meter-row">
+                            <div class="ui-meter-head">
+                                <div>
+                                    <div class="ui-meter-title">Espacios / tenants</div>
+                                    <div class="ui-table-meta">@_summary.CurrentProperties de @_summary.MaxProperties en uso</div>
+                                </div>
+                                <div class="ui-meter-value">@PropertiesUsage%</div>
+                            </div>
+                            <div class="ui-meter-bar"><div class="ui-meter-fill" style="width: @( $"{PropertiesUsage}%" );"></div></div>
+                        </div>
+
+                        <div class="ui-meter-row">
+                            <div class="ui-meter-head">
+                                <div>
+                                    <div class="ui-meter-title">Entidades operativas</div>
+                                    <div class="ui-table-meta">@_summary.CurrentUnits de @_summary.MaxUnits configuradas</div>
+                                </div>
+                                <div class="ui-meter-value">@UnitsUsage%</div>
+                            </div>
+                            <div class="ui-meter-bar"><div class="ui-meter-fill" style="width: @( $"{UnitsUsage}%" );"></div></div>
+                        </div>
+
+                        <div class="ui-meter-row">
+                            <div class="ui-meter-head">
+                                <div>
+                                    <div class="ui-meter-title">Usuarios del tenant</div>
+                                    <div class="ui-table-meta">@_summary.CurrentUsers de @_summary.MaxUsers con acceso</div>
+                                </div>
+                                <div class="ui-meter-value">@UsersUsage%</div>
+                            </div>
+                            <div class="ui-meter-bar"><div class="ui-meter-fill" style="width: @( $"{UsersUsage}%" );"></div></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-5">
+        <div class="col-xl-5">
             <div class="card h-100">
                 <div class="card-body">
                     <div class="ui-card-header">
                         <div>
-                            <h5 class="ui-card-title">Funciones incluidas</h5>
-                            <div class="ui-card-subtitle">Qué capacidades tenés disponibles con el plan actual.</div>
+                            <div class="ui-card-eyebrow">Resumen ejecutivo</div>
+                            <h5 class="ui-card-title">Estado de la cuenta</h5>
+                            <div class="ui-card-subtitle">Datos de referencia para seguimiento operativo y comercial.</div>
                         </div>
                     </div>
+
                     <div class="ui-list-stack">
-                        <div class="ui-check-card"><i class="bi bi-bar-chart-line text-primary"></i><div><strong>Reportes</strong><div class="ui-table-meta">@(_summary.IncludesReports ? "Incluidos" : "No incluidos")</div></div></div>
-                        <div class="ui-check-card"><i class="bi bi-gear text-primary"></i><div><strong>Operaciones</strong><div class="ui-table-meta">@(_summary.IncludesOperations ? "Incluidas" : "No incluidas")</div></div></div>
+                        <div class="ui-check-card">
+                            <i class="bi bi-building text-primary"></i>
+                            <div>
+                                <strong>Cuenta creada</strong>
+                                <div class="ui-table-meta">@_summary.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                            </div>
+                        </div>
+                        <div class="ui-check-card">
+                            <i class="bi bi-shield-check text-primary"></i>
+                            <div>
+                                <strong>Estado operativo</strong>
+                                <div class="ui-table-meta">@(_summary.IsActive ? "La cuenta está activa y lista para operar." : "La cuenta requiere activación o revisión.")</div>
+                            </div>
+                        </div>
+                        <div class="ui-check-card">
+                            <i class="bi bi-rocket-takeoff text-primary"></i>
+                            <div>
+                                <strong>Siguiente foco</strong>
+                                <div class="ui-table-meta">@NextStepLabel</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Funciones del plan</div>
+                            <h5 class="ui-card-title">Cobertura incluida</h5>
+                            <div class="ui-card-subtitle">Qué capacidades ya están habilitadas en tu suscripción actual.</div>
+                        </div>
+                    </div>
+
+                    <div class="ui-list-stack">
+                        <div class="ui-check-card"><i class="bi bi-bar-chart-line text-primary"></i><div><strong>Reportes</strong><div class="ui-table-meta">@(_summary.IncludesReports ? "Incluidos en el plan actual." : "No incluidos en esta suscripción.")</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-gear text-primary"></i><div><strong>Operaciones</strong><div class="ui-table-meta">@(_summary.IncludesOperations ? "Módulos operativos habilitados." : "La capa operativa aún no está incluida.")</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-people text-primary"></i><div><strong>Capacidad de usuarios</strong><div class="ui-table-meta">Disponible para @_summary.MaxUsers usuarios del tenant.</div></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Lectura rápida</div>
+                            <h5 class="ui-card-title">Próximos pasos recomendados</h5>
+                            <div class="ui-card-subtitle">Sugerencias simples para seguir consolidando la cuenta.</div>
+                        </div>
+                    </div>
+
+                    <div class="ui-list-stack">
+                        <div class="ui-check-card"><i class="bi bi-person-plus text-primary"></i><div><strong>Revisar usuarios</strong><div class="ui-table-meta">@(_summary.CurrentUsers < _summary.MaxUsers ? "Todavía hay margen para sumar usuarios internos." : "La capacidad de usuarios está al límite del plan.")</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-diagram-3 text-primary"></i><div><strong>Expandir operación</strong><div class="ui-table-meta">@(_summary.CurrentUnits < _summary.MaxUnits ? "Hay espacio para nuevas unidades operativas." : "La cuenta ya utiliza toda la capacidad operativa disponible.")</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-stars text-primary"></i><div><strong>Evaluar plan</strong><div class="ui-table-meta">@UpgradeHint</div></div></div>
                     </div>
                 </div>
             </div>
@@ -92,8 +188,50 @@ else
 
 @code {
     private AccountSummaryDto? _summary;
+
+    private int PropertiesUsage => Percentage(_summary?.CurrentProperties ?? 0, _summary?.MaxProperties ?? 0);
+    private int UnitsUsage => Percentage(_summary?.CurrentUnits ?? 0, _summary?.MaxUnits ?? 0);
+    private int UsersUsage => Percentage(_summary?.CurrentUsers ?? 0, _summary?.MaxUsers ?? 0);
+
+    private string HealthLabel => MaxUsage switch
+    {
+        >= 90 => "Capacidad alta",
+        >= 70 => "Seguimiento requerido",
+        _ => "Operación estable"
+    };
+
+    private string HealthCssClass => MaxUsage switch
+    {
+        >= 90 => "ui-badge ui-badge-warning",
+        >= 70 => "ui-badge ui-badge-info",
+        _ => "ui-badge ui-badge-success"
+    };
+
+    private int MaxUsage => Math.Max(PropertiesUsage, Math.Max(UnitsUsage, UsersUsage));
+
+    private string NextStepLabel => MaxUsage switch
+    {
+        >= 90 => "Conviene revisar ampliación de plan para evitar cuellos de botella operativos.",
+        >= 70 => "Vale la pena monitorear crecimiento de usuarios y unidades antes del próximo release.",
+        _ => "La cuenta tiene margen sano para seguir incorporando operación y usuarios."
+    };
+
+    private string UpgradeHint => _summary is null
+        ? string.Empty
+        : MaxUsage >= 90
+            ? "El uso actual sugiere evaluar una ampliación del plan para sostener crecimiento."
+            : "Todavía hay holgura operativa; el foco puede seguir en adopción y orden interno.";
+
     protected override async Task OnInitializedAsync()
     {
         _summary = (await Api.GetAsync<AppResult<AccountSummaryDto>>("api/saas/account/summary"))?.Data;
+    }
+
+    private static int Percentage(int current, int total)
+    {
+        if (total <= 0)
+            return 0;
+
+        return Math.Clamp((int)Math.Round(current * 100d / total), 0, 100);
     }
 }

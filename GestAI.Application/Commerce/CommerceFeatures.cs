@@ -61,7 +61,7 @@ public sealed record CreateSupplierCommand(string Name, string TaxId, string Pho
 public sealed record UpdateSupplierCommand(int Id, string Name, string TaxId, string Phone, bool IsActive) : IRequest<AppResult>;
 public sealed record ToggleSupplierStatusCommand(int Id, bool IsActive) : IRequest<AppResult>;
 
-file static class CommerceFeatureHelpers
+internal static class CommerceFeatureHelpers
 {
     public const int MaxPageSize = 100;
 

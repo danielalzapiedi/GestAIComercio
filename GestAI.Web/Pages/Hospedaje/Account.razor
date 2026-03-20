@@ -2,15 +2,7 @@
 @inject ApiClient Api
 @using GestAI.Web.Dtos
 
-<section class="page-hero">
-    <div>
-        <div class="page-hero-title">Mi cuenta</div>
-        <div class="page-hero-subtitle">Actualizá la información general del tenant y revisá el estado actual de tu cuenta.</div>
-    </div>
-    <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-building"></i> Perfil del tenant</span>
-    </div>
-</section>
+<PageTitle>Mi cuenta</PageTitle>
 
 @if (_summary is null)
 {
@@ -18,36 +10,100 @@
 }
 else
 {
-    <div class="ui-split-layout">
-        <div class="card">
-            <div class="card-body">
-                <div class="ui-card-header">
-                    <div>
-                        <h5 class="ui-card-title">Información general</h5>
-                        <div class="ui-card-subtitle">Resumen operativo y estado actual del tenant.</div>
+    <section class="page-hero">
+        <div>
+            <div class="page-hero-title">Mi cuenta</div>
+            <div class="page-hero-subtitle">Actualizá la información general del tenant y revisá el estado operativo de la cuenta con el mismo nivel de claridad que el resto del producto.</div>
+        </div>
+        <div class="page-hero-meta">
+            <span class="page-hero-chip"><i class="bi bi-building"></i> @_summary.Name</span>
+            <StatusBadge IsActive="@_summary.IsActive" />
+            <span class="page-hero-chip"><i class="bi bi-stars"></i> @_summary.PlanName</span>
+        </div>
+    </section>
+
+    <div class="row g-3 ui-summary-grid">
+        <div class="col-md-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Cuenta</div><div class="ui-stat-value">@_summary.Name</div><div class="ui-stat-foot">Tenant activo para la operación diaria.</div></div></div></div>
+        <div class="col-md-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Plan</div><div class="ui-stat-value">@_summary.PlanName</div><div class="ui-stat-foot">Código @(_summary.PlanCode).</div></div></div></div>
+        <div class="col-md-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Usuarios</div><div class="ui-stat-value">@_summary.CurrentUsers / @_summary.MaxUsers</div><div class="ui-stat-foot">@UsersUsage% de ocupación actual.</div></div></div></div>
+        <div class="col-md-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Entidades</div><div class="ui-stat-value">@_summary.CurrentUnits / @_summary.MaxUnits</div><div class="ui-stat-foot">@UnitsUsage% de capacidad operativa.</div></div></div></div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-xl-7">
+            <div class="card h-100 ui-highlight-card">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Visión general</div>
+                            <h5 class="ui-card-title">Estado actual de la cuenta</h5>
+                            <div class="ui-card-subtitle">Resumen de plan, fechas clave y utilización de capacidad.</div>
+                        </div>
                     </div>
-                </div>
-                <div class="ui-list-stack">
-                    <div class="ui-check-card"><i class="bi bi-activity text-primary"></i><div><strong>Estado</strong><div class="ui-table-meta">@(_summary.IsActive ? "Activo" : "Inactivo")</div></div></div>
-                    <div class="ui-check-card"><i class="bi bi-calendar-event text-primary"></i><div><strong>Creación</strong><div class="ui-table-meta">@_summary.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div></div></div>
-                    <div class="ui-check-card"><i class="bi bi-stars text-primary"></i><div><strong>Plan</strong><div class="ui-table-meta">@_summary.PlanName</div></div></div>
-                    <div class="ui-check-card"><i class="bi bi-people text-primary"></i><div><strong>Límites</strong><div class="ui-table-meta">Usuarios @_summary.MaxUsers · Entidades @_summary.MaxUnits</div></div></div>
+
+                    <div class="ui-list-stack mb-3">
+                        <div class="ui-check-card"><i class="bi bi-calendar-event text-primary"></i><div><strong>Cuenta creada</strong><div class="ui-table-meta">@_summary.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-stars text-primary"></i><div><strong>Suscripción activa desde</strong><div class="ui-table-meta">@_summary.StartedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-shield-check text-primary"></i><div><strong>Estado operativo</strong><div class="ui-table-meta">@(_summary.IsActive ? "La cuenta está activa y habilitada para operar." : "La cuenta está inactiva y requiere revisión.")</div></div></div>
+                    </div>
+
+                    <div class="ui-meter-list">
+                        <div class="ui-meter-row">
+                            <div class="ui-meter-head">
+                                <div>
+                                    <div class="ui-meter-title">Usuarios del tenant</div>
+                                    <div class="ui-table-meta">@_summary.CurrentUsers de @_summary.MaxUsers en uso</div>
+                                </div>
+                                <div class="ui-meter-value">@UsersUsage%</div>
+                            </div>
+                            <div class="ui-meter-bar"><div class="ui-meter-fill" style="width: @( $"{UsersUsage}%" );"></div></div>
+                        </div>
+                        <div class="ui-meter-row">
+                            <div class="ui-meter-head">
+                                <div>
+                                    <div class="ui-meter-title">Entidades operativas</div>
+                                    <div class="ui-table-meta">@_summary.CurrentUnits de @_summary.MaxUnits configuradas</div>
+                                </div>
+                                <div class="ui-meter-value">@UnitsUsage%</div>
+                            </div>
+                            <div class="ui-meter-bar"><div class="ui-meter-fill" style="width: @( $"{UnitsUsage}%" );"></div></div>
+                        </div>
+                        <div class="ui-meter-row">
+                            <div class="ui-meter-head">
+                                <div>
+                                    <div class="ui-meter-title">Espacios / tenants</div>
+                                    <div class="ui-table-meta">@_summary.CurrentProperties de @_summary.MaxProperties habilitados</div>
+                                </div>
+                                <div class="ui-meter-value">@PropertiesUsage%</div>
+                            </div>
+                            <div class="ui-meter-bar"><div class="ui-meter-fill" style="width: @( $"{PropertiesUsage}%" );"></div></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="card ui-form-card">
-            <div class="card-body">
-                <div class="ui-card-header">
-                    <div>
-                        <h5 class="ui-card-title">Editar nombre de cuenta</h5>
-                        <div class="ui-card-subtitle">Usá un nombre claro para identificar el tenant.</div>
+        <div class="col-xl-5">
+            <div class="card ui-form-card">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Configuración</div>
+                            <h5 class="ui-card-title">Editar nombre de cuenta</h5>
+                            <div class="ui-card-subtitle">Usá un nombre claro y estable para identificar el tenant en toda la plataforma.</div>
+                        </div>
                     </div>
-                </div>
-                <label class="form-label">Nombre de cuenta</label>
-                <input class="form-control" @bind="_name" />
-                <div class="ui-action-bar">
-                    <button class="btn btn-primary" @onclick="Save">Guardar cambios</button>
+
+                    <div class="ui-form-section">
+                        <div class="ui-form-section-title">Identidad del tenant</div>
+                        <label class="form-label">Nombre de cuenta</label>
+                        <input class="form-control" @bind="_name" />
+                    </div>
+
+                    <div class="ui-action-bar">
+                        <button class="btn btn-primary" @onclick="Save">Guardar cambios</button>
+                        <span class="ui-table-meta">Los cambios impactan en la identificación general del tenant.</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -57,6 +113,10 @@ else
 @code {
     private AccountSummaryDto? _summary;
     private string _name = string.Empty;
+
+    private int UsersUsage => Percentage(_summary?.CurrentUsers ?? 0, _summary?.MaxUsers ?? 0);
+    private int UnitsUsage => Percentage(_summary?.CurrentUnits ?? 0, _summary?.MaxUnits ?? 0);
+    private int PropertiesUsage => Percentage(_summary?.CurrentProperties ?? 0, _summary?.MaxProperties ?? 0);
 
     protected override async Task OnInitializedAsync()
     {
@@ -68,5 +128,14 @@ else
     {
         await Api.PutAsync("api/saas/account", new UpdateAccountCommand(_name, null));
         _summary = (await Api.GetAsync<AppResult<AccountSummaryDto>>("api/saas/account/summary"))?.Data;
+        _name = _summary?.Name ?? _name;
+    }
+
+    private static int Percentage(int current, int total)
+    {
+        if (total <= 0)
+            return 0;
+
+        return Math.Clamp((int)Math.Round(current * 100d / total), 0, 100);
     }
 }

@@ -44,10 +44,12 @@ else
             <div class="card-body">
                 <div class="ui-card-header">
                     <div>
+                        <div class="ui-card-eyebrow">Operación logística</div>
                         <h5 class="ui-card-title">Listado de depósitos</h5>
                         <div class="ui-card-subtitle">Sucursal, indicador principal y estado de cada depósito.</div>
                     </div>
                 </div>
+                <div class="table-responsive">
                 <table class="table table-striped">
                     <thead><tr><th>Nombre</th><th>Sucursal</th><th>Principal</th><th>Estado</th><th></th></tr></thead>
                     <tbody>
@@ -68,6 +70,7 @@ else
                     }
                     </tbody>
                 </table>
+                </div>
                 <div class="ui-action-bar">
                     <span class="text-muted">Página @_page de @TotalPages</span>
                     <div class="btn-group">
@@ -82,6 +85,7 @@ else
             <div class="card-body">
                 <div class="ui-card-header">
                     <div>
+                        <div class="ui-card-eyebrow">Editor</div>
                         <h5 class="ui-card-title">@(_showForm ? (_form.Id == 0 ? "Nuevo depósito" : "Editar depósito") : "Detalle y edición")</h5>
                         <div class="ui-card-subtitle">Definí sucursal, nombre y configuración principal.</div>
                     </div>
@@ -100,8 +104,8 @@ else
                     <div class="row g-3">
                         <div class="col-12"><label class="form-label">Sucursal</label><select class="form-select" @bind="_form.BranchId">@foreach (var branch in _branches){<option value="@branch.Id">@branch.Name</option>}</select></div>
                         <div class="col-12"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
-                        <div class="col-md-6"><label class="form-label">Principal</label><input type="checkbox" class="form-check-input ms-2" @bind="_form.IsMain" /></div>
-                        <div class="col-md-6"><label class="form-label">Activo</label><input type="checkbox" class="form-check-input ms-2" @bind="_form.IsActive" /></div>
+                        <div class="col-md-6"><label class="form-label d-block">Rol del depósito</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsMain" /><span>@(_form.IsMain ? "Depósito principal" : "Depósito secundario")</span></div></div>
+                        <div class="col-md-6"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Depósito activo" : "Depósito inactivo")</span></div></div>
                     </div>
                     <div class="ui-action-bar">
                         <div class="ui-inline-actions">

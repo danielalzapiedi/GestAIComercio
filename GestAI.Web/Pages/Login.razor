@@ -6,6 +6,8 @@
 @layout BareLayout
 @attribute [AllowAnonymous]
 
+<PageTitle>Ingresar</PageTitle>
+
 <main class="ui-auth-shell">
     <section class="ui-auth-hero">
         <div class="ui-auth-kicker">
@@ -65,7 +67,7 @@
                 <div class="col-12">
                     <label class="form-label">Email</label>
                     <div class="input-group has-validation">
-                        <span class="input-group-text">@@</span>
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                         <InputText class="form-control" @bind-Value="_vm.Email" placeholder="nombre@empresa.com" />
                     </div>
                     <ValidationMessage For="@(() => _vm.Email)" />
@@ -86,7 +88,8 @@
             </EditForm>
 
             <div class="ui-auth-footer">
-                AiCommerce · experiencia renovada para operación diaria.
+                <div>AiCommerce · experiencia renovada para operación diaria.</div>
+                <div class="mt-2">Acceso seguro para equipos, tenants y administración central.</div>
             </div>
         </div>
     </section>
@@ -110,7 +113,6 @@
         {
             var req = new LoginRequest(_vm.Email, _vm.Password);
 
-            // ✅ mejor: usar PostAsync<TReq, TRes>
             var res = await Api.PostAsync<LoginRequest, LoginResponse>("api/auth/login", req);
 
             if (res is null || string.IsNullOrWhiteSpace(res.Token))
@@ -125,10 +127,8 @@
             var target = NormalizeReturnUrl(returnUrl);
             Nav.NavigateTo(target, forceLoad: false);
         }
-        catch (Exception ex)
+        catch
         {
-            // si querés ver el detalle en dev:
-            // _error = ex.Message;
             _error = "Credenciales inválidas";
         }
         finally
@@ -139,7 +139,6 @@
 
     private static string NormalizeReturnUrl(string? url)
     {
-        // seguridad básica: solo rutas internas
         if (string.IsNullOrWhiteSpace(url)) return "/dashboard";
         if (!url.StartsWith("/")) return "/dashboard";
         if (url.StartsWith("//")) return "/dashboard";

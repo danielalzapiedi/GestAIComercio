@@ -13,7 +13,17 @@
     </Found>
     <NotFound>
         <LayoutView Layout="@typeof(BareLayout)">
-            <p>Página no encontrada.</p>
+            <PageTitle>No encontrada</PageTitle>
+            <div class="ui-public-shell">
+                <div class="card ui-public-card">
+                    <div class="card-body text-center">
+                        <div class="ui-card-eyebrow">Error 404</div>
+                        <h1 class="ui-card-title mb-2">La página no existe</h1>
+                        <p class="ui-card-subtitle mb-4">La ruta que intentaste abrir no está disponible o ya no forma parte del sistema.</p>
+                        <a class="btn btn-primary" href="/dashboard"><i class="bi bi-arrow-left-circle me-2"></i>Volver al dashboard</a>
+                    </div>
+                </div>
+            </div>
         </LayoutView>
     </NotFound>
 </Router>

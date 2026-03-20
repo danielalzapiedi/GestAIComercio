@@ -44,10 +44,12 @@
                 <div class="card-body">
                     <div class="ui-card-header">
                         <div>
+                            <div class="ui-card-eyebrow">Catálogo y jerarquía</div>
                             <h5 class="ui-card-title">Listado de categorías</h5>
                             <div class="ui-card-subtitle">Vista tabular para edición rápida de la jerarquía.</div>
                         </div>
                     </div>
+                    <div class="table-responsive">
                     <table class="table table-striped">
                         <thead><tr><th>Nombre</th><th>Padre</th><th>Estado</th><th></th></tr></thead>
                         <tbody>
@@ -67,6 +69,7 @@
                         }
                         </tbody>
                     </table>
+                    </div>
                     <div class="ui-action-bar">
                         <span class="text-muted">Página @_page de @TotalPages</span>
                         <div class="btn-group">
@@ -83,6 +86,7 @@
             <div class="card-body">
                 <div class="ui-card-header">
                     <div>
+                        <div class="ui-card-eyebrow">Validación visual</div>
                         <h5 class="ui-card-title">Jerarquía</h5>
                         <div class="ui-card-subtitle">Vista simplificada de árbol para validar la estructura.</div>
                     </div>
@@ -107,6 +111,7 @@
             <div class="card-body">
                 <div class="ui-card-header">
                     <div>
+                        <div class="ui-card-eyebrow">Editor</div>
                         <h5 class="ui-card-title">@(_showForm ? (_form.Id == 0 ? "Nueva categoría" : "Editar categoría") : "Detalle y edición")</h5>
                         <div class="ui-card-subtitle">Definí la categoría y su relación jerárquica.</div>
                     </div>
@@ -125,7 +130,7 @@
                     <div class="row g-3">
                         <div class="col-12"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
                         <div class="col-12"><label class="form-label">Padre</label><select class="form-select" @bind="_form.ParentCategoryId"><option value="">Sin padre</option>@foreach (var item in _allCategories.Where(x => x.Id != _form.Id)){<option value="@item.Id">@item.Name</option>}</select></div>
-                        <div class="col-md-4"><label class="form-label">Activa</label><input type="checkbox" class="form-check-input ms-2" @bind="_form.IsActive" /></div>
+                        <div class="col-md-6"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Categoría activa" : "Categoría inactiva")</span></div></div>
                     </div>
                     <div class="ui-action-bar">
                         <div class="ui-inline-actions">

@@ -1,8 +1,26 @@
-﻿@inject NavigationManager Nav
+@inject NavigationManager Nav
+
+<PageTitle>Redireccionando</PageTitle>
+
+<div class="ui-public-shell">
+    <div class="card ui-public-card">
+        <div class="card-body text-center">
+            <div class="ui-card-eyebrow">Acceso requerido</div>
+            <h1 class="ui-card-title mb-2">Redireccionando al login</h1>
+            <p class="ui-card-subtitle mb-0">Te llevamos a la pantalla de acceso para continuar con tu sesión.</p>
+        </div>
+    </div>
+</div>
+
 @code {
-    protected override void OnInitialized()
+    protected override void OnAfterRender(bool firstRender)
     {
-        var returnUrl = Uri.EscapeDataString(Nav.Uri);
-        Nav.NavigateTo($"/login?returnUrl={returnUrl}", forceLoad: true);
+        if (!firstRender)
+            return;
+
+        var relative = Nav.ToBaseRelativePath(Nav.Uri);
+        var returnUrl = string.IsNullOrWhiteSpace(relative) ? "/dashboard" : $"/{relative}";
+        var encoded = Uri.EscapeDataString(returnUrl);
+        Nav.NavigateTo($"/login?returnUrl={encoded}", forceLoad: true);
     }
 }

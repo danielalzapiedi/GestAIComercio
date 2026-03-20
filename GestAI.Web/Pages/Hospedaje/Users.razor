@@ -2,6 +2,8 @@
 @using GestAI.Web.Dtos
 @inject ApiClient Api
 
+<PageTitle>Usuarios</PageTitle>
+
 <section class="page-hero">
     <div>
         <div class="page-hero-title">Usuarios</div>
@@ -32,10 +34,12 @@ else
             <div class="card-body">
                 <div class="ui-card-header">
                     <div>
+                        <div class="ui-card-eyebrow">Accesos del tenant</div>
                         <h5 class="ui-card-title">Equipo del tenant</h5>
                         <div class="ui-card-subtitle">Roles, estado y permisos asignados por módulo.</div>
                     </div>
                 </div>
+                <div class="table-responsive">
                 <table class="table table-striped">
                     <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Módulos</th><th>Activo</th><th></th></tr></thead>
                     <tbody>
@@ -60,6 +64,7 @@ else
                     }
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
 
@@ -67,6 +72,7 @@ else
             <div class="card-body">
                 <div class="ui-card-header">
                     <div>
+                        <div class="ui-card-eyebrow">Editor</div>
                         <h5 class="ui-card-title">@(_showForm ? (_form.UserId is null ? "Nuevo usuario" : "Editar usuario") : "Alta y edición")</h5>
                         <div class="ui-card-subtitle">Definí datos personales, rol y accesos.</div>
                     </div>
@@ -102,6 +108,10 @@ else
                             <label class="form-label">Password temporal</label>
                             <input class="form-control" placeholder="Solo para altas nuevas" @bind="_form.Password" disabled="@(_form.UserId is not null)" />
                         </div>
+                        <div class="col-12">
+                            <label class="form-label d-block">Estado</label>
+                            <div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Usuario activo" : "Usuario inactivo")</span></div>
+                        </div>
                     </div>
 
                     <div class="mt-3">
@@ -129,7 +139,7 @@ else
                     <div class="ui-action-bar">
                         <div class="ui-inline-actions">
                             <button class="btn btn-primary" @onclick="Save">Guardar</button>
-                            <button class="btn btn-outline-secondary" @onclick="() => _showForm=false">Cancelar</button>
+                            <button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
                         </div>
                         <div class="ui-table-meta">Tip: usá permisos mínimos para cada empleado.</div>
                     </div>
@@ -230,6 +240,8 @@ else
             _form.AllowedModules.Remove(module);
         }
     }
+
+    private void Cancel() => _showForm = false;
 
     private static string GetModuleLabel(SaasModule module) => module switch
     {

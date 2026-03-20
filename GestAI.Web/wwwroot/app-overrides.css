@@ -42,6 +42,7 @@ body {
 
 .ui-app-shell {
     min-height: 100vh;
+    position: relative;
 }
 
 .ui-topbar {
@@ -57,6 +58,7 @@ body {
     padding-left: 0;
     margin-left: 300px !important;
     width: calc(100% - 300px);
+    transition: margin-left .24s ease, width .24s ease;
 }
 
 .ui-page-shell {
@@ -80,6 +82,24 @@ body {
     font-weight: 800;
     letter-spacing: -0.02em;
     font-size: 1.05rem;
+}
+
+.ui-nav-toggle {
+    width: 46px;
+    min-width: 46px;
+    min-height: 46px;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 14px;
+    border: 1px solid rgba(200, 215, 236, 0.95);
+    background: rgba(255,255,255,.88);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+    color: var(--ui-text-heading);
+}
+
+.ui-nav-toggle i {
+    font-size: 1.2rem;
 }
 
 .ui-brand-subtitle,
@@ -181,17 +201,39 @@ body {
 
 .ui-sidebar {
     width: 272px;
+    position: fixed;
     top: 86px;
     left: 14px;
     bottom: 14px;
+    z-index: 1035;
     margin: 0;
     padding: 12px 10px 16px;
     overflow-y: auto;
+    overscroll-behavior: contain;
     direction: rtl;
     border: 1px solid rgba(58, 72, 96, 0.92);
     border-radius: 24px;
     background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
     box-shadow: 0 18px 40px rgba(8, 15, 28, 0.24);
+    transition: transform .24s ease, box-shadow .24s ease;
+}
+
+.ui-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1030;
+    border: 0;
+    padding: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+}
+
+.ui-sidebar-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .ui-sidebar > * {
@@ -693,6 +735,138 @@ body {
     top: 100px;
 }
 
+.ui-card-eyebrow {
+    color: #1d4ed8;
+    font-size: .74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: .35rem;
+}
+
+.ui-highlight-card {
+    background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(244,248,255,.96) 100%);
+}
+
+.ui-meter-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.ui-meter-row {
+    display: grid;
+    gap: .5rem;
+}
+
+.ui-meter-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 1rem;
+}
+
+.ui-meter-title,
+.ui-product-name {
+    font-weight: 700;
+    color: var(--ui-text-heading);
+}
+
+.ui-meter-value {
+    font-weight: 800;
+    color: var(--ui-text-heading);
+    white-space: nowrap;
+}
+
+.ui-meter-bar {
+    height: 10px;
+    border-radius: 999px;
+    background: #e7eef8;
+    overflow: hidden;
+}
+
+.ui-meter-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
+}
+
+.ui-product-main,
+.ui-table-stack {
+    display: grid;
+    gap: .15rem;
+}
+
+.ui-product-meta {
+    color: var(--ui-text-soft);
+    font-size: .82rem;
+}
+
+.ui-form-section {
+    margin-top: 1.15rem;
+    padding-top: 1.15rem;
+    border-top: 1px solid #e5edf8;
+}
+
+.ui-form-section:first-of-type {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.ui-form-section-title {
+    color: var(--ui-text-heading);
+    font-size: .78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: .8rem;
+}
+
+.ui-toggle-field {
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    gap: .65rem;
+    padding: .75rem .95rem;
+    border: 1px solid var(--ui-border);
+    border-radius: 14px;
+    background: rgba(255,255,255,.88);
+    color: #334155;
+    font-weight: 600;
+}
+
+.ui-toggle-field .form-check-input {
+    margin: 0;
+}
+
+.ui-variant-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ui-variant-panel {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 18px;
+    border: 1px solid #dce8f8;
+    background: linear-gradient(180deg, #fbfdff 0%, #f4f8ff 100%);
+}
+
+
+.ui-public-shell {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+}
+
+.ui-public-card {
+    width: min(100%, 520px);
+}
+
 .ui-auth-shell {
     min-height: 100vh;
     display: grid;
@@ -831,13 +1005,21 @@ body {
 @media (max-width: 1199px) {
     .ui-main {
         margin-left: 0 !important;
-        width: auto;
+        width: 100%;
     }
 
     .ui-sidebar {
-        width: auto;
-        position: static;
-        margin: 92px 12px 16px;
+        width: min(320px, calc(100vw - 24px));
+        top: 92px;
+        left: 12px;
+        bottom: 12px;
+        transform: translateX(calc(-100% - 20px));
+        box-shadow: none;
+    }
+
+    .ui-sidebar.is-open {
+        transform: translateX(0);
+        box-shadow: 0 22px 50px rgba(8, 15, 28, 0.32);
     }
 
     .ui-split-layout,
@@ -861,7 +1043,11 @@ body {
     }
 
     .ui-sidebar {
-        margin: 86px 8px 12px;
+        width: calc(100vw - 16px);
+        top: 84px;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
     }
 
     .page-hero,
@@ -877,6 +1063,16 @@ body {
     .ui-auth-feature-grid,
     .ui-check-grid {
         grid-template-columns: 1fr;
+    }
+
+    .ui-meter-head,
+    .ui-variant-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ui-toggle-field {
+        width: 100%;
     }
 }
 
@@ -1365,4 +1561,40 @@ body {
     background: rgba(13, 110, 253, .12);
     color: #0d6efd;
     font-weight: 700;
+}
+
+@media (min-width: 1200px) {
+    .ui-nav-toggle,
+    .ui-sidebar-backdrop {
+        display: none !important;
+    }
+}
+
+.ui-preview-textarea {
+    min-height: 120px;
+}
+
+.ui-code-block {
+    margin: 0;
+    padding: 1rem;
+    border-radius: 16px;
+    background: #0f172a;
+    color: #e2e8f0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: .82rem;
+}
+
+.ui-mono {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.ui-compact-table td,
+.ui-compact-table th {
+    vertical-align: middle;
+}
+
+.ui-badge-warning {
+    background: rgba(245, 158, 11, .14);
+    color: #b45309;
 }

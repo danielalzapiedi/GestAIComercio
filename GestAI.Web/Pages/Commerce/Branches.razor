@@ -43,10 +43,12 @@ else
             <div class="card-body">
                 <div class="ui-card-header">
                     <div>
+                        <div class="ui-card-eyebrow">Estructura comercial</div>
                         <h5 class="ui-card-title">Listado de sucursales</h5>
                         <div class="ui-card-subtitle">Nombre, código interno y depósitos asociados.</div>
                     </div>
                 </div>
+                <div class="table-responsive">
                 <table class="table table-striped">
                     <thead><tr><th>Nombre</th><th>Código</th><th>Depósitos</th><th>Estado</th><th></th></tr></thead>
                     <tbody>
@@ -67,6 +69,7 @@ else
                     }
                     </tbody>
                 </table>
+                </div>
                 <div class="ui-action-bar">
                     <span class="text-muted">Página @_page de @TotalPages</span>
                     <div class="btn-group">
@@ -81,6 +84,7 @@ else
             <div class="card-body">
                 <div class="ui-card-header">
                     <div>
+                        <div class="ui-card-eyebrow">Editor</div>
                         <h5 class="ui-card-title">@(_showForm ? (_form.Id == 0 ? "Nueva sucursal" : "Editar sucursal") : "Detalle y edición")</h5>
                         <div class="ui-card-subtitle">Completá los datos básicos de la sucursal.</div>
                     </div>
@@ -99,7 +103,7 @@ else
                     <div class="row g-3">
                         <div class="col-md-8"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
                         <div class="col-md-4"><label class="form-label">Código</label><input class="form-control" @bind="_form.Code" /></div>
-                        <div class="col-md-4"><label class="form-label">Activa</label><input type="checkbox" class="form-check-input ms-2" @bind="_form.IsActive" /></div>
+                        <div class="col-md-6"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Sucursal activa" : "Sucursal inactiva")</span></div></div>
                     </div>
                     <div class="ui-action-bar">
                         <div class="ui-inline-actions">

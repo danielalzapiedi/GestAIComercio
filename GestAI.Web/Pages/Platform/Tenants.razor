@@ -60,10 +60,12 @@ else
                 <div class="card-body">
                     <div class="ui-card-header">
                         <div>
+                            <div class="ui-card-eyebrow">Gestión centralizada</div>
                             <h5 class="ui-card-title">Tenants de la plataforma</h5>
                             <div class="ui-card-subtitle">Estado, owner principal y cantidad de usuarios por tenant.</div>
                         </div>
                     </div>
+                    <div class="table-responsive">
                     <table class="table table-striped">
                         <thead>
                             <tr>
@@ -97,6 +99,7 @@ else
                             }
                         </tbody>
                     </table>
+                    </div>
                     <div class="ui-action-bar">
                         <span class="text-muted">Página @_page de @TotalPages</span>
                         <div class="btn-group">
@@ -111,6 +114,7 @@ else
                 <div class="card-body">
                     <div class="ui-card-header">
                         <div>
+                            <div class="ui-card-eyebrow">Editor</div>
                             <h5 class="ui-card-title">@(_showForm ? (_editingId == 0 ? "Nuevo tenant" : "Editar tenant") : "Operaciones")</h5>
                             <div class="ui-card-subtitle">Alta, edición y activación de tenants.</div>
                         </div>
@@ -128,18 +132,19 @@ else
                     {
                         <div class="row g-3">
                             <div class="col-12"><label class="form-label">Nombre tenant</label><input class="form-control" @bind="_form.Name" /></div>
-                            <div class="col-md-4"><label class="form-label">Activo</label><input type="checkbox" class="form-check-input ms-2" @bind="_form.IsActive" /></div>
+                            <div class="col-md-6"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Tenant activo" : "Tenant inactivo")</span></div></div>
                         </div>
 
                         @if (_editingId == 0)
                         {
-                            <hr />
-                            <h6>Owner inicial</h6>
-                            <div class="row g-3">
-                                <div class="col-md-6"><label class="form-label">Nombre</label><input class="form-control" @bind="_ownerFirstName" /></div>
-                                <div class="col-md-6"><label class="form-label">Apellido</label><input class="form-control" @bind="_ownerLastName" /></div>
-                                <div class="col-12"><label class="form-label">Email</label><input class="form-control" @bind="_ownerEmail" /></div>
-                                <div class="col-12"><label class="form-label">Password temporal</label><input class="form-control" @bind="_ownerPassword" /></div>
+                            <div class="ui-form-section">
+                                <div class="ui-form-section-title">Owner inicial</div>
+                                <div class="row g-3">
+                                    <div class="col-md-6"><label class="form-label">Nombre</label><input class="form-control" @bind="_ownerFirstName" /></div>
+                                    <div class="col-md-6"><label class="form-label">Apellido</label><input class="form-control" @bind="_ownerLastName" /></div>
+                                    <div class="col-12"><label class="form-label">Email</label><input class="form-control" @bind="_ownerEmail" /></div>
+                                    <div class="col-12"><label class="form-label">Password temporal</label><input class="form-control" @bind="_ownerPassword" /></div>
+                                </div>
                             </div>
                         }
 

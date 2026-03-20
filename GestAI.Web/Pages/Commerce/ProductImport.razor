@@ -1,0 +1,120 @@
+@page "/products/import"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Importación masiva</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Importación masiva de productos</div>
+        <div class="page-hero-subtitle">Carga controlada por CSV con preview previo, validaciones explícitas y soporte para variantes.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-upload"></i> Preview antes de aplicar</span>
+        <span class="page-hero-chip"><i class="bi bi-shield-check"></i> Validación por fila</span>
+    </div>
+</section>
+
+<div class="ui-split-layout">
+    <div>
+        <div class="card ui-form-card">
+            <div class="card-body">
+                <div class="ui-card-header">
+                    <div>
+                        <div class="ui-card-eyebrow">Fuente de datos</div>
+                        <h5 class="ui-card-title">CSV simple y mantenible</h5>
+                        <div class="ui-card-subtitle">Columnas soportadas: Name, InternalCode, Barcode, Description, CategoryName, Brand, UnitOfMeasure, Cost, SalePrice, MinimumStock, IsActive, VariantName, VariantInternalCode, VariantBarcode, VariantAttributes, VariantCost, VariantSalePrice. También podés repetir el mismo producto en varias filas para importar múltiples variantes.</div>
+                    </div>
+                </div>
+                <div class="ui-form-section">
+                    <label class="form-label">Contenido CSV</label>
+                    <textarea class="form-control ui-preview-textarea ui-mono" @bind="_csvContent"></textarea>
+                    <div class="ui-toggle-field mt-3"><input type="checkbox" class="form-check-input" @bind="_upsertExisting" /><span>Actualizar productos/variantes existentes si ya hay coincidencia por código interno.</span></div>
+                </div>
+                <div class="ui-action-bar">
+                    <div class="ui-inline-actions">
+                        <button class="btn btn-outline-primary" @onclick="PreviewAsync">Previsualizar</button>
+                        <button class="btn btn-primary" @onclick="ApplyAsync">Aplicar importación</button>
+                    </div>
+                    <span class="ui-table-meta">@_message</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ui-section-grid">
+        <div class="card">
+            <div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Plantilla sugerida</div><h5 class="ui-card-title">Ejemplo</h5></div></div>
+                <pre class="ui-code-block">@SampleCsv</pre>
+            </div>
+        </div>
+
+        @if (_preview is not null)
+        {
+            <div class="card ui-data-card">
+                <div class="card-body">
+                    <div class="ui-card-header"><div><div class="ui-card-eyebrow">Resultado de preview</div><h5 class="ui-card-title">@($"{_preview.ValidRows} válidas / {_preview.ErrorRows} con error")</h5><div class="ui-card-subtitle">Antes de aplicar, revisá qué filas crearían o actualizarían datos.</div></div></div>
+                    <div class="table-responsive">
+                        <table class="table table-striped ui-compact-table">
+                            <thead><tr><th>Fila</th><th>Código</th><th>Nombre</th><th>Resultado</th><th>Detalle</th></tr></thead>
+                            <tbody>
+                            @foreach (var row in _preview.Rows)
+                            {
+                                <tr>
+                                    <td>@row.RowNumber</td>
+                                    <td class="ui-mono">@row.InternalCode</td>
+                                    <td>@row.Name</td>
+                                    <td><StatusBadge Text="@(row.IsValid ? "Válida" : "Error")" CssClass="@(row.IsValid ? "ui-badge ui-badge-primary" : "ui-badge ui-badge-warning")" /></td>
+                                    <td>@row.Message</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (_result is not null)
+        {
+            <div class="card ui-data-card">
+                <div class="card-body">
+                    <div class="ui-card-header"><div><div class="ui-card-eyebrow">Resultado aplicado</div><h5 class="ui-card-title">Importación ejecutada</h5><div class="ui-card-subtitle">Resumen de productos y variantes procesados.</div></div></div>
+                    <div class="ui-list-stack">
+                        <div class="ui-check-card"><i class="bi bi-box text-primary"></i><div><strong>Productos</strong><div class="ui-table-meta">@_result.CreatedProducts creados · @_result.UpdatedProducts actualizados.</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-boxes text-primary"></i><div><strong>Variantes</strong><div class="ui-table-meta">@_result.CreatedVariants creadas · @_result.UpdatedVariants actualizadas.</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-list-check text-primary"></i><div><strong>Filas procesadas</strong><div class="ui-table-meta">@_result.ProcessedRows válidas · @_result.ErrorRows con error de preview.</div></div></div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private ProductImportPreviewDto? _preview;
+    private ProductImportResultDto? _result;
+    private bool _upsertExisting;
+    private string _message = "Primero conviene ejecutar preview para validar categorías, unidades y duplicados.";
+    private string _csvContent = SampleCsv;
+
+    private const string SampleCsv = "Name,InternalCode,Barcode,Description,CategoryName,Brand,UnitOfMeasure,Cost,SalePrice,MinimumStock,IsActive,VariantName,VariantInternalCode,VariantBarcode,VariantAttributes,VariantCost,VariantSalePrice\n" +
+        "Remera básica,REM-001,,Remera lisa manga corta,Indumentaria,GestAI,Unit,10,18,5,true,Talle M,REM-001-M,,Color negro / M,10,18\n" +
+        "Remera básica,REM-001,,Remera lisa manga corta,Indumentaria,GestAI,Unit,10,18,5,true,Talle L,REM-001-L,,Color negro / L,10,18\n" +
+        "Taza blanca,TAZ-010,,Taza de cerámica 300ml,Hogar,GestAI,Unit,4,7.5,3,true,,,,,,";
+
+    private async Task PreviewAsync()
+    {
+        var result = await Api.PostAsync<ProductImportPreviewCommand, AppResult<ProductImportPreviewDto>>("api/commerce/products/import/preview", new ProductImportPreviewCommand { CsvContent = _csvContent, UpsertExisting = _upsertExisting });
+        _preview = result?.Data;
+        _message = result?.Success == true ? "Preview generado correctamente." : result?.Message ?? "No se pudo previsualizar el archivo.";
+    }
+
+    private async Task ApplyAsync()
+    {
+        var result = await Api.PostAsync<ApplyProductImportCommand, AppResult<ProductImportResultDto>>("api/commerce/products/import", new ApplyProductImportCommand { CsvContent = _csvContent, UpsertExisting = _upsertExisting });
+        _result = result?.Data;
+        _message = result?.Success == true ? "Importación aplicada correctamente." : result?.Message ?? "No se pudo aplicar la importación.";
+    }
+}

@@ -1,4 +1,5 @@
 using GestAI.Application.Commerce;
+using GestAI.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -119,6 +120,62 @@ public sealed class CommerceController(IMediator mediator) : ControllerBase
     [HttpPost("product-variants/{id:int}/status")]
     public async Task<IActionResult> ToggleVariant(int id, [FromBody] ToggleBody body, CancellationToken ct)
         => Ok(await mediator.Send(new ToggleProductVariantStatusCommand(id, body.IsActive), ct));
+
+    [HttpGet("inventory/seed")]
+    public async Task<IActionResult> GetInventorySeed(CancellationToken ct)
+        => Ok(await mediator.Send(new GetInventorySeedDataQuery(), ct));
+
+    [HttpGet("inventory/stocks")]
+    public async Task<IActionResult> GetInventoryStocks([FromQuery] int? warehouseId = null, [FromQuery] int? productId = null, [FromQuery] int? productVariantId = null, [FromQuery] string? search = null, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetInventoryOverviewQuery(warehouseId, productId, productVariantId, search), ct));
+
+    [HttpGet("inventory/movements")]
+    public async Task<IActionResult> GetInventoryMovements([FromQuery] int? warehouseId = null, [FromQuery] int? productId = null, [FromQuery] int? productVariantId = null, [FromQuery] StockMovementType? movementType = null, [FromQuery] int take = 30, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetStockMovementsQuery(warehouseId, productId, productVariantId, movementType, take), ct));
+
+    [HttpPost("inventory/movements")]
+    public async Task<IActionResult> CreateInventoryMovement([FromBody] RecordStockMovementCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
+
+    [HttpGet("price-lists/seed")]
+    public async Task<IActionResult> GetPriceListSeed(CancellationToken ct)
+        => Ok(await mediator.Send(new GetPriceListSeedDataQuery(), ct));
+
+    [HttpGet("price-lists")]
+    public async Task<IActionResult> GetPriceLists([FromQuery] string? search = null, [FromQuery] bool? isActive = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetPriceListsQuery(search, isActive, page, pageSize), ct));
+
+    [HttpGet("price-lists/{id:int}")]
+    public async Task<IActionResult> GetPriceList(int id, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPriceListByIdQuery(id), ct));
+
+    [HttpGet("price-lists/{id:int}/items")]
+    public async Task<IActionResult> GetPriceListItems(int id, [FromQuery] string? search = null, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetPriceListItemsQuery(id, search), ct));
+
+    [HttpPost("price-lists")]
+    public async Task<IActionResult> CreatePriceList([FromBody] CreatePriceListCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
+
+    [HttpPut("price-lists/{id:int}")]
+    public async Task<IActionResult> UpdatePriceList(int id, [FromBody] UpdatePriceListCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command with { Id = id }, ct));
+
+    [HttpPost("price-lists/{id:int}/items")]
+    public async Task<IActionResult> SetPriceListItem(int id, [FromBody] SetPriceListItemCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command with { PriceListId = id }, ct));
+
+    [HttpPost("price-lists/{id:int}/bulk-update")]
+    public async Task<IActionResult> ApplyPriceListAdjustment(int id, [FromBody] ApplyPriceListAdjustmentCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command with { PriceListId = id }, ct));
+
+    [HttpPost("products/import/preview")]
+    public async Task<IActionResult> PreviewProductImport([FromBody] PreviewProductImportCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
+
+    [HttpPost("products/import")]
+    public async Task<IActionResult> ApplyProductImport([FromBody] ApplyProductImportCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
 
     [HttpGet("customers")]
     public async Task<IActionResult> GetCustomers([FromQuery] string? search = null, [FromQuery] bool? isActive = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)

@@ -2,26 +2,92 @@
 @inject ApiClient Api
 @using GestAI.Web.Dtos
 
-<h1>Audit Log</h1>
+<PageTitle>Auditoría</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Auditoría</div>
+        <div class="page-hero-subtitle">Revisá los últimos movimientos del tenant para entender quién hizo qué, cuándo y sobre qué entidad.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-journal-text"></i> @TotalItems registros</span>
+        <span class="page-hero-chip"><i class="bi bi-diagram-3"></i> @DistinctEntities entidades</span>
+    </div>
+</section>
 
 @if (_items is null)
 {
-    <p>Cargando...</p>
+    <div class="card"><div class="card-body">Cargando auditoría...</div></div>
+}
+else if (_items.Count == 0)
+{
+    <EmptyState Title="Todavía no hay eventos de auditoría"
+                Description="Cuando el tenant registre acciones relevantes, vas a poder revisarlas desde esta pantalla."
+                Icon="bi-journal-text" />
 }
 else
 {
-    <table class="table">
-        <thead><tr><th>Fecha</th><th>Entidad</th><th>Acción</th><th>Resumen</th><th>Usuario</th></tr></thead>
-        <tbody>
-        @foreach (var i in _items)
-        {
-            <tr><td>@i.CreatedAtUtc.ToLocalTime()</td><td>@i.EntityName</td><td>@i.Action</td><td>@i.Summary</td><td>@i.UserName</td></tr>
-        }
-        </tbody>
-    </table>
+    <div class="row g-3 ui-summary-grid mb-1">
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Eventos</div><div class="ui-stat-value">@TotalItems</div><div class="ui-stat-foot">Últimos movimientos cargados para esta vista.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Entidades</div><div class="ui-stat-value">@DistinctEntities</div><div class="ui-stat-foot">Tipos de entidades involucradas en los eventos.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Usuarios</div><div class="ui-stat-value">@DistinctUsers</div><div class="ui-stat-foot">Usuarios distintos que generaron actividad.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Último evento</div><div class="ui-stat-value">@LatestEventLabel</div><div class="ui-stat-foot">Fecha del evento más reciente visible.</div></div></div></div>
+    </div>
+
+    <div class="card ui-data-card">
+        <div class="card-body">
+            <div class="ui-card-header">
+                <div>
+                    <div class="ui-card-eyebrow">Trazabilidad del tenant</div>
+                    <h5 class="ui-card-title">Registro reciente de auditoría</h5>
+                    <div class="ui-card-subtitle">Vista resumida de acciones sobre entidades y usuarios del sistema.</div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Entidad</th>
+                            <th>Acción</th>
+                            <th>Resumen</th>
+                            <th>Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in _items)
+                    {
+                        <tr>
+                            <td>
+                                <div class="ui-table-stack">
+                                    <span class="fw-semibold">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                                    <span class="ui-table-meta">@item.CreatedAtUtc.ToLocalTime().ToString("HH:mm")</span>
+                                </div>
+                            </td>
+                            <td><span class="fw-semibold">@item.EntityName</span></td>
+                            <td><StatusBadge Text="@item.Action" /></td>
+                            <td>@item.Summary</td>
+                            <td>@(string.IsNullOrWhiteSpace(item.UserName) ? "Sistema" : item.UserName)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
     private List<AccountAuditItemDto>? _items;
-    protected override async Task OnInitializedAsync() => _items = (await Api.GetAsync<AppResult<List<AccountAuditItemDto>>>("api/saas/account/audit?take=50"))?.Data ?? new();
+
+    private int TotalItems => _items?.Count ?? 0;
+    private int DistinctEntities => _items?.Select(x => x.EntityName).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).Count() ?? 0;
+    private int DistinctUsers => _items?.Select(x => x.UserName).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).Count() ?? 0;
+    private string LatestEventLabel => _items?.FirstOrDefault() is { } item
+        ? item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")
+        : "-";
+
+    protected override async Task OnInitializedAsync()
+        => _items = (await Api.GetAsync<AppResult<List<AccountAuditItemDto>>>("api/saas/account/audit?take=50"))?.Data ?? new();
 }

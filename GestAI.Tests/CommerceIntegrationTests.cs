@@ -265,6 +265,157 @@ public sealed class CommerceIntegrationTests
         Assert.Contains(result.Data!.Modules, x => x.Module == SaasModule.PlatformTenants && !x.Allowed);
     }
 
+    [Fact]
+    public async Task RecordStockMovement_TransferOut_UpdatesOriginAndDestinationStock()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-stock@test");
+
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+
+        var product = new Product
+        {
+            AccountId = fixture.Account.Id,
+            Name = "Producto stock",
+            InternalCode = "STK-1",
+            Description = "Producto",
+            CategoryId = category.Id,
+            Brand = "Marca",
+            UnitOfMeasure = UnitOfMeasure.Unit,
+            Cost = 10,
+            SalePrice = 15,
+            MinimumStock = 2,
+            IsActive = true
+        };
+        db.Products.Add(product);
+
+        var branch = new Branch { AccountId = fixture.Account.Id, Name = "Central", Code = "CTR", IsActive = true };
+        db.Branches.Add(branch);
+        await db.SaveChangesAsync();
+
+        var origin = new Warehouse { AccountId = fixture.Account.Id, BranchId = branch.Id, Name = "Origen", IsMain = true, IsActive = true };
+        var destination = new Warehouse { AccountId = fixture.Account.Id, BranchId = branch.Id, Name = "Destino", IsMain = false, IsActive = true };
+        db.Warehouses.AddRange(origin, destination);
+        await db.SaveChangesAsync();
+
+        db.ProductWarehouseStocks.Add(new ProductWarehouseStock
+        {
+            AccountId = fixture.Account.Id,
+            ProductId = product.Id,
+            WarehouseId = origin.Id,
+            QuantityOnHand = 10,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedByUserId = fixture.CurrentUser.UserId
+        });
+        await db.SaveChangesAsync();
+
+        var handler = new RecordStockMovementCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+
+        var result = await handler.Handle(new RecordStockMovementCommand(product.Id, null, origin.Id, destination.Id, StockMovementType.TransferOut, 4, "Reubicación", "Transferencia interna", DateTime.UtcNow), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(6, await db.ProductWarehouseStocks.Where(x => x.ProductId == product.Id && x.WarehouseId == origin.Id).Select(x => x.QuantityOnHand).SingleAsync());
+        Assert.Equal(4, await db.ProductWarehouseStocks.Where(x => x.ProductId == product.Id && x.WarehouseId == destination.Id).Select(x => x.QuantityOnHand).SingleAsync());
+        Assert.Equal(2, await db.StockMovements.CountAsync(x => x.ProductId == product.Id));
+    }
+
+    [Fact]
+    public async Task ApplyPriceListAdjustment_CreatesItems_FromSalePriceBase()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-prices@test");
+
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+
+        db.Products.AddRange(
+            new Product
+            {
+                AccountId = fixture.Account.Id,
+                Name = "Prod 1",
+                InternalCode = "P1",
+                Description = "P1",
+                CategoryId = category.Id,
+                Brand = "Marca",
+                UnitOfMeasure = UnitOfMeasure.Unit,
+                Cost = 10,
+                SalePrice = 20,
+                MinimumStock = 1,
+                IsActive = true
+            },
+            new Product
+            {
+                AccountId = fixture.Account.Id,
+                Name = "Prod 2",
+                InternalCode = "P2",
+                Description = "P2",
+                CategoryId = category.Id,
+                Brand = "Marca",
+                UnitOfMeasure = UnitOfMeasure.Unit,
+                Cost = 30,
+                SalePrice = 50,
+                MinimumStock = 1,
+                IsActive = true
+            });
+        await db.SaveChangesAsync();
+
+        var createList = new CreatePriceListCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var createListResult = await createList.Handle(new CreatePriceListCommand("Minorista", PriceListBaseMode.SalePrice, PriceListTargetType.Product, true), CancellationToken.None);
+        Assert.True(createListResult.Success);
+        var listId = createListResult.Data;
+
+        var handler = new ApplyPriceListAdjustmentCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var result = await handler.Handle(new ApplyPriceListAdjustmentCommand(listId, BulkPriceAdjustmentType.Percentage, 10, false, null), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(2, await db.PriceListItems.CountAsync(x => x.PriceListId == listId));
+        Assert.Contains(await db.PriceListItems.Where(x => x.PriceListId == listId).Select(x => x.Price).ToListAsync(), x => x == 22);
+        Assert.Contains(await db.PriceListItems.Where(x => x.PriceListId == listId).Select(x => x.Price).ToListAsync(), x => x == 55);
+    }
+
+    [Fact]
+    public async Task PreviewProductImport_FailsRows_WhenCategoryDoesNotExist()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-import@test");
+
+        var handler = new PreviewProductImportCommandHandler(db, fixture.Access);
+        const string csv = "Name,InternalCode,Barcode,Description,CategoryName,Brand,UnitOfMeasure,Cost,SalePrice,MinimumStock,IsActive\n" +
+                           "Producto demo,IMP-1,,Desc,Categoria Inexistente,Marca,Unit,10,20,1,true";
+
+        var result = await handler.Handle(new PreviewProductImportCommand(csv, false), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Single(result.Data!.Rows);
+        Assert.False(result.Data.Rows[0].IsValid);
+    }
+
+    [Fact]
+    public async Task ApplyProductImport_AllowsMultipleRows_ForSameProductWithDifferentVariants()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-import-variants@test");
+
+        db.ProductCategories.Add(new ProductCategory { AccountId = fixture.Account.Id, Name = "Indumentaria", IsActive = true });
+        await db.SaveChangesAsync();
+
+        var handler = new ApplyProductImportCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        const string csv = "Name,InternalCode,Barcode,Description,CategoryName,Brand,UnitOfMeasure,Cost,SalePrice,MinimumStock,IsActive,VariantName,VariantInternalCode,VariantBarcode,VariantAttributes,VariantCost,VariantSalePrice\n" +
+                           "Remera básica,REM-001,,Remera lisa,Indumentaria,Marca,Unit,10,20,2,true,Talle M,REM-001-M,,Negra / M,10,20\n" +
+                           "Remera básica,REM-001,,Remera lisa,Indumentaria,Marca,Unit,10,20,2,true,Talle L,REM-001-L,,Negra / L,10,20";
+
+        var result = await handler.Handle(new ApplyProductImportCommand(csv, false), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(1, await db.Products.CountAsync(x => x.InternalCode == "REM-001"));
+        Assert.Equal(2, await db.ProductVariants.CountAsync(x => x.Product.InternalCode == "REM-001"));
+        Assert.Equal(1, result.Data!.CreatedProducts);
+        Assert.Equal(2, result.Data.CreatedVariants);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
