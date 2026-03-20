@@ -67,7 +67,7 @@ public sealed class CommerceIntegrationTests
         Assert.True(result.Success);
         var warehouses = await db.Warehouses.Where(x => x.BranchId == branch.Id).OrderBy(x => x.Id).ToListAsync();
         Assert.False(warehouses.Single(x => x.Id == currentMain.Id).IsMain);
-        Assert.True(warehouses.Single(x => x.Id == result.Data!.Value).IsMain);
+        Assert.True(warehouses.Single(x => x.Id == result.Data!).IsMain);
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public sealed class CommerceIntegrationTests
             CancellationToken.None);
 
         Assert.True(result.Success);
-        var createdAccount = await db.Accounts.Include(x => x.Users).Include(x => x.SubscriptionPlans).SingleAsync(x => x.Id == result.Data!.Value);
+        var createdAccount = await db.Accounts.Include(x => x.Users).Include(x => x.SubscriptionPlans).SingleAsync(x => x.Id == result.Data!);
         Assert.Equal("Tenant Uno", createdAccount.Name);
         Assert.Contains(createdAccount.Users, x => x.UserId == "tenant-owner" && x.Role == InternalUserRole.Owner);
         Assert.Contains(createdAccount.SubscriptionPlans, x => x.IsActive);
