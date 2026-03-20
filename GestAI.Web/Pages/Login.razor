@@ -6,73 +6,90 @@
 @layout BareLayout
 @attribute [AllowAnonymous]
 
-<main>
-    <div class="container">
-        <section class="section register min-vh-100 d-flex flex-column align-items-center justify-content-center py-4">
-            <div class="container">
-                <div class="row justify-content-center">
-                    <div class="col-lg-4 col-md-6 d-flex flex-column align-items-center justify-content-center">
-
-                        <div class="d-flex justify-content-center py-4">
-                            <a href="/" class="logo d-flex align-items-center w-auto">
-                                <img src="assets/img/logo.png" alt="">
-                                <span class="d-none d-lg-block">SaaS Starter Kit</span>
-                            </a>
-                        </div>
-
-                        <div class="card mb-3">
-                            <div class="card-body">
-
-                                <div class="pt-4 pb-2">
-                                    <h5 class="card-title text-center pb-0 fs-4">Ingresar a su cuenta</h5>
-                                    <p class="text-center small">Ingresá tu email y contraseña para acceder al sistema</p>
-                                </div>
-
-                                @if (!string.IsNullOrWhiteSpace(_error))
-                                {
-                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                        @_error
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                    </div>
-                                }
-
-                                <EditForm Model="_vm" OnValidSubmit="DoLogin" class="row g-3 needs-validation">
-                                    <DataAnnotationsValidator />
-
-                                    <div class="col-12">
-                                        <label class="form-label">Email</label>
-                                        <div class="input-group has-validation">
-                                            <span class="input-group-text">@@</span>
-                                            <InputText class="form-control" @bind-Value="_vm.Email" />
-                                        </div>
-                                        <ValidationMessage For="@(() => _vm.Email)" />
-                                    </div>
-
-                                    <div class="col-12">
-                                        <label class="form-label">Contraseña</label>
-                                        <InputText class="form-control" type="password" @bind-Value="_vm.Password" />
-                                        <ValidationMessage For="@(() => _vm.Password)" />
-                                    </div>
-
-                                    <div class="col-12">
-                                        <button class="btn btn-primary w-100" type="submit" disabled="@_busy">
-                                            @(_busy ? "Ingresando..." : "Ingresar")
-                                        </button>
-                                    </div>
-                                </EditForm>
-
-                            </div>
-                        </div>
-
-                        <div class="credits">
-                            SaaS Starter Kit · base reutilizable multi-tenant
-                        </div>
-
-                    </div>
-                </div>
+<main class="ui-auth-shell">
+    <section class="ui-auth-hero">
+        <div class="ui-auth-kicker">
+            <i class="bi bi-stars"></i>
+            <span>Plataforma moderna de gestión comercial</span>
+        </div>
+        <div>
+            <div class="ui-auth-title">Controlá tu operación desde un solo lugar.</div>
+            <p class="ui-auth-copy">
+                Gestioná sucursales, depósitos, categorías, productos, clientes, proveedores y usuarios
+                con una experiencia más clara, rápida y orientada al trabajo diario.
+            </p>
+        </div>
+        <div class="ui-auth-feature-grid">
+            <div class="ui-auth-feature">
+                <strong>Panel comercial unificado</strong>
+                <div class="small mt-1 text-white-50">Todo el flujo operativo accesible en una sola navegación.</div>
             </div>
-        </section>
-    </div>
+            <div class="ui-auth-feature">
+                <strong>Permisos por módulo</strong>
+                <div class="small mt-1 text-white-50">Más control sobre lo que cada usuario puede hacer.</div>
+            </div>
+            <div class="ui-auth-feature">
+                <strong>Diseño claro y actual</strong>
+                <div class="small mt-1 text-white-50">Menos ruido visual, mejor lectura y decisiones más rápidas.</div>
+            </div>
+            <div class="ui-auth-feature">
+                <strong>Preparado para crecer</strong>
+                <div class="small mt-1 text-white-50">Base lista para operación multi-tenant y administración central.</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-auth-panel">
+        <div class="ui-auth-card">
+            <a href="/" class="ui-auth-logo">
+                <span class="ui-brand-mark"><i class="bi bi-shop-window"></i></span>
+                <span>
+                    <strong class="d-block">GestAI Comercio</strong>
+                    <span class="text-muted small">Ingresá para continuar</span>
+                </span>
+            </a>
+
+            <div class="mb-4">
+                <h1 class="page-hero-title mb-1">Bienvenido</h1>
+                <p class="page-hero-subtitle mb-0">Usá tu email y contraseña para entrar al sistema.</p>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_error))
+            {
+                <Alert Message="@_error" CssClass="alert-danger" />
+            }
+
+            <EditForm Model="_vm" OnValidSubmit="DoLogin" class="row g-3 needs-validation">
+                <DataAnnotationsValidator />
+
+                <div class="col-12">
+                    <label class="form-label">Email</label>
+                    <div class="input-group has-validation">
+                        <span class="input-group-text">@@</span>
+                        <InputText class="form-control" @bind-Value="_vm.Email" placeholder="nombre@empresa.com" />
+                    </div>
+                    <ValidationMessage For="@(() => _vm.Email)" />
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Contraseña</label>
+                    <InputText class="form-control" type="password" @bind-Value="_vm.Password" placeholder="Ingresá tu contraseña" />
+                    <ValidationMessage For="@(() => _vm.Password)" />
+                </div>
+
+                <div class="col-12">
+                    <button class="btn btn-primary w-100" type="submit" disabled="@_busy">
+                        <i class="bi bi-arrow-right-circle me-2"></i>
+                        @(_busy ? "Ingresando..." : "Ingresar al sistema")
+                    </button>
+                </div>
+            </EditForm>
+
+            <div class="ui-auth-footer">
+                GestAI Comercio · experiencia renovada para operación diaria.
+            </div>
+        </div>
+    </section>
 </main>
 
 @code {

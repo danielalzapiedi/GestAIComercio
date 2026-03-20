@@ -4,29 +4,88 @@
 
 <PageTitle>Dashboard</PageTitle>
 
-<h1>Dashboard</h1>
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Dashboard</div>
+        <div class="page-hero-subtitle">Una vista rápida del estado de tu cuenta, plan y capacidad operativa.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-lightning-charge"></i> Resumen ejecutivo</span>
+        <span class="page-hero-chip"><i class="bi bi-shield-check"></i> Datos de cuenta</span>
+    </div>
+</section>
 
 @if (_summary is null)
 {
-    <p>Cargando...</p>
+    <div class="card"><div class="card-body">Cargando dashboard...</div></div>
 }
 else
 {
-    <div class="row g-3">
-        <div class="col-md-6 col-xl-3"><div class="card"><div class="card-body"><h6>Cuenta</h6><strong>@_summary.Name</strong></div></div></div>
-        <div class="col-md-6 col-xl-3"><div class="card"><div class="card-body"><h6>Plan actual</h6><strong>@_summary.PlanName</strong></div></div></div>
-        <div class="col-md-6 col-xl-3"><div class="card"><div class="card-body"><h6>Usuarios</h6><strong>@_summary.CurrentUsers / @_summary.MaxUsers</strong></div></div></div>
-        <div class="col-md-6 col-xl-3"><div class="card"><div class="card-body"><h6>Suscripción</h6><strong>@_summary.PlanStatus</strong></div></div></div>
+    <div class="row g-3 ui-summary-grid">
+        <div class="col-md-6 col-xl-3">
+            <div class="card ui-stat-card"><div class="card-body">
+                <div class="ui-stat-label">Cuenta</div>
+                <div class="ui-stat-value">@_summary.Name</div>
+                <div class="ui-stat-foot">Tenant activo para tu operación diaria.</div>
+            </div></div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card ui-stat-card"><div class="card-body">
+                <div class="ui-stat-label">Plan actual</div>
+                <div class="ui-stat-value">@_summary.PlanName</div>
+                <div class="ui-stat-foot">Código @(_summary.PlanCode).</div>
+            </div></div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card ui-stat-card"><div class="card-body">
+                <div class="ui-stat-label">Usuarios</div>
+                <div class="ui-stat-value">@_summary.CurrentUsers / @_summary.MaxUsers</div>
+                <div class="ui-stat-foot">Capacidad de usuarios utilizada.</div>
+            </div></div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card ui-stat-card"><div class="card-body">
+                <div class="ui-stat-label">Suscripción</div>
+                <div class="ui-stat-value">@_summary.PlanStatus</div>
+                <div class="ui-stat-foot">Inicio: @_summary.StartedAtUtc.ToLocalTime().ToString("dd/MM/yyyy").</div>
+            </div></div>
+        </div>
     </div>
 
-    <div class="card mt-3">
-        <div class="card-body">
-            <h5>Límites del plan</h5>
-            <ul>
-                <li>Máximo espacios/tenants: @_summary.MaxProperties</li>
-                <li>Máximo entidades: @_summary.MaxUnits</li>
-                <li>Máximo usuarios: @_summary.MaxUsers</li>
-            </ul>
+    <div class="row g-3 mt-1">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <h5 class="ui-card-title">Capacidad del plan</h5>
+                            <div class="ui-card-subtitle">Límites operativos incluidos en tu suscripción actual.</div>
+                        </div>
+                    </div>
+                    <div class="ui-list-stack">
+                        <div class="ui-check-card"><i class="bi bi-building text-primary"></i><div><strong>Espacios / tenants</strong><div class="ui-table-meta">Máximo: @_summary.MaxProperties</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-box-seam text-primary"></i><div><strong>Entidades operativas</strong><div class="ui-table-meta">Máximo: @_summary.MaxUnits</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-people text-primary"></i><div><strong>Usuarios del tenant</strong><div class="ui-table-meta">Máximo: @_summary.MaxUsers</div></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <h5 class="ui-card-title">Funciones incluidas</h5>
+                            <div class="ui-card-subtitle">Qué capacidades tenés disponibles con el plan actual.</div>
+                        </div>
+                    </div>
+                    <div class="ui-list-stack">
+                        <div class="ui-check-card"><i class="bi bi-bar-chart-line text-primary"></i><div><strong>Reportes</strong><div class="ui-table-meta">@(_summary.IncludesReports ? "Incluidos" : "No incluidos")</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-gear text-primary"></i><div><strong>Operaciones</strong><div class="ui-table-meta">@(_summary.IncludesOperations ? "Incluidas" : "No incluidas")</div></div></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 }

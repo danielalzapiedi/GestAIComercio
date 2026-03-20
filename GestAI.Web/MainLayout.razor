@@ -8,89 +8,109 @@
 
 <AuthorizeView>
     <Authorized>
-        <header id="header" class="header fixed-top d-flex align-items-center">
-            <div class="d-flex align-items-center justify-content-between w-100 px-3">
-                <a href="/dashboard" class="logo d-flex align-items-center text-decoration-none">
-                    <span class="d-none d-lg-block">GestAI Comercio</span>
-                </a>
-                <div class="d-flex align-items-center gap-2">
-                    @if (_loadingAccess)
-                    {
-                        <span class="text-muted small">Cargando acceso...</span>
-                    }
-                    else if (_access is not null)
-                    {
-                        <span class="badge bg-secondary">@(_access.IsPlatformAdmin ? "Super Admin" : _access.Role?.ToString() ?? "Sin rol")</span>
-                    }
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="Logout">Salir</button>
+        <div class="ui-app-shell">
+            <header id="header" class="header fixed-top d-flex align-items-center ui-topbar">
+                <div class="d-flex align-items-center justify-content-between w-100 px-3 px-lg-4">
+                    <a href="/dashboard" class="logo d-flex align-items-center text-decoration-none gap-3">
+                        <span class="ui-brand-mark"><i class="bi bi-shop-window"></i></span>
+                        <span>
+                            <span class="d-block ui-brand-title">GestAI Comercio</span>
+                            <span class="d-none d-lg-block ui-brand-subtitle">Gestión comercial multi-tenant</span>
+                        </span>
+                    </a>
+                    <div class="d-flex align-items-center gap-2 gap-lg-3">
+                        <div class="text-end d-none d-md-block">
+                            <div class="ui-user-eyebrow">Sesión activa</div>
+                            <div class="ui-user-name">@(_access?.IsPlatformAdmin == true ? "Super Admin" : _access?.Role?.ToString() ?? "Usuario")</div>
+                        </div>
+                        @if (_loadingAccess)
+                        {
+                            <span class="text-muted small">Cargando acceso...</span>
+                        }
+                        else if (_access is not null)
+                        {
+                            <span class="ui-role-pill">@(_access.IsPlatformAdmin ? "Super Admin" : _access.Role?.ToString() ?? "Sin rol")</span>
+                        }
+                        <button class="btn btn-outline-secondary btn-sm ui-logout-btn" @onclick="Logout">
+                            <i class="bi bi-box-arrow-right"></i>
+                            <span class="d-none d-md-inline">Salir</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </header>
+            </header>
 
-        <aside id="sidebar" class="sidebar">
-            <ul class="sidebar-nav" id="sidebar-nav">
-                @if (CanAccess(SaasModule.Dashboard))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/dashboard"><i class="bi bi-grid"></i><span>Dashboard</span></NavLink></li>
-                }
+            <aside id="sidebar" class="sidebar ui-sidebar">
+                <div class="ui-sidebar-head">
+                    <div class="ui-sidebar-title">Navegación</div>
+                    <div class="ui-sidebar-subtitle">Accesos según tu rol y permisos</div>
+                </div>
 
-                @if (_access?.IsPlatformAdmin == true)
-                {
-                    <li class="nav-heading">Plataforma</li>
-                    <li class="nav-item"><NavLink class="nav-link" href="/platform/tenants"><i class="bi bi-building-gear"></i><span>Tenants</span></NavLink></li>
-                }
+                <ul class="sidebar-nav ui-nav-list" id="sidebar-nav">
+                    @if (CanAccess(SaasModule.Dashboard))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/dashboard"><i class="bi bi-grid"></i><span>Dashboard</span></NavLink></li>
+                    }
 
-                <li class="nav-heading">Organización</li>
-                @if (CanAccess(SaasModule.Branches))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/branches"><i class="bi bi-shop"></i><span>Sucursales</span></NavLink></li>
-                }
-                @if (CanAccess(SaasModule.Warehouses))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/warehouses"><i class="bi bi-box-seam"></i><span>Depósitos</span></NavLink></li>
-                }
-                @if (CanAccess(SaasModule.Users))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/users"><i class="bi bi-people"></i><span>Usuarios</span></NavLink></li>
-                }
+                    @if (_access?.IsPlatformAdmin == true)
+                    {
+                        <li class="nav-heading">Plataforma</li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/platform/tenants"><i class="bi bi-building-gear"></i><span>Tenants</span></NavLink></li>
+                    }
 
-                <li class="nav-heading">Catálogos</li>
-                @if (CanAccess(SaasModule.Categories))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/categories"><i class="bi bi-diagram-3"></i><span>Categorías</span></NavLink></li>
-                }
-                @if (CanAccess(SaasModule.Products))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/products"><i class="bi bi-box"></i><span>Productos</span></NavLink></li>
-                }
-                @if (CanAccess(SaasModule.Customers))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/customers"><i class="bi bi-person-vcard"></i><span>Clientes</span></NavLink></li>
-                }
-                @if (CanAccess(SaasModule.Suppliers))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/suppliers"><i class="bi bi-truck"></i><span>Proveedores</span></NavLink></li>
-                }
+                    <li class="nav-heading">Organización</li>
+                    @if (CanAccess(SaasModule.Branches))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/branches"><i class="bi bi-shop"></i><span>Sucursales</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Warehouses))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/warehouses"><i class="bi bi-box-seam"></i><span>Depósitos</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Users))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/users"><i class="bi bi-people"></i><span>Usuarios</span></NavLink></li>
+                    }
 
-                <li class="nav-heading">Configuración</li>
-                @if (CanAccess(SaasModule.Configuration))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/account"><i class="bi bi-building"></i><span>Cuenta</span></NavLink></li>
-                }
-                @if (CanAccess(SaasModule.Plans))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/plans"><i class="bi bi-card-checklist"></i><span>Plan</span></NavLink></li>
-                }
-                @if (CanAccess(SaasModule.AuditLog))
-                {
-                    <li class="nav-item"><NavLink class="nav-link" href="/audit-log"><i class="bi bi-journal-text"></i><span>Auditoría</span></NavLink></li>
-                }
-            </ul>
-        </aside>
+                    <li class="nav-heading">Catálogos</li>
+                    @if (CanAccess(SaasModule.Categories))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/categories"><i class="bi bi-diagram-3"></i><span>Categorías</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Products))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/products"><i class="bi bi-box"></i><span>Productos</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Customers))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/customers"><i class="bi bi-person-vcard"></i><span>Clientes</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Suppliers))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/suppliers"><i class="bi bi-truck"></i><span>Proveedores</span></NavLink></li>
+                    }
 
-        <main id="main" class="main">
-            @Body
-        </main>
+                    <li class="nav-heading">Configuración</li>
+                    @if (CanAccess(SaasModule.Configuration))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/account"><i class="bi bi-building"></i><span>Cuenta</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.Plans))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/plans"><i class="bi bi-card-checklist"></i><span>Plan</span></NavLink></li>
+                    }
+                    @if (CanAccess(SaasModule.AuditLog))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/audit-log"><i class="bi bi-journal-text"></i><span>Auditoría</span></NavLink></li>
+                    }
+                </ul>
+            </aside>
+
+            <main id="main" class="main ui-main">
+                <div class="ui-page-shell">
+                    @Body
+                </div>
+            </main>
+        </div>
     </Authorized>
     <NotAuthorized>
         @Body
