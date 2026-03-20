@@ -68,32 +68,16 @@
             </header>
 
             <aside id="sidebar" class="sidebar ui-sidebar">
-                <div class="ui-sidebar-head">
-                    <div class="ui-sidebar-title">Navegación</div>
-                    <div class="ui-sidebar-subtitle">Accesos según tu rol y permisos</div>
-                </div>
-                @if (_access is not null)
-                {
-                    <div class="ui-sidebar-profile">
-                        <div class="ui-sidebar-profile-top">
-                            <span class="ui-avatar ui-avatar-lg">@UserInitial</span>
-                            <div>
-                                <div class="ui-sidebar-profile-name">@UserDisplayName</div>
-                                <div class="ui-sidebar-profile-role">@UserRoleLabel</div>
-                            </div>
-                        </div>
-                        <div class="ui-sidebar-profile-actions">
-                            @if (CanAccess(SaasModule.Configuration))
-                            {
-                                <a href="/account" class="btn btn-sm btn-light">Cuenta</a>
-                            }
-                            @if (CanAccess(SaasModule.Plans))
-                            {
-                                <a href="/plans" class="btn btn-sm btn-outline-light">Plan</a>
-                            }
-                        </div>
+                <div class="ui-sidebar-head ui-sidebar-head-compact">
+                    <div>
+                        <div class="ui-sidebar-title">Menú principal</div>
+                        <div class="ui-sidebar-subtitle">Accesos disponibles</div>
                     </div>
-                }
+                    @if (_access is not null)
+                    {
+                        <span class="ui-sidebar-role-pill">@UserRoleLabel</span>
+                    }
+                </div>
 
                 <ul class="sidebar-nav ui-nav-list" id="sidebar-nav">
                     @if (CanAccess(SaasModule.Dashboard))
