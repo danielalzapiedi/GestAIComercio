@@ -18,6 +18,6 @@ public sealed class PriceListConfiguration : IEntityTypeConfiguration<PriceList>
         b.Property(x => x.IsActive).HasDefaultValue(true);
         b.Property(x => x.RowVersion).IsRowVersion();
         b.HasIndex(x => new { x.AccountId, x.Name }).IsUnique();
-        b.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.NoAction);
     }
 }

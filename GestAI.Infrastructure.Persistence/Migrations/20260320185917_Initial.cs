@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GestAI.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class Release1 : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -177,6 +177,33 @@ namespace GestAI.Infrastructure.Persistence.Migrations
                         principalTable: "Accounts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PriceLists",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AccountId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false),
+                    BaseMode = table.Column<int>(type: "int", nullable: false),
+                    TargetType = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedByUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    ModifiedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedByUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PriceLists", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PriceLists_Accounts_AccountId",
+                        column: x => x.AccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -519,6 +546,157 @@ namespace GestAI.Infrastructure.Persistence.Migrations
                         principalColumn: "Id");
                 });
 
+            migrationBuilder.CreateTable(
+                name: "PriceListItems",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AccountId = table.Column<int>(type: "int", nullable: false),
+                    PriceListId = table.Column<int>(type: "int", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: false),
+                    ProductVariantId = table.Column<int>(type: "int", nullable: true),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedByUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    ModifiedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedByUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PriceListItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PriceListItems_Accounts_AccountId",
+                        column: x => x.AccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PriceListItems_PriceLists_PriceListId",
+                        column: x => x.PriceListId,
+                        principalTable: "PriceLists",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_PriceListItems_ProductVariants_ProductVariantId",
+                        column: x => x.ProductVariantId,
+                        principalTable: "ProductVariants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PriceListItems_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProductWarehouseStocks",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AccountId = table.Column<int>(type: "int", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: false),
+                    ProductVariantId = table.Column<int>(type: "int", nullable: true),
+                    WarehouseId = table.Column<int>(type: "int", nullable: false),
+                    QuantityOnHand = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    LastMovementAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedByUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    ModifiedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedByUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProductWarehouseStocks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProductWarehouseStocks_Accounts_AccountId",
+                        column: x => x.AccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProductWarehouseStocks_ProductVariants_ProductVariantId",
+                        column: x => x.ProductVariantId,
+                        principalTable: "ProductVariants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ProductWarehouseStocks_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ProductWarehouseStocks_Warehouses_WarehouseId",
+                        column: x => x.WarehouseId,
+                        principalTable: "Warehouses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "StockMovements",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AccountId = table.Column<int>(type: "int", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: false),
+                    ProductVariantId = table.Column<int>(type: "int", nullable: true),
+                    WarehouseId = table.Column<int>(type: "int", nullable: false),
+                    CounterpartWarehouseId = table.Column<int>(type: "int", nullable: true),
+                    MovementType = table.Column<int>(type: "int", nullable: false),
+                    QuantityDelta = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Reason = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Note = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    ReferenceGroup = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: true),
+                    OccurredAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedByUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    ModifiedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ModifiedByUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StockMovements", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StockMovements_Accounts_AccountId",
+                        column: x => x.AccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_StockMovements_ProductVariants_ProductVariantId",
+                        column: x => x.ProductVariantId,
+                        principalTable: "ProductVariants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StockMovements_Products_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Products",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StockMovements_Warehouses_CounterpartWarehouseId",
+                        column: x => x.CounterpartWarehouseId,
+                        principalTable: "Warehouses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_StockMovements_Warehouses_WarehouseId",
+                        column: x => x.WarehouseId,
+                        principalTable: "Warehouses",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Accounts_OwnerUserId_Name",
                 table: "Accounts",
@@ -612,6 +790,41 @@ namespace GestAI.Infrastructure.Persistence.Migrations
                 columns: new[] { "AccountId", "Name" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_PriceListItems_AccountId",
+                table: "PriceListItems",
+                column: "AccountId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PriceListItems_PriceListId_ProductId",
+                table: "PriceListItems",
+                columns: new[] { "PriceListId", "ProductId" },
+                unique: true,
+                filter: "[ProductVariantId] IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PriceListItems_PriceListId_ProductVariantId",
+                table: "PriceListItems",
+                columns: new[] { "PriceListId", "ProductVariantId" },
+                unique: true,
+                filter: "[ProductVariantId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PriceListItems_ProductId",
+                table: "PriceListItems",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PriceListItems_ProductVariantId",
+                table: "PriceListItems",
+                column: "ProductVariantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PriceLists_AccountId_Name",
+                table: "PriceLists",
+                columns: new[] { "AccountId", "Name" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ProductCategories_AccountId_ParentCategoryId_Name",
                 table: "ProductCategories",
                 columns: new[] { "AccountId", "ParentCategoryId", "Name" },
@@ -651,10 +864,69 @@ namespace GestAI.Infrastructure.Persistence.Migrations
                 columns: new[] { "ProductId", "Name" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_ProductWarehouseStocks_AccountId_WarehouseId_ProductId",
+                table: "ProductWarehouseStocks",
+                columns: new[] { "AccountId", "WarehouseId", "ProductId" },
+                unique: true,
+                filter: "[ProductVariantId] IS NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductWarehouseStocks_AccountId_WarehouseId_ProductVariantId",
+                table: "ProductWarehouseStocks",
+                columns: new[] { "AccountId", "WarehouseId", "ProductVariantId" },
+                unique: true,
+                filter: "[ProductVariantId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductWarehouseStocks_ProductId",
+                table: "ProductWarehouseStocks",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductWarehouseStocks_ProductVariantId",
+                table: "ProductWarehouseStocks",
+                column: "ProductVariantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductWarehouseStocks_WarehouseId",
+                table: "ProductWarehouseStocks",
+                column: "WarehouseId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_SaasPlanDefinitions_Code",
                 table: "SaasPlanDefinitions",
                 column: "Code",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StockMovements_AccountId_OccurredAtUtc",
+                table: "StockMovements",
+                columns: new[] { "AccountId", "OccurredAtUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StockMovements_AccountId_ProductId_ProductVariantId_WarehouseId_OccurredAtUtc",
+                table: "StockMovements",
+                columns: new[] { "AccountId", "ProductId", "ProductVariantId", "WarehouseId", "OccurredAtUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StockMovements_CounterpartWarehouseId",
+                table: "StockMovements",
+                column: "CounterpartWarehouseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StockMovements_ProductId",
+                table: "StockMovements",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StockMovements_ProductVariantId",
+                table: "StockMovements",
+                column: "ProductVariantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StockMovements_WarehouseId",
+                table: "StockMovements",
+                column: "WarehouseId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Suppliers_AccountId_Name",
@@ -715,13 +987,16 @@ namespace GestAI.Infrastructure.Persistence.Migrations
                 name: "Customers");
 
             migrationBuilder.DropTable(
-                name: "ProductVariants");
+                name: "PriceListItems");
+
+            migrationBuilder.DropTable(
+                name: "ProductWarehouseStocks");
+
+            migrationBuilder.DropTable(
+                name: "StockMovements");
 
             migrationBuilder.DropTable(
                 name: "Suppliers");
-
-            migrationBuilder.DropTable(
-                name: "Warehouses");
 
             migrationBuilder.DropTable(
                 name: "SaasPlanDefinitions");
@@ -731,6 +1006,15 @@ namespace GestAI.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "PriceLists");
+
+            migrationBuilder.DropTable(
+                name: "ProductVariants");
+
+            migrationBuilder.DropTable(
+                name: "Warehouses");
 
             migrationBuilder.DropTable(
                 name: "Products");

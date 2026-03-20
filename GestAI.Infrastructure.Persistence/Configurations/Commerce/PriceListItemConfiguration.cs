@@ -18,7 +18,7 @@ public sealed class PriceListItemConfiguration : IEntityTypeConfiguration<PriceL
         b.HasIndex(x => new { x.PriceListId, x.ProductId }).HasFilter("[ProductVariantId] IS NULL").IsUnique();
         b.HasIndex(x => new { x.PriceListId, x.ProductVariantId }).HasFilter("[ProductVariantId] IS NOT NULL").IsUnique();
         b.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
-        b.HasOne(x => x.PriceList).WithMany(x => x.Items).HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.Cascade);
+        b.HasOne(x => x.PriceList).WithMany(x => x.Items).HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.NoAction);
         b.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne(x => x.ProductVariant).WithMany().HasForeignKey(x => x.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
     }
