@@ -17,6 +17,7 @@ public sealed class GetCurrentUserAccessQueryHandler(IAppDbContext db, ICurrentU
         var accountId = await access.GetCurrentAccountIdAsync(ct);
         InternalUserRole? role = null;
         var isOwner = false;
+        var isPlatformAdmin = current.IsInRole("SuperAdmin");
         SaasPlanDefinition? plan = null;
 
         if (accountId.HasValue)
@@ -42,10 +43,10 @@ public sealed class GetCurrentUserAccessQueryHandler(IAppDbContext db, ICurrentU
         }
 
         var modules = Enum.GetValues<SaasModule>()
-            .Select(module => new ModuleAccessDto(module, SaasPermissionMap.HasAccess(role, plan, module, isOwner)))
+            .Select(module => new ModuleAccessDto(module, SaasPermissionMap.HasAccess(role, plan, module, isOwner, isPlatformAdmin)))
             .ToList();
 
-        return AppResult<CurrentUserAccessDto>.Ok(new CurrentUserAccessDto(accountId, role, isOwner, user.IsActive, modules));
+        return AppResult<CurrentUserAccessDto>.Ok(new CurrentUserAccessDto(accountId, role, isOwner, user.IsActive, isPlatformAdmin, modules));
     }
 }
 
@@ -189,7 +190,7 @@ public sealed class UpsertAccountUserCommandHandler(IAppDbContext db, IUserAcces
                 UserId = create.UserId,
                 Role = request.Role,
                 IsActive = request.IsActive,
-                CanManageConfiguration = request.Role is InternalUserRole.Admin or InternalUserRole.Owner,
+                CanManageConfiguration = request.Role is InternalUserRole.Owner,
                 InvitedAtUtc = DateTime.UtcNow
             });
             await db.SaveChangesAsync(ct);
@@ -202,7 +203,7 @@ public sealed class UpsertAccountUserCommandHandler(IAppDbContext db, IUserAcces
 
         membership.Role = request.Role;
         membership.IsActive = request.IsActive;
-        membership.CanManageConfiguration = request.Role is InternalUserRole.Admin or InternalUserRole.Owner;
+        membership.CanManageConfiguration = request.Role is InternalUserRole.Owner;
         membership.User.Nombre = request.Nombre.Trim();
         membership.User.Apellido = request.Apellido.Trim();
         membership.User.Email = request.Email.Trim();

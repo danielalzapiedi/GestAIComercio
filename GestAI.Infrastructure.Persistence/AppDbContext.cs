@@ -1,5 +1,6 @@
 using GestAI.Application.Abstractions;
 using GestAI.Domain.Entities;
+using GestAI.Domain.Entities.Commerce;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
@@ -15,6 +16,13 @@ public class AppDbContext : IdentityDbContext<User>, IAppDbContext
     public DbSet<AccountSubscriptionPlan> AccountSubscriptionPlans => Set<AccountSubscriptionPlan>();
     public DbSet<SaasPlanDefinition> SaasPlanDefinitions => Set<SaasPlanDefinition>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
     DbSet<User> IAppDbContext.Users => Set<User>();
 
     public async Task<IDbContextTransactionAdapter> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken ct = default)

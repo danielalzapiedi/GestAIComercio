@@ -1,0 +1,105 @@
+@page "/suppliers"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Proveedores</PageTitle>
+
+<h1>Proveedores</h1>
+<div class="card mb-3"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre, CUIT, teléfono" /></div>
+        <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
+        <div class="col-md-2"><button class="btn btn-outline-primary" @onclick="Load">Buscar</button></div>
+        <div class="col-md-3 text-md-end"><button class="btn btn-primary" @onclick="NewItem">Nuevo proveedor</button></div>
+    </div>
+</div></div>
+
+@if (!_loaded)
+{
+    <p>Cargando...</p>
+}
+else if (_result?.Items.Count == 0)
+{
+    <div class="alert alert-info">No hay proveedores.</div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead><tr><th>Nombre</th><th>CUIT</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var item in _result!.Items)
+        {
+            <tr>
+                <td>@item.Name</td>
+                <td>@item.TaxId</td>
+                <td>@item.Phone</td>
+                <td><span class="badge @(item.IsActive ? "bg-success" : "bg-secondary")">@(item.IsActive ? "Activo" : "Inactivo")</span></td>
+                <td><button class="btn btn-sm btn-outline-primary me-1" @onclick="() => Edit(item)">Editar</button><button class="btn btn-sm btn-outline-secondary" @onclick="() => Toggle(item)">@(item.IsActive ? "Desactivar" : "Activar")</button></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@if (_showForm)
+{
+    <div class="card mt-4"><div class="card-body">
+        <h5>@(_form.Id == 0 ? "Nuevo proveedor" : "Editar proveedor")</h5>
+        <div class="row g-3">
+            <div class="col-md-4"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
+            <div class="col-md-3"><label class="form-label">CUIT/DNI</label><input class="form-control" @bind="_form.TaxId" /></div>
+            <div class="col-md-3"><label class="form-label">Teléfono</label><input class="form-control" @bind="_form.Phone" /></div>
+            <div class="col-md-2"><label class="form-label">Activo</label><input type="checkbox" class="form-check-input ms-2" @bind="_form.IsActive" /></div>
+        </div>
+        <div class="mt-3"><button class="btn btn-primary me-2" @onclick="Save">Guardar</button><button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button></div>
+    </div></div>
+}
+
+@code {
+    private PagedResult<SupplierListItemDto>? _result;
+    private string _search = string.Empty;
+    private string _status = string.Empty;
+    private bool _loaded;
+    private bool _showForm;
+    private SupplierUpsertCommand _form = new();
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _loaded = false;
+        var active = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&isActive={_status}";
+        _result = (await Api.GetAsync<AppResult<PagedResult<SupplierListItemDto>>>($"api/commerce/suppliers?search={Uri.EscapeDataString(_search ?? string.Empty)}{active}"))?.Data;
+        _loaded = true;
+    }
+
+    private void NewItem()
+    {
+        _form = new SupplierUpsertCommand { IsActive = true };
+        _showForm = true;
+    }
+
+    private async Task Edit(SupplierListItemDto item)
+    {
+        var detail = (await Api.GetAsync<AppResult<SupplierDetailDto>>($"api/commerce/suppliers/{item.Id}"))?.Data;
+        if (detail is null) return;
+        _form = new SupplierUpsertCommand { Id = detail.Id, Name = detail.Name, TaxId = detail.TaxId, Phone = detail.Phone, IsActive = detail.IsActive };
+        _showForm = true;
+    }
+
+    private async Task Save()
+    {
+        if (_form.Id == 0) await Api.PostAsync("api/commerce/suppliers", new { _form.Name, _form.TaxId, _form.Phone, _form.IsActive });
+        else await Api.PutAsync($"api/commerce/suppliers/{_form.Id}", new { _form.Id, _form.Name, _form.TaxId, _form.Phone, _form.IsActive });
+        _showForm = false;
+        await Load();
+    }
+
+    private async Task Toggle(SupplierListItemDto item)
+    {
+        await Api.PostAsync($"api/commerce/suppliers/{item.Id}/status", new { isActive = !item.IsActive });
+        await Load();
+    }
+
+    private void Cancel() => _showForm = false;
+}

@@ -1,4 +1,5 @@
 using GestAI.Domain.Entities;
+using GestAI.Domain.Entities.Commerce;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using System.Data;
@@ -12,6 +13,13 @@ public interface IAppDbContext
     DbSet<AccountSubscriptionPlan> AccountSubscriptionPlans { get; }
     DbSet<SaasPlanDefinition> SaasPlanDefinitions { get; }
     DbSet<AuditLog> AuditLogs { get; }
+    DbSet<Branch> Branches { get; }
+    DbSet<Warehouse> Warehouses { get; }
+    DbSet<ProductCategory> ProductCategories { get; }
+    DbSet<Product> Products { get; }
+    DbSet<ProductVariant> ProductVariants { get; }
+    DbSet<Customer> Customers { get; }
+    DbSet<Supplier> Suppliers { get; }
     DbSet<User> Users { get; }
     DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken ct = default);
@@ -35,6 +43,7 @@ public interface ICurrentUser
     string UserId { get; }
     string? Email { get; }
     string? FullName { get; }
+    bool IsInRole(string role);
 }
 
 public interface IUserAccessService

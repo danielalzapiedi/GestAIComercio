@@ -1,25 +1,90 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@using GestAI.Web.Dtos
 @inject JwtAuthStateProvider Auth
 @inject NavigationManager Navigation
+@inject ApiClient Api
+@inject GestAI.Web.Service.AppState AppState
 
 <AuthorizeView>
     <Authorized>
         <header id="header" class="header fixed-top d-flex align-items-center">
             <div class="d-flex align-items-center justify-content-between w-100 px-3">
                 <a href="/dashboard" class="logo d-flex align-items-center text-decoration-none">
-                    <span class="d-none d-lg-block">SaaS Starter Kit</span>
+                    <span class="d-none d-lg-block">GestAI Comercio</span>
                 </a>
-                <button class="btn btn-outline-secondary btn-sm" @onclick="Logout">Salir</button>
+                <div class="d-flex align-items-center gap-2">
+                    @if (_loadingAccess)
+                    {
+                        <span class="text-muted small">Cargando acceso...</span>
+                    }
+                    else if (_access is not null)
+                    {
+                        <span class="badge bg-secondary">@(_access.IsPlatformAdmin ? "Super Admin" : _access.Role?.ToString() ?? "Sin rol")</span>
+                    }
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="Logout">Salir</button>
+                </div>
             </div>
         </header>
 
         <aside id="sidebar" class="sidebar">
             <ul class="sidebar-nav" id="sidebar-nav">
-                <li class="nav-item"><NavLink class="nav-link" href="/dashboard"><i class="bi bi-grid"></i><span>Dashboard</span></NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/users"><i class="bi bi-people"></i><span>Users</span></NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/account"><i class="bi bi-building"></i><span>Account</span></NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/plans"><i class="bi bi-card-checklist"></i><span>Plans</span></NavLink></li>
-                <li class="nav-item"><NavLink class="nav-link" href="/audit-log"><i class="bi bi-journal-text"></i><span>Audit Log</span></NavLink></li>
+                @if (CanAccess(SaasModule.Dashboard))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/dashboard"><i class="bi bi-grid"></i><span>Dashboard</span></NavLink></li>
+                }
+
+                @if (_access?.IsPlatformAdmin == true)
+                {
+                    <li class="nav-heading">Plataforma</li>
+                    <li class="nav-item"><NavLink class="nav-link" href="/platform/tenants"><i class="bi bi-building-gear"></i><span>Tenants</span></NavLink></li>
+                }
+
+                <li class="nav-heading">Organización</li>
+                @if (CanAccess(SaasModule.Branches))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/branches"><i class="bi bi-shop"></i><span>Sucursales</span></NavLink></li>
+                }
+                @if (CanAccess(SaasModule.Warehouses))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/warehouses"><i class="bi bi-box-seam"></i><span>Depósitos</span></NavLink></li>
+                }
+                @if (CanAccess(SaasModule.Users))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/users"><i class="bi bi-people"></i><span>Usuarios</span></NavLink></li>
+                }
+
+                <li class="nav-heading">Catálogos</li>
+                @if (CanAccess(SaasModule.Categories))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/categories"><i class="bi bi-diagram-3"></i><span>Categorías</span></NavLink></li>
+                }
+                @if (CanAccess(SaasModule.Products))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/products"><i class="bi bi-box"></i><span>Productos</span></NavLink></li>
+                }
+                @if (CanAccess(SaasModule.Customers))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/customers"><i class="bi bi-person-vcard"></i><span>Clientes</span></NavLink></li>
+                }
+                @if (CanAccess(SaasModule.Suppliers))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/suppliers"><i class="bi bi-truck"></i><span>Proveedores</span></NavLink></li>
+                }
+
+                <li class="nav-heading">Configuración</li>
+                @if (CanAccess(SaasModule.Configuration))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/account"><i class="bi bi-building"></i><span>Cuenta</span></NavLink></li>
+                }
+                @if (CanAccess(SaasModule.Plans))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/plans"><i class="bi bi-card-checklist"></i><span>Plan</span></NavLink></li>
+                }
+                @if (CanAccess(SaasModule.AuditLog))
+                {
+                    <li class="nav-item"><NavLink class="nav-link" href="/audit-log"><i class="bi bi-journal-text"></i><span>Auditoría</span></NavLink></li>
+                }
             </ul>
         </aside>
 
@@ -33,9 +98,40 @@
 </AuthorizeView>
 
 @code {
+    private CurrentUserAccessDto? _access;
+    private bool _loadingAccess = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.OnChange += StateHasChanged;
+        await LoadAccess();
+    }
+
+    private async Task LoadAccess()
+    {
+        _loadingAccess = true;
+        try
+        {
+            var result = await Api.GetAsync<AppResult<CurrentUserAccessDto>>("api/saas/me/access");
+            _access = result?.Data;
+            if (_access is not null)
+            {
+                AppState.SetAccess(_access);
+            }
+        }
+        finally
+        {
+            _loadingAccess = false;
+        }
+    }
+
+    private bool CanAccess(SaasModule module) => _access?.IsPlatformAdmin == true || AppState.CanAccess(module);
+
     private async Task Logout()
     {
         await Auth.SetTokenAsync(null);
         Navigation.NavigateTo("/login", true);
     }
+
+    public void Dispose() => AppState.OnChange -= StateHasChanged;
 }

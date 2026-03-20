@@ -9,6 +9,7 @@ public sealed record CurrentUserAccessDto(
     InternalUserRole? Role,
     bool IsOwner,
     bool IsActive,
+    bool IsPlatformAdmin,
     List<ModuleAccessDto> Modules);
 
 public sealed record AccountSummaryDto(

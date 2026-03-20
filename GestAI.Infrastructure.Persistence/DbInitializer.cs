@@ -13,7 +13,8 @@ public static class DbInitializer
     public static async Task MigrateAndSeedAsync(AppDbContext db, UserManager<User> userManager, RoleManager<IdentityRole> roleManager, ILogger logger, SeedOptions options, CancellationToken ct = default)
     {
         await db.Database.EnsureCreatedAsync(ct);
-        if (!await roleManager.RoleExistsAsync("Admin")) await roleManager.CreateAsync(new IdentityRole("Admin"));
+
+        if (!await roleManager.RoleExistsAsync("SuperAdmin")) await roleManager.CreateAsync(new IdentityRole("SuperAdmin"));
 
         var admin = await userManager.FindByEmailAsync(options.AdminEmail);
         if (admin is null)
@@ -21,13 +22,15 @@ public static class DbInitializer
             admin = new User { UserName = options.AdminEmail, Email = options.AdminEmail, EmailConfirmed = true, Nombre = "Admin", Apellido = "GestAI" };
             var created = await userManager.CreateAsync(admin, options.AdminPassword);
             if (!created.Succeeded) throw new InvalidOperationException(string.Join("; ", created.Errors.Select(e => e.Description)));
-            await userManager.AddToRoleAsync(admin, "Admin");
         }
+
+        if (!await userManager.IsInRoleAsync(admin, "SuperAdmin"))
+            await userManager.AddToRoleAsync(admin, "SuperAdmin");
 
         var account = await db.Accounts.FirstOrDefaultAsync(a => a.OwnerUserId == admin.Id, ct);
         if (account is null)
         {
-            account = new Account { OwnerUserId = admin.Id, Name = "Mi cuenta", IsActive = true, CreatedAtUtc = DateTime.UtcNow };
+            account = new Account { OwnerUserId = admin.Id, Name = "Comercio Demo", IsActive = true, CreatedAtUtc = DateTime.UtcNow };
             db.Accounts.Add(account);
             await db.SaveChangesAsync(ct);
         }
@@ -69,6 +72,6 @@ public static class DbInitializer
             await db.SaveChangesAsync(ct);
         }
 
-        logger.LogInformation("DB migrate + seed OK. Admin: {Email}, AccountId: {AccountId}", options.AdminEmail, account.Id);
+        logger.LogInformation("DB migrate + seed OK. SuperAdmin: {Email}, AccountId: {AccountId}", options.AdminEmail, account.Id);
     }
 }

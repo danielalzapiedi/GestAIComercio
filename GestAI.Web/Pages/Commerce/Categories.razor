@@ -1,0 +1,141 @@
+@page "/categories"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Categorías</PageTitle>
+
+<h1>Categorías</h1>
+<div class="card mb-3"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre" /></div>
+        <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activas</option><option value="false">Inactivas</option></select></div>
+        <div class="col-md-2"><button class="btn btn-outline-primary" @onclick="Load">Buscar</button></div>
+        <div class="col-md-3 text-md-end"><button class="btn btn-primary" @onclick="NewItem">Nueva categoría</button></div>
+    </div>
+</div></div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        @if (!_loaded)
+        {
+            <p>Cargando...</p>
+        }
+        else if (_result?.Items.Count == 0)
+        {
+            <div class="alert alert-info">No hay categorías.</div>
+        }
+        else
+        {
+            <table class="table table-striped">
+                <thead><tr><th>Nombre</th><th>Padre</th><th>Estado</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var item in _result!.Items)
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        <td>@(item.ParentCategoryName ?? "Raíz")</td>
+                        <td><span class="badge @(item.IsActive ? "bg-success" : "bg-secondary")">@(item.IsActive ? "Activa" : "Inactiva")</span></td>
+                        <td><button class="btn btn-sm btn-outline-primary me-1" @onclick="() => Edit(item)">Editar</button><button class="btn btn-sm btn-outline-secondary" @onclick="() => Toggle(item)">@(item.IsActive ? "Desactivar" : "Activar")</button></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+    <div class="col-lg-5">
+        <div class="card"><div class="card-body">
+            <h5>Jerarquía</h5>
+            @if (_tree.Count == 0)
+            {
+                <p class="text-muted">Sin categorías.</p>
+            }
+            else
+            {
+                <ul class="mb-0">
+                    @foreach (var line in FlattenTree(_tree, 0))
+                    {
+                        <li>@line</li>
+                    }
+                </ul>
+            }
+        </div></div>
+    </div>
+</div>
+
+@if (_showForm)
+{
+    <div class="card mt-4"><div class="card-body">
+        <h5>@(_form.Id == 0 ? "Nueva categoría" : "Editar categoría")</h5>
+        <div class="row g-3">
+            <div class="col-md-5"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
+            <div class="col-md-5"><label class="form-label">Padre</label><select class="form-select" @bind="_form.ParentCategoryId"><option value="">Sin padre</option>@foreach (var item in _allCategories.Where(x => x.Id != _form.Id)){<option value="@item.Id">@item.Name</option>}</select></div>
+            <div class="col-md-2"><label class="form-label">Activa</label><input type="checkbox" class="form-check-input ms-2" @bind="_form.IsActive" /></div>
+        </div>
+        <div class="mt-3"><button class="btn btn-primary me-2" @onclick="Save">Guardar</button><button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button></div>
+    </div></div>
+}
+
+@code {
+    private PagedResult<CategoryListItemDto>? _result;
+    private List<CategoryTreeItemDto> _tree = new();
+    private List<CategoryListItemDto> _allCategories = new();
+    private string _search = string.Empty;
+    private string _status = string.Empty;
+    private bool _loaded;
+    private bool _showForm;
+    private CategoryUpsertCommand _form = new();
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _loaded = false;
+        var active = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&isActive={_status}";
+        _result = (await Api.GetAsync<AppResult<PagedResult<CategoryListItemDto>>>($"api/commerce/categories?search={Uri.EscapeDataString(_search ?? string.Empty)}{active}"))?.Data;
+        _allCategories = (await Api.GetAsync<AppResult<PagedResult<CategoryListItemDto>>>("api/commerce/categories?pageSize=200"))?.Data?.Items.ToList() ?? new();
+        _tree = (await Api.GetAsync<AppResult<List<CategoryTreeItemDto>>>("api/commerce/categories/tree"))?.Data ?? new();
+        _loaded = true;
+    }
+
+    private IEnumerable<string> FlattenTree(IEnumerable<CategoryTreeItemDto> nodes, int level)
+    {
+        foreach (var node in nodes)
+        {
+            yield return $"{new string('—', level)} {node.Name}".Trim();
+            foreach (var child in FlattenTree(node.Children, level + 1))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private void NewItem()
+    {
+        _form = new CategoryUpsertCommand { IsActive = true };
+        _showForm = true;
+    }
+
+    private async Task Edit(CategoryListItemDto item)
+    {
+        var detail = (await Api.GetAsync<AppResult<CategoryDetailDto>>($"api/commerce/categories/{item.Id}"))?.Data;
+        if (detail is null) return;
+        _form = new CategoryUpsertCommand { Id = detail.Id, Name = detail.Name, ParentCategoryId = detail.ParentCategoryId, IsActive = detail.IsActive };
+        _showForm = true;
+    }
+
+    private async Task Save()
+    {
+        if (_form.Id == 0) await Api.PostAsync("api/commerce/categories", new { _form.Name, _form.ParentCategoryId, _form.IsActive });
+        else await Api.PutAsync($"api/commerce/categories/{_form.Id}", new { _form.Id, _form.Name, _form.ParentCategoryId, _form.IsActive });
+        _showForm = false;
+        await Load();
+    }
+
+    private async Task Toggle(CategoryListItemDto item)
+    {
+        await Api.PostAsync($"api/commerce/categories/{item.Id}/status", new { isActive = !item.IsActive });
+        await Load();
+    }
+
+    private void Cancel() => _showForm = false;
+}

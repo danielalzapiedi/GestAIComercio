@@ -16,17 +16,17 @@ public class SaasCoreTests
     }
 
     [Fact]
-    public void SaasPermissionMap_AllowsConfiguredModulesForAdmin()
+    public void SaasPermissionMap_Employee_HasCommerceModules()
     {
         var plan = new SaasPlanDefinition();
-        Assert.True(SaasPermissionMap.HasAccess(InternalUserRole.Admin, plan, SaasModule.Users, false));
+        Assert.True(SaasPermissionMap.HasAccess(InternalUserRole.Employee, plan, SaasModule.Products, false));
+        Assert.False(SaasPermissionMap.HasAccess(InternalUserRole.Employee, plan, SaasModule.Users, false));
     }
 
     [Fact]
-    public void SaasPermissionMap_Reception_HasOnlyDashboard()
+    public void SaasPermissionMap_PlatformAdmin_HasPlatformAccess()
     {
         var plan = new SaasPlanDefinition();
-        Assert.True(SaasPermissionMap.HasAccess(InternalUserRole.Reception, plan, SaasModule.Dashboard, false));
-        Assert.False(SaasPermissionMap.HasAccess(InternalUserRole.Reception, plan, SaasModule.Users, false));
+        Assert.True(SaasPermissionMap.HasAccess(null, plan, SaasModule.PlatformTenants, false, true));
     }
 }

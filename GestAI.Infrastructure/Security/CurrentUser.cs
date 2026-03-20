@@ -23,5 +23,8 @@ namespace GestAI.Infrastructure.Security
         public string? FullName =>
             _http.HttpContext?.User?.FindFirstValue(ClaimTypes.Name)
             ?? _http.HttpContext?.User?.FindFirstValue("name");
+
+        public bool IsInRole(string role) =>
+            _http.HttpContext?.User?.IsInRole(role) ?? false;
     }
 }

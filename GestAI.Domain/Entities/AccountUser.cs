@@ -9,7 +9,7 @@ public sealed class AccountUser : Entity
     public Account Account { get; set; } = null!;
     public string UserId { get; set; } = null!;
     public User User { get; set; } = null!;
-    public InternalUserRole Role { get; set; } = InternalUserRole.Reception;
+    public InternalUserRole Role { get; set; } = InternalUserRole.Employee;
     public bool CanManageConfiguration { get; set; } = false;
     public bool IsActive { get; set; } = true;
     public DateTime InvitedAtUtc { get; set; } = DateTime.UtcNow;
