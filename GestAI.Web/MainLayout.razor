@@ -125,7 +125,7 @@
         }
     }
 
-    private bool CanAccess(SaasModule module) => _access?.IsPlatformAdmin == true || AppState.CanAccess(module);
+    private bool CanAccess(SaasModule module) => AppState.CanAccess(module);
 
     private async Task Logout()
     {

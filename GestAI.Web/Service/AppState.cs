@@ -20,6 +20,6 @@ namespace GestAI.Web.Service
             OnChange?.Invoke();
         }
 
-        public bool CanAccess(SaasModule module) => IsPlatformAdmin || AllowedModules.Contains(module);
+        public bool CanAccess(SaasModule module) => AllowedModules.Contains(module);
     }
 }

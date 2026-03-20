@@ -7,7 +7,7 @@ public static class SaasPermissionMap
 {
     public static bool HasAccess(InternalUserRole? role, SaasPlanDefinition? plan, SaasModule module, bool isOwner, bool isPlatformAdmin = false)
     {
-        if (isPlatformAdmin) return true;
+        if (isPlatformAdmin) return module == SaasModule.PlatformTenants;
         if (isOwner) return module is not SaasModule.PlatformTenants && IsEnabledByPlan(plan, module);
         if (role is null) return false;
 

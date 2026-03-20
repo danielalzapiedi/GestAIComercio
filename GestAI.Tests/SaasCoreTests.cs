@@ -29,6 +29,8 @@ public class SaasCoreTests
     {
         var plan = new SaasPlanDefinition();
         Assert.True(SaasPermissionMap.HasAccess(null, plan, SaasModule.PlatformTenants, false, true));
+        Assert.False(SaasPermissionMap.HasAccess(null, plan, SaasModule.Products, false, true));
+        Assert.False(SaasPermissionMap.HasAccess(null, plan, SaasModule.Users, false, true));
     }
 
     [Fact]
