@@ -7,6 +7,7 @@ using GestAI.Domain.Entities.Commerce;
 using GestAI.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace GestAI.Application.Commerce;
 
@@ -87,7 +88,7 @@ file static class CommerceFeatureHelpers
     public static PagedResult<T> ToPaged<T>(IReadOnlyList<T> items, int total, int page, int pageSize)
         => new(items, total, page, pageSize);
 
-    public static void AddPagingRules<T>(AbstractValidator<T> validator, Func<T, int> pageSelector, Func<T, int> pageSizeSelector)
+    public static void AddPagingRules<T>(AbstractValidator<T> validator, Expression<Func<T, int>> pageSelector, Expression<Func<T, int>> pageSizeSelector)
     {
         validator.RuleFor(pageSelector).GreaterThanOrEqualTo(1);
         validator.RuleFor(pageSizeSelector).InclusiveBetween(1, MaxPageSize);
