@@ -31,6 +31,11 @@ public class AppDbContext : IdentityDbContext<User>, IAppDbContext
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleItem> SaleItems => Set<SaleItem>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<PurchaseDocument> PurchaseDocuments => Set<PurchaseDocument>();
+    public DbSet<PurchaseDocumentItem> PurchaseDocumentItems => Set<PurchaseDocumentItem>();
+    public DbSet<GoodsReceipt> GoodsReceipts => Set<GoodsReceipt>();
+    public DbSet<GoodsReceiptItem> GoodsReceiptItems => Set<GoodsReceiptItem>();
+    public DbSet<SupplierAccountMovement> SupplierAccountMovements => Set<SupplierAccountMovement>();
     DbSet<User> IAppDbContext.Users => Set<User>();
 
     public async Task<IDbContextTransactionAdapter> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken ct = default)

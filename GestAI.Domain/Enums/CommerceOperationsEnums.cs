@@ -46,3 +46,26 @@ public enum SaleStatus
     Completed = 2,
     Cancelled = 3
 }
+
+
+public enum PurchaseDocumentType
+{
+    PurchaseDocument = 0,
+    PurchaseOrder = 1
+}
+
+public enum PurchaseDocumentStatus
+{
+    Draft = 0,
+    Issued = 1,
+    PartiallyReceived = 2,
+    Received = 3,
+    Cancelled = 4
+}
+
+public enum SupplierAccountMovementType
+{
+    PurchaseDocument = 0,
+    Payment = 1,
+    Adjustment = 2
+}

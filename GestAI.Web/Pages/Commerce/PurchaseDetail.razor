@@ -1,0 +1,247 @@
+@page "/purchases/{Id:int}"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Detalle de compra</PageTitle>
+
+@if (!_loaded)
+{
+    <div class="card"><div class="card-body">Cargando compra...</div></div>
+}
+else if (_detail is null)
+{
+    <EmptyState Title="Compra no encontrada"
+                Description="Volvé al listado para revisar otras operaciones de abastecimiento."
+                Icon="bi-bag-x">
+        <a class="btn btn-primary" href="/purchases">Volver a compras</a>
+    </EmptyState>
+}
+else
+{
+    <section class="page-hero">
+        <div>
+            <div class="page-hero-title">@_detail.Number · @_detail.SupplierName</div>
+            <div class="page-hero-subtitle">Documento @(_detail.SupplierDocumentNumber ?? TypeLabel(_detail.DocumentType)), estado @StatusLabel(_detail.Status), con trazabilidad completa entre compra, ingresos y saldo proveedor.</div>
+        </div>
+        <div class="page-hero-meta">
+            <span class="page-hero-chip"><i class="bi bi-bag-check"></i>@_detail.Total.ToString("C")</span>
+            <button class="btn btn-outline-secondary" type="button" @onclick="Back"><i class="bi bi-arrow-left me-2"></i>Volver</button>
+            @if (_detail.CanReceive)
+            {
+                <button class="btn btn-primary" type="button" @onclick="OpenReceipt"><i class="bi bi-box-arrow-in-down me-2"></i>Registrar ingreso</button>
+            }
+        </div>
+    </section>
+
+    <div class="row g-3 ui-summary-grid mb-1">
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Ordenado</div><div class="ui-stat-value">@_detail.OrderedQuantity</div><div class="ui-stat-foot">Cantidad total comprometida.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Recibido</div><div class="ui-stat-value">@_detail.ReceivedQuantity</div><div class="ui-stat-foot">Impactado en stock.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Pendiente</div><div class="ui-stat-value">@_detail.PendingQuantity</div><div class="ui-stat-foot">Pendiente de ingresar.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Saldo proveedor</div><div class="ui-stat-value">@_detail.SupplierAccount.Balance.ToString("C")</div><div class="ui-stat-foot">Base de deuda originada por compras.</div></div></div></div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <div class="card ui-data-card mb-3"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Documento</div><h5 class="ui-card-title">Ítems de compra</h5><div class="ui-card-subtitle">Cada línea muestra costo pactado, cantidad recibida y costo operativo actualmente guardado en el SKU.</div></div></div>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead><tr><th>SKU</th><th>Cantidad</th><th>Recepción</th><th>Costo compra</th><th>Costo actual</th><th>Subtotal</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in _detail.Items)
+                        {
+                            <tr>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@item.Description</span><span class="ui-table-meta">@item.InternalCode</span></div></td>
+                                <td>@item.QuantityOrdered</td>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@item.QuantityReceived</span><span class="ui-table-meta">Pendiente @item.PendingQuantity</span></div></td>
+                                <td>@item.UnitCost.ToString("C")</td>
+                                <td>@item.CurrentRecordedCost.ToString("C")</td>
+                                <td>@item.LineSubtotal.ToString("C")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div></div>
+
+            <div class="card ui-data-card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Recepciones</div><h5 class="ui-card-title">Ingresos de mercadería</h5><div class="ui-card-subtitle">Cada ingreso genera movimiento de stock inbound en el depósito seleccionado.</div></div></div>
+                @if (_detail.Receipts.Count == 0)
+                {
+                    <EmptyState Title="Sin ingresos todavía"
+                                Description="Cuando registres una recepción, acá vas a ver el historial con depósito, fecha y cantidades impactadas."
+                                Icon="bi-box-seam">
+                        @if (_detail.CanReceive)
+                        {
+                            <button class="btn btn-primary" type="button" @onclick="OpenReceipt">Registrar primer ingreso</button>
+                        }
+                    </EmptyState>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead><tr><th>Número</th><th>Depósito</th><th>Fecha</th><th>Cantidad</th><th>Total</th><th>Usuario</th></tr></thead>
+                            <tbody>
+                            @foreach (var receipt in _detail.Receipts)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@receipt.Number</td>
+                                    <td>@receipt.WarehouseName</td>
+                                    <td>@receipt.ReceivedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@receipt.TotalQuantity</td>
+                                    <td>@receipt.TotalCost.ToString("C")</td>
+                                    <td>@receipt.CreatedByUserId</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div></div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card ui-data-card mb-3"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Costo</div><h5 class="ui-card-title">Regla de actualización</h5><div class="ui-card-subtitle">@_detail.CostStrategyDescription</div></div></div>
+                <ul class="small text-muted mb-0">
+                    <li>Se actualiza al confirmar el ingreso, no al guardar la compra.</li>
+                    <li>Si el SKU no tiene stock previo, toma el costo recibido.</li>
+                    <li>Si hay stock previo, recalcula promedio ponderado sobre la existencia actual.</li>
+                </ul>
+            </div></div>
+
+            <div class="card ui-data-card mb-3"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Cuenta proveedor</div><h5 class="ui-card-title">Saldo y movimientos</h5><div class="ui-card-subtitle">Base para evolucionar hacia pagos y cuenta corriente completa.</div></div></div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6"><div class="border rounded-3 p-2"><div class="small text-muted">Débito</div><div class="fw-semibold">@_detail.SupplierAccount.Debit.ToString("C")</div></div></div>
+                    <div class="col-6"><div class="border rounded-3 p-2"><div class="small text-muted">Crédito</div><div class="fw-semibold">@_detail.SupplierAccount.Credit.ToString("C")</div></div></div>
+                </div>
+                <div class="border rounded-3 p-3 mb-3 bg-light-subtle"><div class="small text-muted">Saldo actual</div><div class="h4 mb-0">@_detail.SupplierAccount.Balance.ToString("C")</div></div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Fecha</th><th>Ref.</th><th>Impacto</th></tr></thead>
+                        <tbody>
+                        @foreach (var movement in _detail.SupplierAccount.RecentMovements)
+                        {
+                            <tr>
+                                <td>@movement.IssuedAtUtc.ToLocalTime().ToString("dd/MM")</td>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@movement.ReferenceNumber</span><span class="ui-table-meta">@movement.Description</span></div></td>
+                                <td class="fw-semibold">@movement.BalanceImpact.ToString("C")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <a class="btn btn-outline-secondary w-100" href="/supplier-accounts">Ver cuentas de proveedores</a>
+            </div></div>
+
+            @if (_showReceiptForm)
+            {
+                <div class="card ui-form-card"><div class="card-body">
+                    <div class="ui-card-header"><div><div class="ui-card-eyebrow">Ingreso</div><h5 class="ui-card-title">Registrar mercadería</h5><div class="ui-card-subtitle">Seleccioná depósito destino y las cantidades efectivamente recibidas.</div></div></div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6"><label class="form-label">Depósito</label><select class="form-select" @bind="_receipt.WarehouseId"><option value="0">Seleccionar</option>@foreach (var warehouse in _seed?.Warehouses ?? Array.Empty<LookupDto>()){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
+                        <div class="col-md-6"><label class="form-label">Fecha ingreso</label><input type="datetime-local" class="form-control" @bind="ReceiptLocalDate" /></div>
+                        <div class="col-12"><label class="form-label">Observaciones</label><input class="form-control" @bind="_receipt.Observations" /></div>
+                    </div>
+                    @foreach (var line in _receipt.Items)
+                    {
+                        <div class="border rounded-3 p-3 mb-2">
+                            <div class="d-flex justify-content-between gap-3 mb-2"><div><div class="fw-semibold">@line.Description</div><div class="small text-muted">@line.InternalCode · Pendiente @line.PendingQuantity</div></div><div class="text-end"><div class="small text-muted">Costo</div><div class="fw-semibold">@line.UnitCost.ToString("C")</div></div></div>
+                            <input type="number" step="0.01" class="form-control" @bind="line.QuantityReceived" max="@line.PendingQuantity" />
+                        </div>
+                    }
+                    <div class="ui-action-bar">
+                        <div class="ui-inline-actions"><button class="btn btn-primary" type="button" @onclick="SaveReceipt">Confirmar ingreso</button><button class="btn btn-outline-secondary" type="button" @onclick="CloseReceipt">Cancelar</button></div>
+                        <div class="text-muted">Total ingreso <strong>@_receipt.Items.Sum(x => x.LineSubtotal).ToString("C")</strong></div>
+                    </div>
+                </div></div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private PurchaseDetailDto? _detail;
+    private PurchaseSeedDataDto? _seed;
+    private GoodsReceiptCommand _receipt = new();
+    private bool _showReceiptForm;
+    private bool _loaded;
+    private string ReceiptLocalDate
+    {
+        get => _receipt.ReceivedAtUtc.ToLocalTime().ToString("yyyy-MM-ddTHH:mm");
+        set
+        {
+            if (DateTime.TryParse(value, out var parsed))
+                _receipt.ReceivedAtUtc = DateTime.SpecifyKind(parsed, DateTimeKind.Local).ToUniversalTime();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _seed = (await Api.GetAsync<AppResult<PurchaseSeedDataDto>>("api/commerce/purchases/seed"))?.Data;
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        _loaded = false;
+        _detail = (await Api.GetAsync<AppResult<PurchaseDetailDto>>($"api/commerce/purchases/{Id}"))?.Data;
+        _loaded = true;
+    }
+
+    private void Back() => Navigation.NavigateTo("/purchases");
+
+    private void OpenReceipt()
+    {
+        if (_detail is null) return;
+        _receipt = new GoodsReceiptCommand
+        {
+            PurchaseDocumentId = _detail.Id,
+            ReceivedAtUtc = DateTime.UtcNow,
+            Items = _detail.Items.Where(x => x.PendingQuantity > 0m).Select(x => new GoodsReceiptLineFormModel
+            {
+                PurchaseDocumentItemId = x.Id,
+                Description = x.Description,
+                InternalCode = x.InternalCode,
+                PendingQuantity = x.PendingQuantity,
+                QuantityReceived = x.PendingQuantity,
+                UnitCost = x.UnitCost
+            }).ToList()
+        };
+        _showReceiptForm = true;
+    }
+
+    private async Task SaveReceipt()
+    {
+        if (_detail is null) return;
+        var body = new
+        {
+            purchaseDocumentId = _detail.Id,
+            _receipt.WarehouseId,
+            _receipt.ReceivedAtUtc,
+            _receipt.Observations,
+            items = _receipt.Items.Where(x => x.QuantityReceived > 0m).Select(x => new { x.PurchaseDocumentItemId, x.QuantityReceived }).ToList()
+        };
+        await Api.PostAsync($"api/commerce/purchases/{_detail.Id}/receipts", body);
+        _showReceiptForm = false;
+        await Load();
+    }
+
+    private void CloseReceipt() => _showReceiptForm = false;
+
+    private static string TypeLabel(PurchaseDocumentType type) => type == PurchaseDocumentType.PurchaseOrder ? "Orden de compra" : "Comprobante";
+    private static string StatusLabel(PurchaseDocumentStatus status) => status switch
+    {
+        PurchaseDocumentStatus.Draft => "Borrador",
+        PurchaseDocumentStatus.Issued => "Emitida",
+        PurchaseDocumentStatus.PartiallyReceived => "Recepción parcial",
+        PurchaseDocumentStatus.Received => "Recepcionada",
+        PurchaseDocumentStatus.Cancelled => "Cancelada",
+        _ => status.ToString()
+    };
+}

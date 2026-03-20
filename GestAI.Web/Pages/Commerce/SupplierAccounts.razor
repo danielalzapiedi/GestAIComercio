@@ -1,0 +1,106 @@
+@page "/supplier-accounts"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Cuentas con proveedores</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Cuentas con proveedores</div>
+        <div class="page-hero-subtitle">Vista base de deuda comercial por proveedor, con trazabilidad al documento de compra que originó el saldo.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-journal-richtext"></i> @_items.Count proveedores</span>
+    </div>
+</section>
+
+<div class="row g-3 ui-summary-grid mb-1">
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Saldo total</div><div class="ui-stat-value">@_items.Sum(x => x.Balance).ToString("C")</div><div class="ui-stat-foot">Deuda abierta con proveedores.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Proveedores con saldo</div><div class="ui-stat-value">@_items.Count(x => x.Balance > 0m)</div><div class="ui-stat-foot">Con deuda pendiente.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Compras asociadas</div><div class="ui-stat-value">@_items.Sum(x => x.DocumentsCount)</div><div class="ui-stat-foot">Documentos de compra emitidos.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Crédito registrado</div><div class="ui-stat-value">@_items.Sum(x => x.Credit).ToString("C")</div><div class="ui-stat-foot">Preparado para pagos futuros.</div></div></div></div>
+</div>
+
+<div class="card ui-filter-card mb-3"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-6"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Proveedor o CUIT" /></div>
+        <div class="col-md-3"><label class="form-label">Vista</label><select class="form-select" @bind="_onlyWithBalance"><option value="false">Todos</option><option value="true">Solo con saldo</option></select></div>
+        <div class="col-md-3"><button class="btn btn-outline-primary" type="button" @onclick="Load">Actualizar</button></div>
+    </div>
+</div></div>
+
+<div class="row g-3">
+    <div class="col-xl-7">
+        <div class="card ui-data-card"><div class="card-body">
+            <div class="ui-card-header"><div><div class="ui-card-eyebrow">Cuenta corriente base</div><h5 class="ui-card-title">Saldos por proveedor</h5><div class="ui-card-subtitle">El saldo surge de débitos por compras y deja espacio para créditos/pagos en releases posteriores.</div></div></div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead><tr><th>Proveedor</th><th>Estado</th><th>Débito</th><th>Crédito</th><th>Saldo</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var item in _items)
+                    {
+                        <tr>
+                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.SupplierName</span><span class="ui-table-meta">@item.TaxId · @item.DocumentsCount compras</span></div></td>
+                            <td><StatusBadge IsActive="@item.IsActive" /></td>
+                            <td>@item.Debit.ToString("C")</td>
+                            <td>@item.Credit.ToString("C")</td>
+                            <td class="fw-semibold">@item.Balance.ToString("C")</td>
+                            <td><button class="btn btn-sm btn-outline-secondary" type="button" @onclick="() => SelectSupplier(item.SupplierId)">Ver movimientos</button></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div></div>
+    </div>
+    <div class="col-xl-5">
+        <div class="card ui-data-card"><div class="card-body">
+            <div class="ui-card-header"><div><div class="ui-card-eyebrow">Trazabilidad</div><h5 class="ui-card-title">Movimientos del proveedor</h5><div class="ui-card-subtitle">Últimos débitos/créditos relacionados con el abastecimiento.</div></div></div>
+            @if (_selected is null)
+            {
+                <EmptyState Title="Elegí un proveedor"
+                            Description="Seleccioná una fila para revisar el origen del saldo y los comprobantes asociados."
+                            Icon="bi-person-lines-fill" />
+            }
+            else
+            {
+                <div class="border rounded-3 p-3 mb-3 bg-light-subtle"><div class="small text-muted">Saldo de @_selected.SupplierName</div><div class="h4 mb-0">@_selected.Balance.ToString("C")</div></div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Fecha</th><th>Referencia</th><th>Débito</th><th>Crédito</th></tr></thead>
+                        <tbody>
+                        @foreach (var movement in _selected.RecentMovements)
+                        {
+                            <tr>
+                                <td>@movement.IssuedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@movement.ReferenceNumber</span><span class="ui-table-meta">@movement.Description</span></div></td>
+                                <td>@movement.DebitAmount.ToString("C")</td>
+                                <td>@movement.CreditAmount.ToString("C")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div></div>
+    </div>
+</div>
+
+@code {
+    private List<SupplierAccountListItemDto> _items = new();
+    private SupplierAccountSummaryDto? _selected;
+    private string _search = string.Empty;
+    private bool _onlyWithBalance;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _items = (await Api.GetAsync<AppResult<List<SupplierAccountListItemDto>>>($"api/commerce/supplier-accounts?search={Uri.EscapeDataString(_search ?? string.Empty)}&onlyWithBalance={_onlyWithBalance.ToString().ToLowerInvariant()}"))?.Data ?? new();
+        if (_selected is not null)
+            await SelectSupplier(_selected.SupplierId);
+    }
+
+    private async Task SelectSupplier(int supplierId)
+        => _selected = (await Api.GetAsync<AppResult<SupplierAccountSummaryDto>>($"api/commerce/supplier-accounts/{supplierId}"))?.Data;
+}

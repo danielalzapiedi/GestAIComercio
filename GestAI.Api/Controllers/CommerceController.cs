@@ -261,4 +261,38 @@ public sealed class CommerceController(IMediator mediator) : ControllerBase
     [HttpPost("suppliers/{id:int}/status")]
     public async Task<IActionResult> ToggleSupplier(int id, [FromBody] ToggleBody body, CancellationToken ct)
         => Ok(await mediator.Send(new ToggleSupplierStatusCommand(id, body.IsActive), ct));
+
+
+    [HttpGet("purchases/seed")]
+    public async Task<IActionResult> GetPurchaseSeed(CancellationToken ct)
+        => Ok(await mediator.Send(new GetPurchaseSeedDataQuery(), ct));
+
+    [HttpGet("purchases")]
+    public async Task<IActionResult> GetPurchases([FromQuery] string? search = null, [FromQuery] PurchaseDocumentStatus? status = null, [FromQuery] int? supplierId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetPurchasesQuery(search, status, supplierId, page, pageSize), ct));
+
+    [HttpGet("purchases/{id:int}")]
+    public async Task<IActionResult> GetPurchase(int id, CancellationToken ct)
+        => Ok(await mediator.Send(new GetPurchaseByIdQuery(id), ct));
+
+    [HttpPost("purchases")]
+    public async Task<IActionResult> CreatePurchase([FromBody] CreatePurchaseDocumentCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
+
+    [HttpPut("purchases/{id:int}")]
+    public async Task<IActionResult> UpdatePurchase(int id, [FromBody] UpdatePurchaseDocumentCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command with { Id = id }, ct));
+
+    [HttpPost("purchases/{id:int}/receipts")]
+    public async Task<IActionResult> CreateGoodsReceipt(int id, [FromBody] CreateGoodsReceiptCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command with { PurchaseDocumentId = id }, ct));
+
+    [HttpGet("supplier-accounts")]
+    public async Task<IActionResult> GetSupplierAccounts([FromQuery] string? search = null, [FromQuery] bool? onlyWithBalance = null, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetSupplierAccountsQuery(search, onlyWithBalance), ct));
+
+    [HttpGet("supplier-accounts/{supplierId:int}")]
+    public async Task<IActionResult> GetSupplierAccount(int supplierId, CancellationToken ct)
+        => Ok(await mediator.Send(new GetSupplierAccountBySupplierIdQuery(supplierId), ct));
+
 }

@@ -554,6 +554,209 @@ public sealed class CommerceIntegrationTests
         Assert.Equal(2, result.Data.CreatedVariants);
     }
 
+    [Fact]
+    public async Task CreatePurchaseDocument_ComputesTotals_AndCreatesSupplierLedger()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-purchases@test");
+
+        var supplier = new Supplier { AccountId = fixture.Account.Id, Name = "Proveedor Demo", TaxId = "30-123", Phone = "111", IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.Suppliers.Add(supplier);
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+
+        var product = new Product
+        {
+            AccountId = fixture.Account.Id,
+            Name = "Producto compra",
+            InternalCode = "BUY-1",
+            Description = "Producto",
+            CategoryId = category.Id,
+            Brand = "Marca",
+            UnitOfMeasure = UnitOfMeasure.Unit,
+            Cost = 10,
+            SalePrice = 20,
+            MinimumStock = 0,
+            IsActive = true
+        };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var handler = new CreatePurchaseDocumentCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var result = await handler.Handle(new CreatePurchaseDocumentCommand(supplier.Id, PurchaseDocumentType.PurchaseDocument, PurchaseDocumentStatus.Issued, DateTime.UtcNow, "FAC-1", "Compra inicial", new[]
+        {
+            new PurchaseLineInput(product.Id, null, null, 3, 12, 1)
+        }), CancellationToken.None);
+
+        Assert.True(result.Success);
+        var purchase = await db.PurchaseDocuments.Include(x => x.Items).SingleAsync(x => x.Id == result.Data);
+        Assert.Equal("OC-000001", purchase.Number);
+        Assert.Equal(36, purchase.Total);
+        var movement = await db.SupplierAccountMovements.SingleAsync(x => x.PurchaseDocumentId == purchase.Id);
+        Assert.Equal(36, movement.DebitAmount);
+        Assert.Equal("OC-000001", movement.ReferenceNumber);
+    }
+
+    [Fact]
+    public async Task CreateGoodsReceipt_UpdatesStockCostAndReceiptStatus()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-receipts@test");
+
+        var supplier = new Supplier { AccountId = fixture.Account.Id, Name = "Proveedor Stock", TaxId = "30-222", Phone = "111", IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        var branch = new Branch { AccountId = fixture.Account.Id, Name = "Central", Code = "CTR", IsActive = true };
+        db.Suppliers.Add(supplier);
+        db.ProductCategories.Add(category);
+        db.Branches.Add(branch);
+        await db.SaveChangesAsync();
+
+        var warehouse = new Warehouse { AccountId = fixture.Account.Id, BranchId = branch.Id, Name = "Principal", IsMain = true, IsActive = true };
+        db.Warehouses.Add(warehouse);
+
+        var product = new Product
+        {
+            AccountId = fixture.Account.Id,
+            Name = "Producto costo",
+            InternalCode = "BUY-2",
+            Description = "Producto",
+            CategoryId = category.Id,
+            Brand = "Marca",
+            UnitOfMeasure = UnitOfMeasure.Unit,
+            Cost = 10,
+            SalePrice = 20,
+            MinimumStock = 0,
+            IsActive = true
+        };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        db.ProductWarehouseStocks.Add(new ProductWarehouseStock
+        {
+            AccountId = fixture.Account.Id,
+            ProductId = product.Id,
+            WarehouseId = warehouse.Id,
+            QuantityOnHand = 5,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedByUserId = fixture.CurrentUser.UserId
+        });
+        await db.SaveChangesAsync();
+
+        var createPurchase = new CreatePurchaseDocumentCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var purchaseResult = await createPurchase.Handle(new CreatePurchaseDocumentCommand(supplier.Id, PurchaseDocumentType.PurchaseDocument, PurchaseDocumentStatus.Issued, DateTime.UtcNow, null, null, new[]
+        {
+            new PurchaseLineInput(product.Id, null, null, 5, 20, 1)
+        }), CancellationToken.None);
+        var purchase = await db.PurchaseDocuments.Include(x => x.Items).SingleAsync(x => x.Id == purchaseResult.Data);
+
+        var handler = new CreateGoodsReceiptCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var result = await handler.Handle(new CreateGoodsReceiptCommand(purchase.Id, warehouse.Id, DateTime.UtcNow, "Ingreso total", new[]
+        {
+            new GoodsReceiptLineInput(purchase.Items.Single().Id, 5)
+        }), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(10, await db.ProductWarehouseStocks.Where(x => x.ProductId == product.Id && x.WarehouseId == warehouse.Id).Select(x => x.QuantityOnHand).SingleAsync());
+        Assert.Equal(15, await db.Products.Where(x => x.Id == product.Id).Select(x => x.Cost).SingleAsync());
+        Assert.Equal(PurchaseDocumentStatus.Received, await db.PurchaseDocuments.Where(x => x.Id == purchase.Id).Select(x => x.Status).SingleAsync());
+        Assert.Single(await db.GoodsReceipts.Include(x => x.Items).ToListAsync());
+        Assert.Single(await db.StockMovements.Where(x => x.ReferenceGroup == $"purchase:{purchase.Id}").ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateGoodsReceipt_SupportsPartialReceipt()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-partial@test");
+
+        var supplier = new Supplier { AccountId = fixture.Account.Id, Name = "Proveedor Parcial", TaxId = "30-333", Phone = "111", IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        var branch = new Branch { AccountId = fixture.Account.Id, Name = "Central", Code = "CTR", IsActive = true };
+        db.Suppliers.Add(supplier);
+        db.ProductCategories.Add(category);
+        db.Branches.Add(branch);
+        await db.SaveChangesAsync();
+
+        var warehouse = new Warehouse { AccountId = fixture.Account.Id, BranchId = branch.Id, Name = "Principal", IsMain = true, IsActive = true };
+        db.Warehouses.Add(warehouse);
+        var product = new Product
+        {
+            AccountId = fixture.Account.Id,
+            Name = "Producto parcial",
+            InternalCode = "BUY-3",
+            Description = "Producto",
+            CategoryId = category.Id,
+            Brand = "Marca",
+            UnitOfMeasure = UnitOfMeasure.Unit,
+            Cost = 8,
+            SalePrice = 20,
+            MinimumStock = 0,
+            IsActive = true
+        };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var createPurchase = new CreatePurchaseDocumentCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var purchaseResult = await createPurchase.Handle(new CreatePurchaseDocumentCommand(supplier.Id, PurchaseDocumentType.PurchaseDocument, PurchaseDocumentStatus.Issued, DateTime.UtcNow, null, null, new[]
+        {
+            new PurchaseLineInput(product.Id, null, null, 10, 8, 1)
+        }), CancellationToken.None);
+        var purchase = await db.PurchaseDocuments.Include(x => x.Items).SingleAsync(x => x.Id == purchaseResult.Data);
+
+        var handler = new CreateGoodsReceiptCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var result = await handler.Handle(new CreateGoodsReceiptCommand(purchase.Id, warehouse.Id, DateTime.UtcNow, null, new[]
+        {
+            new GoodsReceiptLineInput(purchase.Items.Single().Id, 4)
+        }), CancellationToken.None);
+
+        Assert.True(result.Success);
+        var updated = await db.PurchaseDocuments.Include(x => x.Items).SingleAsync(x => x.Id == purchase.Id);
+        Assert.Equal(PurchaseDocumentStatus.PartiallyReceived, updated.Status);
+        Assert.Equal(4, updated.Items.Single().QuantityReceived);
+    }
+
+    [Fact]
+    public async Task GetSupplierAccountSummary_ReturnsAccumulatedDebtFromPurchases()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-supplier-account@test");
+
+        var supplier = new Supplier { AccountId = fixture.Account.Id, Name = "Proveedor Cuenta", TaxId = "30-444", Phone = "111", IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.Suppliers.Add(supplier);
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+
+        var product = new Product
+        {
+            AccountId = fixture.Account.Id,
+            Name = "Producto deuda",
+            InternalCode = "BUY-4",
+            Description = "Producto",
+            CategoryId = category.Id,
+            Brand = "Marca",
+            UnitOfMeasure = UnitOfMeasure.Unit,
+            Cost = 5,
+            SalePrice = 10,
+            MinimumStock = 0,
+            IsActive = true
+        };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var createPurchase = new CreatePurchaseDocumentCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        await createPurchase.Handle(new CreatePurchaseDocumentCommand(supplier.Id, PurchaseDocumentType.PurchaseDocument, PurchaseDocumentStatus.Issued, DateTime.UtcNow, "A", null, new[] { new PurchaseLineInput(product.Id, null, null, 2, 10, 1) }), CancellationToken.None);
+        await createPurchase.Handle(new CreatePurchaseDocumentCommand(supplier.Id, PurchaseDocumentType.PurchaseDocument, PurchaseDocumentStatus.Issued, DateTime.UtcNow, "B", null, new[] { new PurchaseLineInput(product.Id, null, null, 1, 15, 1) }), CancellationToken.None);
+
+        var handler = new GetSupplierAccountBySupplierIdQueryHandler(db, fixture.Access);
+        var result = await handler.Handle(new GetSupplierAccountBySupplierIdQuery(supplier.Id), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(35, result.Data!.Balance);
+        Assert.Equal(2, result.Data.MovementsCount);
+    }
+
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

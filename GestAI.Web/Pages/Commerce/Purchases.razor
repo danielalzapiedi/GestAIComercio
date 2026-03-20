@@ -1,0 +1,298 @@
+@page "/purchases"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Compras</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Compras y abastecimiento</div>
+        <div class="page-hero-subtitle">Emití comprobantes de compra, seguí recepciones pendientes y dejá lista la trazabilidad hacia stock, costo y deuda con proveedores.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-bag-check"></i> @_result?.TotalCount ?? 0 compras</span>
+        <button class="btn btn-primary" type="button" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nueva compra</button>
+    </div>
+</section>
+
+<div class="row g-3 ui-summary-grid mb-1">
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Monto visible</div><div class="ui-stat-value">@VisibleTotal.ToString("C")</div><div class="ui-stat-foot">Total de la página filtrada.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Pendiente recepción</div><div class="ui-stat-value">@PendingReceipts</div><div class="ui-stat-foot">Compras emitidas o parciales.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Recepción acumulada</div><div class="ui-stat-value">@ReceivedUnits</div><div class="ui-stat-foot">Unidades ya ingresadas en la página actual.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Estrategia costo</div><div class="ui-stat-value text-capitalize">@(_seed?.CostStrategy?.Replace("_", " ") ?? "-")</div><div class="ui-stat-foot">@_seed?.CostStrategyDescription</div></div></div></div>
+</div>
+
+<div class="card ui-filter-card"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-lg-5"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, proveedor, comprobante proveedor" /></div>
+        <div class="col-lg-3"><label class="form-label">Proveedor</label><select class="form-select" @bind="_supplierId"><option value="0">Todos</option>@foreach (var supplier in _seed?.Suppliers ?? Array.Empty<LookupDto>()){<option value="@supplier.Id">@supplier.Name</option>}</select></div>
+        <div class="col-lg-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<PurchaseDocumentStatus>()){<option value="@status">@StatusLabel(status)</option>}</select></div>
+        <div class="col-lg-1"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
+    </div>
+</div></div>
+
+<div class="ui-split-layout ui-split-layout-focus-editor">
+    <div>
+        @if (!_loaded)
+        {
+            <div class="card"><div class="card-body">Cargando compras...</div></div>
+        }
+        else if (_result?.Items.Count == 0 && !_showForm)
+        {
+            <EmptyState Title="Todavía no hay compras"
+                        Description="Creá el primer comprobante para activar el circuito de abastecimiento y luego recibir mercadería desde el detalle."
+                        Icon="bi-bag-check">
+                <button class="btn btn-primary" type="button" @onclick="NewItem">Nueva compra</button>
+            </EmptyState>
+        }
+        else
+        {
+            <div class="card ui-data-card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Abastecimiento</div><h5 class="ui-card-title">Listado de compras</h5><div class="ui-card-subtitle">Seguimiento integrado del documento, el proveedor y el avance de recepción.</div></div></div>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead><tr><th>Documento</th><th>Proveedor</th><th>Fecha</th><th>Totales</th><th>Recepción</th><th>Estado</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach (var item in _result?.Items ?? Array.Empty<PurchaseListItemDto>())
+                        {
+                            <tr>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@item.Number</span><span class="ui-table-meta">@(string.IsNullOrWhiteSpace(item.SupplierDocumentNumber) ? TypeLabel(item.DocumentType) : item.SupplierDocumentNumber)</span></div></td>
+                                <td>@item.SupplierName</td>
+                                <td>@item.IssuedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@item.Total.ToString("C")</span><span class="ui-table-meta">@item.ItemsCount ítems</span></div></td>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@item.ReceivedQuantity / @item.OrderedQuantity</span><span class="ui-table-meta">@(item.LastReceiptAtUtc.HasValue ? $"Último ingreso {item.LastReceiptAtUtc.Value.ToLocalTime():dd/MM}" : "Sin ingresos")</span></div></td>
+                                <td><StatusBadge Text="@StatusLabel(item.Status)" CssClass="@StatusClass(item.Status)" /></td>
+                                <td><div class="ui-inline-actions"><button class="btn btn-sm btn-outline-primary" type="button" @onclick="() => Edit(item.Id)">Editar</button><button class="btn btn-sm btn-outline-secondary" type="button" @onclick="() => OpenDetail(item.Id)">Detalle</button></div></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="ui-action-bar">
+                    <span class="text-muted">Página @_page de @TotalPages</span>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary" type="button" disabled="@(_page <= 1)" @onclick="PrevPage">Anterior</button>
+                        <button class="btn btn-outline-secondary" type="button" disabled="@(_page >= TotalPages)" @onclick="NextPage">Siguiente</button>
+                    </div>
+                </div>
+            </div></div>
+        }
+    </div>
+
+    <div class="ui-section-grid">
+        <div class="card ui-form-card"><div class="card-body">
+            <div class="ui-card-header"><div><div class="ui-card-eyebrow">Carga guiada</div><h5 class="ui-card-title">@(_form.Id == 0 ? "Nueva compra" : $"Editar {_editingNumber}")</h5><div class="ui-card-subtitle">Definí proveedor, estado y costos. La recepción y el impacto en stock se hacen desde el detalle.</div></div></div>
+            @if (!_showForm)
+            {
+                <EmptyState Title="Elegí una acción"
+                            Description="Podés crear una nueva compra o editar una existente mientras todavía no tenga ingresos registrados."
+                            Icon="bi-pencil-square">
+                    <button class="btn btn-primary" type="button" @onclick="NewItem">Nueva compra</button>
+                </EmptyState>
+            }
+            else
+            {
+                <div class="ui-form-section">
+                    <div class="ui-form-section-title">Cabecera</div>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label">Proveedor</label><select class="form-select" @bind="_form.SupplierId"><option value="0">Seleccionar proveedor</option>@foreach (var supplier in _seed?.Suppliers ?? Array.Empty<LookupDto>()){<option value="@supplier.Id">@supplier.Name</option>}</select></div>
+                        <div class="col-md-3"><label class="form-label">Tipo</label><select class="form-select" @bind="_form.DocumentType">@foreach (var type in Enum.GetValues<PurchaseDocumentType>()){<option value="@type">@TypeLabel(type)</option>}</select></div>
+                        <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_form.Status">@foreach (var status in Enum.GetValues<PurchaseDocumentStatus>().Where(x => x is PurchaseDocumentStatus.Draft or PurchaseDocumentStatus.Issued or PurchaseDocumentStatus.Cancelled)){<option value="@status">@StatusLabel(status)</option>}</select></div>
+                        <div class="col-md-4"><label class="form-label">Fecha</label><input type="date" class="form-control" @bind="IssuedAtLocalDate" /></div>
+                        <div class="col-md-4"><label class="form-label">Comprobante proveedor</label><input class="form-control" @bind="_form.SupplierDocumentNumber" /></div>
+                        <div class="col-md-4"><label class="form-label">Observaciones</label><input class="form-control" @bind="_form.Observations" /></div>
+                    </div>
+                </div>
+
+                <div class="ui-form-section">
+                    <div class="d-flex justify-content-between align-items-center mb-2"><div class="ui-form-section-title mb-0">Ítems</div><button class="btn btn-sm btn-outline-primary" type="button" @onclick="AddLine"><i class="bi bi-plus-circle me-1"></i>Agregar línea</button></div>
+                    @foreach (var (line, index) in _form.Items.Select((value, index) => (value, index)))
+                    {
+                        <div class="border rounded-3 p-3 mb-2">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-5"><label class="form-label">SKU</label><select class="form-select" @onchange="e => SelectSku(index, e.Value?.ToString())"><option value="">Seleccionar</option>@foreach (var sku in AllSkus){<option value="@SkuKey(sku.ProductId, sku.ProductVariantId)" selected="@(line.ProductId == sku.ProductId && line.ProductVariantId == sku.ProductVariantId)">@sku.Label (@sku.InternalCode)</option>}</select></div>
+                                <div class="col-md-2"><label class="form-label">Cantidad</label><input type="number" step="0.01" class="form-control" @bind="line.QuantityOrdered" /></div>
+                                <div class="col-md-2"><label class="form-label">Costo unitario</label><input type="number" step="0.01" class="form-control" @bind="line.UnitCost" /></div>
+                                <div class="col-md-2"><label class="form-label">Subtotal</label><input class="form-control" value="@line.LineSubtotal.ToString("0.00")" readonly /></div>
+                                <div class="col-md-1"><button class="btn btn-outline-danger w-100" type="button" @onclick="() => RemoveLine(index)"><i class="bi bi-trash"></i></button></div>
+                                <div class="col-md-8"><label class="form-label">Descripción</label><input class="form-control" @bind="line.Description" /></div>
+                                <div class="col-md-2"><label class="form-label">Costo actual</label><input class="form-control" value="@line.CurrentRecordedCost.ToString("0.00")" readonly /></div>
+                                <div class="col-md-2"><label class="form-label">Código</label><input class="form-control" @bind="line.InternalCode" readonly /></div>
+                            </div>
+                        </div>
+                    }
+                    @if (_form.Items.Count == 0)
+                    {
+                        <div class="text-muted small">Agregá al menos un ítem para guardar el comprobante.</div>
+                    }
+                </div>
+
+                <div class="ui-action-bar">
+                    <div class="ui-inline-actions"><button class="btn btn-primary" type="button" @onclick="Save">Guardar compra</button><button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Cancelar</button></div>
+                    <div class="text-muted">Total estimado <strong>@FormTotal.ToString("C")</strong></div>
+                </div>
+            }
+        </div></div>
+    </div>
+</div>
+
+@code {
+    private PurchaseSeedDataDto? _seed;
+    private PagedResult<PurchaseListItemDto>? _result;
+    private PurchaseUpsertCommand _form = new();
+    private string _search = string.Empty;
+    private string _editingNumber = string.Empty;
+    private PurchaseDocumentStatus? _status;
+    private int _supplierId;
+    private bool _loaded;
+    private bool _showForm;
+    private int _page = 1;
+    private const int PageSize = 10;
+
+    private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
+    private decimal VisibleTotal => _result?.Items.Sum(x => x.Total) ?? 0m;
+    private int PendingReceipts => _result?.Items.Count(x => x.Status is PurchaseDocumentStatus.Issued or PurchaseDocumentStatus.PartiallyReceived) ?? 0;
+    private decimal ReceivedUnits => _result?.Items.Sum(x => x.ReceivedQuantity) ?? 0m;
+    private IEnumerable<PurchaseSkuLookupDto> AllSkus => (_seed?.Products ?? Array.Empty<PurchaseSkuLookupDto>()).Concat(_seed?.Variants ?? Array.Empty<PurchaseSkuLookupDto>());
+    private string IssuedAtLocalDate
+    {
+        get => _form.IssuedAtUtc.ToLocalTime().ToString("yyyy-MM-dd");
+        set
+        {
+            if (DateTime.TryParse(value, out var parsed))
+                _form.IssuedAtUtc = DateTime.SpecifyKind(parsed, DateTimeKind.Local).ToUniversalTime();
+        }
+    }
+    private decimal FormTotal => _form.Items.Sum(x => x.LineSubtotal);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _seed = (await Api.GetAsync<AppResult<PurchaseSeedDataDto>>("api/commerce/purchases/seed"))?.Data;
+        await Load();
+    }
+
+    private async Task Search() { _page = 1; await Load(); }
+
+    private async Task Load()
+    {
+        _loaded = false;
+        var status = _status.HasValue ? $"&status={_status}" : string.Empty;
+        var supplier = _supplierId > 0 ? $"&supplierId={_supplierId}" : string.Empty;
+        _result = (await Api.GetAsync<AppResult<PagedResult<PurchaseListItemDto>>>($"api/commerce/purchases?search={Uri.EscapeDataString(_search ?? string.Empty)}{status}{supplier}&page={_page}&pageSize={PageSize}"))?.Data;
+        _loaded = true;
+    }
+
+    private void NewItem()
+    {
+        _editingNumber = string.Empty;
+        _form = new PurchaseUpsertCommand { Status = PurchaseDocumentStatus.Draft, IssuedAtUtc = DateTime.UtcNow };
+        _form.Items.Add(new PurchaseLineFormModel());
+        _showForm = true;
+    }
+
+    private async Task Edit(int id)
+    {
+        var detail = (await Api.GetAsync<AppResult<PurchaseDetailDto>>($"api/commerce/purchases/{id}"))?.Data;
+        if (detail is null || !detail.CanEdit)
+        {
+            Navigation.NavigateTo($"/purchases/{id}");
+            return;
+        }
+
+        _editingNumber = detail.Number;
+        _form = new PurchaseUpsertCommand
+        {
+            Id = detail.Id,
+            SupplierId = detail.SupplierId,
+            DocumentType = detail.DocumentType,
+            Status = detail.Status,
+            IssuedAtUtc = detail.IssuedAtUtc,
+            SupplierDocumentNumber = detail.SupplierDocumentNumber,
+            Observations = detail.Observations,
+            Items = detail.Items.Select(x => new PurchaseLineFormModel
+            {
+                Id = x.Id,
+                ProductId = x.ProductId,
+                ProductVariantId = x.ProductVariantId,
+                Description = x.Description,
+                InternalCode = x.InternalCode,
+                QuantityOrdered = x.QuantityOrdered,
+                QuantityReceived = x.QuantityReceived,
+                UnitCost = x.UnitCost,
+                CurrentRecordedCost = x.CurrentRecordedCost
+            }).ToList()
+        };
+        _showForm = true;
+    }
+
+    private void AddLine() => _form.Items.Add(new PurchaseLineFormModel());
+    private void RemoveLine(int index)
+    {
+        if (index >= 0 && index < _form.Items.Count) _form.Items.RemoveAt(index);
+    }
+
+    private void SelectSku(int index, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        var pieces = value.Split(':');
+        if (!int.TryParse(pieces[0], out var productId)) return;
+        int? variantId = pieces.Length > 1 && int.TryParse(pieces[1], out var parsedVariantId) ? parsedVariantId : null;
+        var sku = AllSkus.FirstOrDefault(x => x.ProductId == productId && x.ProductVariantId == variantId);
+        if (sku is null) return;
+        var line = _form.Items[index];
+        line.ProductId = sku.ProductId;
+        line.ProductVariantId = sku.ProductVariantId;
+        line.Description = sku.Label;
+        line.InternalCode = sku.InternalCode;
+        line.UnitCost = sku.CurrentCost;
+        line.CurrentRecordedCost = sku.CurrentCost;
+    }
+
+    private async Task Save()
+    {
+        var body = new
+        {
+            _form.Id,
+            _form.SupplierId,
+            _form.DocumentType,
+            _form.Status,
+            _form.IssuedAtUtc,
+            _form.SupplierDocumentNumber,
+            _form.Observations,
+            items = _form.Items.Select((x, i) => new { x.ProductId, x.ProductVariantId, Description = x.Description, Quantity = x.QuantityOrdered, x.UnitCost, SortOrder = i + 1 }).ToList()
+        };
+
+        if (_form.Id == 0) await Api.PostAsync("api/commerce/purchases", body);
+        else await Api.PutAsync($"api/commerce/purchases/{_form.Id}", body);
+
+        _showForm = false;
+        await Load();
+    }
+
+    private void Cancel() => _showForm = false;
+    private void OpenDetail(int id) => Navigation.NavigateTo($"/purchases/{id}");
+    private async Task PrevPage() { if (_page > 1) { _page--; await Load(); } }
+    private async Task NextPage() { if (_page < TotalPages) { _page++; await Load(); } }
+
+    private static string TypeLabel(PurchaseDocumentType type) => type == PurchaseDocumentType.PurchaseOrder ? "Orden de compra" : "Comprobante";
+    private static string StatusLabel(PurchaseDocumentStatus status) => status switch
+    {
+        PurchaseDocumentStatus.Draft => "Borrador",
+        PurchaseDocumentStatus.Issued => "Emitida",
+        PurchaseDocumentStatus.PartiallyReceived => "Recepción parcial",
+        PurchaseDocumentStatus.Received => "Recepcionada",
+        PurchaseDocumentStatus.Cancelled => "Cancelada",
+        _ => status.ToString()
+    };
+    private static string StatusClass(PurchaseDocumentStatus status) => status switch
+    {
+        PurchaseDocumentStatus.Draft => "secondary",
+        PurchaseDocumentStatus.Issued => "info",
+        PurchaseDocumentStatus.PartiallyReceived => "warning",
+        PurchaseDocumentStatus.Received => "success",
+        PurchaseDocumentStatus.Cancelled => "danger",
+        _ => "secondary"
+    };
+    private static string SkuKey(int productId, int? variantId) => variantId.HasValue ? $"{productId}:{variantId}" : productId.ToString();
+}

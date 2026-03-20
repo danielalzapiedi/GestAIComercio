@@ -28,6 +28,11 @@ public interface IAppDbContext
     DbSet<Sale> Sales { get; }
     DbSet<SaleItem> SaleItems { get; }
     DbSet<Supplier> Suppliers { get; }
+    DbSet<PurchaseDocument> PurchaseDocuments { get; }
+    DbSet<PurchaseDocumentItem> PurchaseDocumentItems { get; }
+    DbSet<GoodsReceipt> GoodsReceipts { get; }
+    DbSet<GoodsReceiptItem> GoodsReceiptItems { get; }
+    DbSet<SupplierAccountMovement> SupplierAccountMovements { get; }
     DbSet<User> Users { get; }
     DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken ct = default);

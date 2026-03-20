@@ -15,7 +15,8 @@ public static class SaasPermissionMap
         SaasModule.Customers,
         SaasModule.Suppliers,
         SaasModule.Quotes,
-        SaasModule.Sales
+        SaasModule.Sales,
+        SaasModule.Purchases
     };
 
     public static bool HasAccess(InternalUserRole? role, SaasPlanDefinition? plan, SaasModule module, bool isOwner, bool isPlatformAdmin = false, IReadOnlyCollection<SaasModule>? assignedModules = null)
