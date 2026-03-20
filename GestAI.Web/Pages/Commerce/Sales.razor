@@ -218,7 +218,15 @@
 
     private void NewItem()
     {
-        _form = new SaleUpsertCommand { Status = SaleStatus.Draft, IssuedAtUtc = DateTime.UtcNow };
+        _form = new SaleUpsertCommand
+        {
+            Status = SaleStatus.Draft,
+            IssuedAtUtc = DateTime.UtcNow,
+            Items = new List<CommercialLineFormModel>
+            {
+                new() { Quantity = 1 }
+            }
+        };
         _issuedAtDate = DateTime.UtcNow.Date;
         _quickSearch = string.Empty;
         _editingNumber = "borrador";
