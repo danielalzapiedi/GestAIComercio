@@ -108,6 +108,11 @@ public interface IFiscalIntegrationService
     Task<FiscalAuthorizationResult> AuthorizeInvoiceAsync(GestAI.Domain.Entities.Commerce.CommercialInvoice invoice, GestAI.Domain.Entities.Commerce.FiscalConfiguration configuration, CancellationToken ct);
 }
 
+public interface IFiscalCredentialStore
+{
+    Task<string> SaveAsync(int accountId, string fileName, byte[] content, bool isPrivateKey, CancellationToken ct);
+}
+
 public sealed record FiscalAuthorizationResult(
     GestAI.Domain.Enums.FiscalSubmissionStatus Status,
     string RequestPayload,

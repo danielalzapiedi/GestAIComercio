@@ -247,6 +247,10 @@ public sealed class CommerceController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> UpsertFiscalConfiguration([FromBody] UpsertFiscalConfigurationCommand command, CancellationToken ct)
         => Ok(await mediator.Send(command, ct));
 
+    [HttpPost("fiscal/credentials")]
+    public async Task<IActionResult> UploadFiscalCredential([FromBody] UploadFiscalCredentialCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
+
     [HttpGet("reports/operational")]
     public async Task<IActionResult> GetOperationalReport([FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] int top = 10, CancellationToken ct = default)
         => Ok(await mediator.Send(new GetOperationalReportQuery(from, to, top), ct));

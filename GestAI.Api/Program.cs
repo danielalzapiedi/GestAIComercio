@@ -62,6 +62,7 @@ builder.Services.AddScoped<IUserAccessService, GestAI.Infrastructure.Saas.UserAc
 builder.Services.AddScoped<ISaasPlanService, GestAI.Infrastructure.Saas.SaasPlanService>();
 builder.Services.AddScoped<IAuditService, GestAI.Infrastructure.Saas.AuditService>();
 builder.Services.AddScoped<IFiscalIntegrationService, FiscalIntegrationService>();
+builder.Services.AddScoped<IFiscalCredentialStore, FiscalCredentialStore>();
 
 var app = builder.Build();
 

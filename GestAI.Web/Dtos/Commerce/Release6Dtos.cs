@@ -80,6 +80,14 @@ public sealed class UpsertFiscalConfigurationCommandDto
     public string? Observations { get; set; }
 }
 
+public sealed class UploadFiscalCredentialCommandDto
+{
+    public string FileName { get; set; } = string.Empty;
+    public string ContentBase64 { get; set; } = string.Empty;
+    public string? ContentType { get; set; }
+    public bool IsPrivateKey { get; set; }
+}
+
 public sealed record InvoiceLineDto(
     int Id,
     int SaleItemId,

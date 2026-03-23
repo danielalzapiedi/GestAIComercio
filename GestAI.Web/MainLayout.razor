@@ -153,6 +153,10 @@
                     }
 
                     <li class="nav-heading">Configuración</li>
+                    @if (CanAccess(SaasModule.Sales))
+                    {
+                        <li class="nav-item"><NavLink class="nav-link" href="/fiscal-configuration" @onclick="CloseSidebar"><i class="bi bi-shield-check"></i><span>Fiscal / ARCA</span></NavLink></li>
+                    }
                     @if (CanAccess(SaasModule.AuditLog))
                     {
                         <li class="nav-item"><NavLink class="nav-link" href="/audit-log" @onclick="CloseSidebar"><i class="bi bi-journal-text"></i><span>Auditoría</span></NavLink></li>

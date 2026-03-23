@@ -1,0 +1,286 @@
+@page "/fiscal-configuration"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Configuración fiscal</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Configuración fiscal / ARCA</div>
+        <div class="page-hero-subtitle">Cada tenant puede decidir si opera en modo interno/mock o si deja preparada la conexión ARCA con sus credenciales y punto de venta.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-building-check"></i> Configuración por cuenta</span>
+        <button class="btn btn-primary" type="button" @onclick="Save" disabled="@_saving">Guardar configuración</button>
+    </div>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert @( _messageIsError ? "alert-danger" : "alert-success")" role="alert">@_message</div>
+}
+
+@if (_loading)
+{
+    <div class="card"><div class="card-body">Cargando configuración fiscal...</div></div>
+}
+else
+{
+    <div class="row g-3 ui-summary-grid mb-1">
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Modo</div><div class="ui-stat-value">@ModeLabel</div><div class="ui-stat-foot">Cómo opera hoy la cuenta.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Punto de venta</div><div class="ui-stat-value">@_form.PointOfSale</div><div class="ui-stat-foot">Numeración usada para facturación.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Certificado</div><div class="ui-stat-value">@(HasCertificate ? "Cargado" : "Pendiente")</div><div class="ui-stat-foot">Referencia asociada a la cuenta.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Clave privada</div><div class="ui-stat-value">@(HasPrivateKey ? "Cargada" : "Pendiente")</div><div class="ui-stat-foot">Credencial complementaria para ARCA.</div></div></div></div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <div class="card ui-form-card">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Datos del emisor</div>
+                            <h5 class="ui-card-title">Configuración por tenant</h5>
+                            <div class="ui-card-subtitle">Esta pantalla define si la cuenta usa integración ARCA y qué credenciales quedan referenciadas para sus comprobantes.</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Razón social</label>
+                            <input class="form-control" @bind="_form.LegalName" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">CUIT</label>
+                            <input class="form-control" @bind="_form.TaxIdentifier" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Ingresos brutos</label>
+                            <input class="form-control" @bind="_form.GrossIncomeTaxId" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Punto de venta</label>
+                            <input class="form-control" type="number" min="1" @bind="_form.PointOfSale" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Factura por defecto</label>
+                            <select class="form-select" @bind="_form.DefaultInvoiceType">
+                                @foreach (var type in Enum.GetValues<InvoiceType>())
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Conexión ARCA</label>
+                            <select class="form-select" @bind="_form.IntegrationMode">
+                                <option value="@FiscalIntegrationMode.Mock">Desactivada / Mock</option>
+                                <option value="@FiscalIntegrationMode.ArcaWsfe">Activa / ARCA WSFE</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Ambiente</label>
+                            <select class="form-select" @bind="_form.UseSandbox">
+                                <option value="true">Sandbox</option>
+                                <option value="false">Producción</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">API base (opcional)</label>
+                            <input class="form-control" @bind="_form.ApiBaseUrl" placeholder="https://..." />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Estado</label>
+                            <select class="form-select" @bind="_form.IsActive">
+                                <option value="true">Activo</option>
+                                <option value="false">Inactivo</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Observaciones</label>
+                            <textarea class="form-control" rows="3" @bind="_form.Observations" placeholder="Notas operativas, vencimientos, alias del certificado, observaciones internas..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card ui-form-card">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Credenciales ARCA</div>
+                            <h5 class="ui-card-title">Certificado por cuenta</h5>
+                            <div class="ui-card-subtitle">Los archivos quedan guardados por tenant y sus referencias se asocian a la configuración fiscal activa.</div>
+                        </div>
+                    </div>
+
+                    <div class="ui-check-card mb-3">
+                        <i class="bi bi-shield-lock text-primary"></i>
+                        <div>
+                            <strong>@ModeLabel</strong>
+                            <div class="ui-table-meta">@(IsArcaEnabled ? "La cuenta quedó preparada para enviar comprobantes a ARCA." : "La cuenta seguirá operando sin integración real hasta que actives ARCA.")</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Subir certificado (.crt/.cer/.pem)</label>
+                        <InputFile class="form-control" OnChange="UploadCertificateAsync" />
+                        <div class="form-text">@CertificateLabel</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Subir clave privada (.key/.pem)</label>
+                        <InputFile class="form-control" OnChange="UploadPrivateKeyAsync" />
+                        <div class="form-text">@PrivateKeyLabel</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Referencia certificado</label>
+                        <input class="form-control" @bind="_form.CertificateReference" placeholder="Se completa al subir el archivo o puede cargarse manualmente." />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Referencia clave privada</label>
+                        <input class="form-control" @bind="_form.PrivateKeyReference" placeholder="Se completa al subir el archivo o puede cargarse manualmente." />
+                    </div>
+
+                    @if (_current?.LastConnectionCheckAtUtc is DateTime checkedAt)
+                    {
+                        <div class="small text-muted mb-3">Última verificación registrada: @checkedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                    }
+
+                    <div class="ui-action-bar">
+                        <button class="btn btn-primary" type="button" @onclick="Save" disabled="@_saving">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const long MaxFiscalFileSize = 2 * 1024 * 1024;
+
+    private FiscalConfigurationDto? _current;
+    private UpsertFiscalConfigurationCommandDto _form = CreateEmptyForm();
+    private bool _loading = true;
+    private bool _saving;
+    private string? _message;
+    private bool _messageIsError;
+
+    private bool IsArcaEnabled => _form.IntegrationMode == FiscalIntegrationMode.ArcaWsfe;
+    private bool HasCertificate => !string.IsNullOrWhiteSpace(_form.CertificateReference);
+    private bool HasPrivateKey => !string.IsNullOrWhiteSpace(_form.PrivateKeyReference);
+    private string ModeLabel => IsArcaEnabled ? (_form.UseSandbox ? "ARCA Sandbox" : "ARCA Producción") : "Mock / Sin conexión";
+    private string CertificateLabel => HasCertificate ? $"Referencia actual: {_form.CertificateReference}" : "Todavía no hay certificado cargado para esta cuenta.";
+    private string PrivateKeyLabel => HasPrivateKey ? $"Referencia actual: {_form.PrivateKeyReference}" : "Todavía no hay clave privada cargada para esta cuenta.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        _loading = true;
+        _message = null;
+
+        try
+        {
+            _current = (await Api.GetAsync<AppResult<FiscalConfigurationDto?>>("api/commerce/fiscal/configuration"))?.Data;
+            _form = _current is null ? CreateEmptyForm() : Map(_current);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        _message = null;
+
+        try
+        {
+            var result = await Api.PutAsync<UpsertFiscalConfigurationCommandDto, AppResult<int>>("api/commerce/fiscal/configuration", _form);
+            _messageIsError = result?.Success != true;
+            _message = result?.Success == true ? "Configuración fiscal guardada correctamente." : result?.Message ?? "No se pudo guardar la configuración fiscal.";
+
+            if (result?.Success == true)
+                await Load();
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task UploadCertificateAsync(InputFileChangeEventArgs e)
+        => await UploadCredentialAsync(e.File, isPrivateKey: false);
+
+    private async Task UploadPrivateKeyAsync(InputFileChangeEventArgs e)
+        => await UploadCredentialAsync(e.File, isPrivateKey: true);
+
+    private async Task UploadCredentialAsync(IBrowserFile? file, bool isPrivateKey)
+    {
+        if (file is null)
+            return;
+
+        await using var stream = file.OpenReadStream(MaxFiscalFileSize);
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory);
+
+        var command = new UploadFiscalCredentialCommandDto
+        {
+            FileName = file.Name,
+            ContentType = file.ContentType,
+            ContentBase64 = Convert.ToBase64String(memory.ToArray()),
+            IsPrivateKey = isPrivateKey
+        };
+
+        var result = await Api.PostAsync<UploadFiscalCredentialCommandDto, AppResult<string>>("api/commerce/fiscal/credentials", command);
+        _messageIsError = result?.Success != true;
+        _message = result?.Success == true
+            ? (isPrivateKey ? "Clave privada cargada correctamente." : "Certificado cargado correctamente.")
+            : result?.Message ?? "No se pudo cargar el archivo.";
+
+        if (result?.Success == true && !string.IsNullOrWhiteSpace(result.Data))
+        {
+            if (isPrivateKey)
+                _form.PrivateKeyReference = result.Data;
+            else
+                _form.CertificateReference = result.Data;
+        }
+    }
+
+    private static UpsertFiscalConfigurationCommandDto CreateEmptyForm()
+        => new()
+        {
+            PointOfSale = 1,
+            DefaultInvoiceType = InvoiceType.InvoiceB,
+            IntegrationMode = FiscalIntegrationMode.Mock,
+            UseSandbox = true,
+            IsActive = true
+        };
+
+    private static UpsertFiscalConfigurationCommandDto Map(FiscalConfigurationDto dto)
+        => new()
+        {
+            Id = dto.Id,
+            LegalName = dto.LegalName,
+            TaxIdentifier = dto.TaxIdentifier,
+            GrossIncomeTaxId = dto.GrossIncomeTaxId,
+            PointOfSale = dto.PointOfSale,
+            DefaultInvoiceType = dto.DefaultInvoiceType,
+            IntegrationMode = dto.IntegrationMode,
+            UseSandbox = dto.UseSandbox,
+            IsActive = dto.IsActive,
+            CertificateReference = dto.CertificateReference,
+            PrivateKeyReference = dto.PrivateKeyReference,
+            ApiBaseUrl = dto.ApiBaseUrl,
+            Observations = dto.Observations
+        };
+}

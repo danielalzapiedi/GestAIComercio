@@ -27,6 +27,7 @@ public sealed record UpsertFiscalConfigurationCommand(
     string? PrivateKeyReference,
     string? ApiBaseUrl,
     string? Observations) : IRequest<AppResult<int>>;
+public sealed record UploadFiscalCredentialCommand(string FileName, string ContentBase64, string? ContentType, bool IsPrivateKey) : IRequest<AppResult<string>>;
 
 public sealed record GetInvoicesQuery(string? Search = null, InvoiceStatus? Status = null, int? SaleId = null, int? CustomerId = null, int Page = 1, int PageSize = 20) : IRequest<AppResult<PagedResult<CommercialInvoiceListItemDto>>>;
 public sealed record GetInvoiceByIdQuery(int Id) : IRequest<AppResult<CommercialInvoiceDetailDto>>;
@@ -183,6 +184,15 @@ public sealed class CreateInvoiceCommandValidator : AbstractValidator<CreateInvo
     }
 }
 
+public sealed class UploadFiscalCredentialCommandValidator : AbstractValidator<UploadFiscalCredentialCommand>
+{
+    public UploadFiscalCredentialCommandValidator()
+    {
+        RuleFor(x => x.FileName).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.ContentBase64).NotEmpty();
+    }
+}
+
 public sealed class CreateDeliveryNoteCommandValidator : AbstractValidator<CreateDeliveryNoteCommand>
 {
     public CreateDeliveryNoteCommandValidator()
@@ -294,6 +304,33 @@ public sealed class UpsertFiscalConfigurationCommandHandler(IAppDbContext db, IU
         await audit.WriteAsync(scope.AccountId, null, nameof(FiscalConfiguration), entity.Id, request.Id > 0 ? "updated" : "created", $"Configuración fiscal {(request.Id > 0 ? "actualizada" : "creada")} para PV {entity.PointOfSale}.", ct);
         await Release6Helpers.AppendChangeAsync(db, current, scope.AccountId, nameof(FiscalConfiguration), entity.Id, $"FISC-{entity.PointOfSale:D4}", request.Id > 0 ? "updated" : "created", $"Configuración fiscal {(request.Id > 0 ? "actualizada" : "creada")}.", changes, null, ct);
         return AppResult<int>.Ok(entity.Id);
+    }
+}
+
+public sealed class UploadFiscalCredentialCommandHandler(IUserAccessService access, IFiscalCredentialStore store)
+    : IRequestHandler<UploadFiscalCredentialCommand, AppResult<string>>
+{
+    public async Task<AppResult<string>> Handle(UploadFiscalCredentialCommand request, CancellationToken ct)
+    {
+        var scope = await Release6Helpers.RequireSalesAsync(access, ct);
+        if (!scope.Success)
+            return AppResult<string>.Fail(scope.ErrorCode, scope.Message);
+
+        byte[] content;
+        try
+        {
+            content = Convert.FromBase64String(request.ContentBase64);
+        }
+        catch (FormatException)
+        {
+            return AppResult<string>.Fail("invalid_file", "El archivo fiscal no tiene un contenido válido.");
+        }
+
+        if (content.Length == 0)
+            return AppResult<string>.Fail("empty_file", "El archivo fiscal está vacío.");
+
+        var reference = await store.SaveAsync(scope.AccountId, request.FileName, content, request.IsPrivateKey, ct);
+        return AppResult<string>.Ok(reference);
     }
 }
 
