@@ -113,6 +113,12 @@ public interface IFiscalCredentialStore
     Task<string> SaveAsync(int accountId, string fileName, byte[] content, bool isPrivateKey, CancellationToken ct);
 }
 
+public interface ICommercialDocumentPdfService
+{
+    Task<DocumentFileResult> BuildInvoicePdfAsync(CommercialInvoice invoice, CancellationToken ct);
+    Task<DocumentFileResult> BuildDeliveryNotePdfAsync(DeliveryNote note, CancellationToken ct);
+}
+
 public sealed record FiscalAuthorizationResult(
     GestAI.Domain.Enums.FiscalSubmissionStatus Status,
     string RequestPayload,
@@ -122,3 +128,8 @@ public sealed record FiscalAuthorizationResult(
     DateTime? CaeDueDateUtc,
     string? ExternalReference,
     string StatusDetail);
+
+public sealed record DocumentFileResult(
+    string FileName,
+    byte[] Content,
+    string ContentType);

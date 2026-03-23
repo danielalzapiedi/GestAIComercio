@@ -35,6 +35,19 @@ public sealed class ApiClient
         }
     }
 
+    public async Task<byte[]> GetBytesAsync(string url, CancellationToken ct = default)
+    {
+        try
+        {
+            SetBusy(true);
+            return await _http.GetByteArrayAsync(Normalize(url), ct);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
     public async Task<TResponse?> PostAsync<TRequest, TResponse>(string url, TRequest body, CancellationToken ct = default)
     {
         try

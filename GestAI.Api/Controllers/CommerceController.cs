@@ -271,6 +271,18 @@ public sealed class CommerceController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetInvoice(int id, CancellationToken ct)
         => Ok(await mediator.Send(new GetInvoiceByIdQuery(id), ct));
 
+    [HttpGet("invoices/{id:int}/pdf")]
+    public async Task<IActionResult> GetInvoicePdf(int id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetInvoicePdfQuery(id), ct);
+        if (!result.Success || result.Data is null)
+            return result.ErrorCode == "not_found"
+                ? NotFound(new { result.ErrorCode, result.Message })
+                : BadRequest(new { result.ErrorCode, result.Message });
+
+        return File(result.Data.Content, result.Data.ContentType, result.Data.FileName);
+    }
+
     [HttpPost("invoices")]
     public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceCommand command, CancellationToken ct)
         => Ok(await mediator.Send(command, ct));
@@ -286,6 +298,18 @@ public sealed class CommerceController(IMediator mediator) : ControllerBase
     [HttpGet("delivery-notes/{id:int}")]
     public async Task<IActionResult> GetDeliveryNote(int id, CancellationToken ct)
         => Ok(await mediator.Send(new GetDeliveryNoteByIdQuery(id), ct));
+
+    [HttpGet("delivery-notes/{id:int}/pdf")]
+    public async Task<IActionResult> GetDeliveryNotePdf(int id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetDeliveryNotePdfQuery(id), ct);
+        if (!result.Success || result.Data is null)
+            return result.ErrorCode == "not_found"
+                ? NotFound(new { result.ErrorCode, result.Message })
+                : BadRequest(new { result.ErrorCode, result.Message });
+
+        return File(result.Data.Content, result.Data.ContentType, result.Data.FileName);
+    }
 
     [HttpPost("delivery-notes")]
     public async Task<IActionResult> CreateDeliveryNote([FromBody] CreateDeliveryNoteCommand command, CancellationToken ct)

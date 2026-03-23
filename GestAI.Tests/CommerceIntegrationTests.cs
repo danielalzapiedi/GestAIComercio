@@ -1125,6 +1125,81 @@ public sealed class CommerceIntegrationTests
         Assert.Equal(expected, Assert.IsType<int>(result));
     }
 
+    [Fact]
+    public async Task CommercialDocumentPdfService_BuildInvoicePdfAsync_ReturnsPdfBytes()
+    {
+        var service = new CommercialDocumentPdfService();
+        var invoice = new CommercialInvoice
+        {
+            Number = "FC-0001-00000001",
+            InvoiceType = InvoiceType.InvoiceB,
+            Status = InvoiceStatus.Authorized,
+            Sale = new Sale { Number = "V-000001" },
+            Customer = new Customer { Name = "Cliente PDF" },
+            PointOfSale = 1,
+            IssuedAtUtc = DateTime.UtcNow,
+            CurrencyCode = "ARS",
+            Subtotal = 100m,
+            TaxAmount = 21m,
+            OtherTaxesAmount = 0m,
+            Total = 121m,
+            Cae = "12345678901234",
+            CaeDueDateUtc = DateTime.UtcNow.Date.AddDays(10),
+            FiscalStatusDetail = "Autorizada",
+            Items = new List<CommercialInvoiceItem>
+            {
+                new()
+                {
+                    Description = "Producto PDF",
+                    InternalCode = "PDF-1",
+                    Quantity = 1,
+                    UnitPrice = 100m,
+                    LineSubtotal = 100m,
+                    TaxAmount = 21m,
+                    SortOrder = 1
+                }
+            }
+        };
+
+        var result = await service.BuildInvoicePdfAsync(invoice, CancellationToken.None);
+
+        Assert.Equal("application/pdf", result.ContentType);
+        Assert.NotEmpty(result.Content);
+    }
+
+    [Fact]
+    public async Task CommercialDocumentPdfService_BuildDeliveryNotePdfAsync_ReturnsPdfBytes()
+    {
+        var service = new CommercialDocumentPdfService();
+        var note = new DeliveryNote
+        {
+            Number = "RM-0001-00000001",
+            Status = DeliveryNoteStatus.Delivered,
+            Sale = new Sale { Number = "V-000001" },
+            Customer = new Customer { Name = "Cliente PDF" },
+            Warehouse = new Warehouse { Name = "Principal" },
+            DeliveredAtUtc = DateTime.UtcNow,
+            TotalQuantity = 2m,
+            PendingQuantity = 0m,
+            Items = new List<DeliveryNoteItem>
+            {
+                new()
+                {
+                    Description = "Producto PDF",
+                    InternalCode = "PDF-1",
+                    QuantityOrdered = 2m,
+                    QuantityDelivered = 2m,
+                    SortOrder = 1
+                }
+            }
+        };
+
+        var result = await service.BuildDeliveryNotePdfAsync(note, CancellationToken.None);
+
+        Assert.Equal("application/pdf", result.ContentType);
+        Assert.NotEmpty(result.Content);
+    }
+
     private sealed record CommerceFixture(Account Account, TestCurrentUser CurrentUser, UserAccessService Access);
 
     private sealed class TestCurrentUser(string userId, params string[] roles) : ICurrentUser

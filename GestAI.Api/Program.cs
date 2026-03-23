@@ -16,6 +16,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,8 +66,11 @@ builder.Services.AddScoped<ISaasPlanService, GestAI.Infrastructure.Saas.SaasPlan
 builder.Services.AddScoped<IAuditService, GestAI.Infrastructure.Saas.AuditService>();
 builder.Services.AddScoped<IFiscalIntegrationService, FiscalIntegrationService>();
 builder.Services.AddScoped<IFiscalCredentialStore, FiscalCredentialStore>();
+builder.Services.AddScoped<ICommercialDocumentPdfService, CommercialDocumentPdfService>();
 
 var app = builder.Build();
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 app.UseSwagger();
 app.UseSwaggerUI();

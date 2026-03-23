@@ -31,11 +31,13 @@ public sealed record UploadFiscalCredentialCommand(string FileName, string Conte
 
 public sealed record GetInvoicesQuery(string? Search = null, InvoiceStatus? Status = null, int? SaleId = null, int? CustomerId = null, int Page = 1, int PageSize = 20) : IRequest<AppResult<PagedResult<CommercialInvoiceListItemDto>>>;
 public sealed record GetInvoiceByIdQuery(int Id) : IRequest<AppResult<CommercialInvoiceDetailDto>>;
+public sealed record GetInvoicePdfQuery(int Id) : IRequest<AppResult<DocumentFileResult>>;
 public sealed record CreateInvoiceCommand(int SaleId, int? FiscalConfigurationId, InvoiceType? InvoiceType, DateTime? IssuedAtUtc, decimal TaxRate) : IRequest<AppResult<int>>;
 public sealed record SubmitInvoiceToArcaCommand(int InvoiceId) : IRequest<AppResult>;
 
 public sealed record GetDeliveryNotesQuery(string? Search = null, DeliveryNoteStatus? Status = null, int? SaleId = null, int? WarehouseId = null, int Page = 1, int PageSize = 20) : IRequest<AppResult<PagedResult<DeliveryNoteListItemDto>>>;
 public sealed record GetDeliveryNoteByIdQuery(int Id) : IRequest<AppResult<DeliveryNoteDetailDto>>;
+public sealed record GetDeliveryNotePdfQuery(int Id) : IRequest<AppResult<DocumentFileResult>>;
 public sealed record CreateDeliveryNoteCommand(int SaleId, int WarehouseId, int? CommercialInvoiceId, DateTime? DeliveredAtUtc, string? Observations, IReadOnlyList<CreateDeliveryNoteLineInput> Items) : IRequest<AppResult<int>>;
 public sealed record CreateDeliveryNoteLineInput(int SaleItemId, decimal QuantityDelivered);
 
@@ -404,6 +406,29 @@ public sealed class GetInvoiceByIdQueryHandler(IAppDbContext db, IUserAccessServ
     }
 }
 
+public sealed class GetInvoicePdfQueryHandler(IAppDbContext db, IUserAccessService access, ICommercialDocumentPdfService pdfService)
+    : IRequestHandler<GetInvoicePdfQuery, AppResult<DocumentFileResult>>
+{
+    public async Task<AppResult<DocumentFileResult>> Handle(GetInvoicePdfQuery request, CancellationToken ct)
+    {
+        var scope = await Release6Helpers.RequireSalesAsync(access, ct);
+        if (!scope.Success)
+            return AppResult<DocumentFileResult>.Fail(scope.ErrorCode, scope.Message);
+
+        var invoice = await db.CommercialInvoices
+            .AsNoTracking()
+            .Include(x => x.Sale)
+            .Include(x => x.Customer)
+            .Include(x => x.Items)
+            .Include(x => x.DeliveryNotes)
+            .FirstOrDefaultAsync(x => x.AccountId == scope.AccountId && x.Id == request.Id, ct);
+        if (invoice is null)
+            return AppResult<DocumentFileResult>.Fail("not_found", "Factura no encontrada.");
+
+        return AppResult<DocumentFileResult>.Ok(await pdfService.BuildInvoicePdfAsync(invoice, ct));
+    }
+}
+
 public sealed class CreateInvoiceCommandHandler(IAppDbContext db, IUserAccessService access, ICurrentUser current, IAuditService audit)
     : IRequestHandler<CreateInvoiceCommand, AppResult<int>>
 {
@@ -600,6 +625,30 @@ public sealed class GetDeliveryNoteByIdQueryHandler(IAppDbContext db, IUserAcces
             return AppResult<DeliveryNoteDetailDto>.Fail("not_found", "Remito no encontrado.");
 
         return AppResult<DeliveryNoteDetailDto>.Ok(Release6Helpers.MapDeliveryDetail(note));
+    }
+}
+
+public sealed class GetDeliveryNotePdfQueryHandler(IAppDbContext db, IUserAccessService access, ICommercialDocumentPdfService pdfService)
+    : IRequestHandler<GetDeliveryNotePdfQuery, AppResult<DocumentFileResult>>
+{
+    public async Task<AppResult<DocumentFileResult>> Handle(GetDeliveryNotePdfQuery request, CancellationToken ct)
+    {
+        var scope = await Release6Helpers.RequireSalesAsync(access, ct);
+        if (!scope.Success)
+            return AppResult<DocumentFileResult>.Fail(scope.ErrorCode, scope.Message);
+
+        var note = await db.DeliveryNotes
+            .AsNoTracking()
+            .Include(x => x.Sale)
+            .Include(x => x.Customer)
+            .Include(x => x.Warehouse)
+            .Include(x => x.CommercialInvoice)
+            .Include(x => x.Items)
+            .FirstOrDefaultAsync(x => x.AccountId == scope.AccountId && x.Id == request.Id, ct);
+        if (note is null)
+            return AppResult<DocumentFileResult>.Fail("not_found", "Remito no encontrado.");
+
+        return AppResult<DocumentFileResult>.Ok(await pdfService.BuildDeliveryNotePdfAsync(note, ct));
     }
 }
 
