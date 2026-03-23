@@ -285,14 +285,14 @@ public sealed class CommercialDocumentPdfService : ICommercialDocumentPdfService
             });
     }
 
-    private static void HeaderCell(TableCellDescriptor cell, string text)
+    private static void HeaderCell(TableCellDescriptor header, string text)
     {
-        cell.Background(Colors.Grey.Lighten3).Padding(6).Text(text).SemiBold();
+        header.Cell().Background(Colors.Grey.Lighten3).Padding(6).Text(text).SemiBold();
     }
 
-    private static void BodyCell(TableCellDescriptor cell, string text)
+    private static void BodyCell(TableDescriptor table, string text)
     {
-        cell.BorderBottom(1).BorderColor(Colors.Grey.Lighten3).PaddingVertical(6).PaddingHorizontal(4).Text(text);
+        table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten3).PaddingVertical(6).PaddingHorizontal(4).Text(text);
     }
 
     private static string FormatMoney(decimal value)
