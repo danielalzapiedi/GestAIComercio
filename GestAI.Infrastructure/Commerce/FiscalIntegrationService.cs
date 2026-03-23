@@ -266,7 +266,7 @@ public sealed class FiscalIntegrationService(
 
         using var response = await client.SendAsync(request, ct);
         var responseText = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
+        if (!response.IsSuccessStatusCode && !LooksLikeSoapFault(responseText))
             throw new InvalidOperationException($"ARCA/AFIP devolvió HTTP {(int)response.StatusCode}: {Truncate(responseText, 500)}");
 
         return responseText;
@@ -349,9 +349,11 @@ public sealed class FiscalIntegrationService(
         if (fault is null)
             return;
 
-        var message = fault.Descendants().FirstOrDefault(x => x.Name.LocalName is "faultstring" or "Reason")?.Value
+        var faultCode = fault.Descendants().FirstOrDefault(x => x.Name.LocalName is "faultcode" or "Value")?.Value;
+        var faultMessage = fault.Descendants().FirstOrDefault(x => x.Name.LocalName is "faultstring" or "Text" or "Reason")?.Value
             ?? fault.Value;
-        throw new InvalidOperationException($"{serviceName} devolvió SOAP Fault: {message}");
+        var detailMessage = BuildSoapFaultDetailMessage(faultCode, faultMessage);
+        throw new InvalidOperationException($"{serviceName} devolvió SOAP Fault: {detailMessage}");
     }
 
     private static List<string> ExtractAfipMessages(XElement root, string collectionName, string itemName)
@@ -433,6 +435,37 @@ public sealed class FiscalIntegrationService(
 
     private static string FormatDecimal(decimal value)
         => value.ToString("0.00", CultureInfo.InvariantCulture);
+
+    private static bool LooksLikeSoapFault(string value)
+        => !string.IsNullOrWhiteSpace(value)
+           && value.Contains("<", StringComparison.Ordinal)
+           && (value.Contains("Fault", StringComparison.OrdinalIgnoreCase)
+               || value.Contains("Envelope", StringComparison.OrdinalIgnoreCase));
+
+    private static string BuildSoapFaultDetailMessage(string? faultCode, string? faultMessage)
+    {
+        var normalizedCode = (faultCode ?? string.Empty).Trim();
+        var normalizedMessage = (faultMessage ?? string.Empty).Trim();
+
+        if (normalizedCode.Contains("cms.cert.untrusted", StringComparison.OrdinalIgnoreCase)
+            || normalizedMessage.Contains("Certificado no emitido por AC de confianza", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Certificado no emitido por AC de confianza. Verificá que el certificado haya sido emitido por ARCA y que coincida el ambiente: certificado de homologación con WSAA/WSFE de homologación, o certificado de producción con endpoints productivos.";
+        }
+
+        if (normalizedCode.Contains("xml.destination.invalid", StringComparison.OrdinalIgnoreCase))
+        {
+            return "El destination del LoginTicketRequest no coincide con el DN del WSAA. Revisá el ambiente configurado y el endpoint utilizado.";
+        }
+
+        if (string.IsNullOrWhiteSpace(normalizedCode))
+            return normalizedMessage;
+
+        if (string.IsNullOrWhiteSpace(normalizedMessage))
+            return normalizedCode;
+
+        return $"{normalizedCode}: {normalizedMessage}";
+    }
 
     private static string Truncate(string value, int max)
         => string.IsNullOrWhiteSpace(value) || value.Length <= max ? value : value[..max];
