@@ -107,6 +107,9 @@
                     @if (CanAccess(SaasModule.Sales))
                     {
                         <li class="nav-item"><NavLink class="nav-link" href="/sales" @onclick="CloseSidebar"><i class="bi bi-receipt-cutoff"></i><span>Ventas</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/invoices" @onclick="CloseSidebar"><i class="bi bi-file-earmark-medical"></i><span>Facturación</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/delivery-notes" @onclick="CloseSidebar"><i class="bi bi-truck-flatbed"></i><span>Remitos</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/reports" @onclick="CloseSidebar"><i class="bi bi-bar-chart-line"></i><span>Reportes</span></NavLink></li>
                     }
                     @if (CanAccess(SaasModule.Purchases))
                     {
@@ -153,6 +156,7 @@
                     @if (CanAccess(SaasModule.AuditLog))
                     {
                         <li class="nav-item"><NavLink class="nav-link" href="/audit-log" @onclick="CloseSidebar"><i class="bi bi-journal-text"></i><span>Auditoría</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/document-history" @onclick="CloseSidebar"><i class="bi bi-clock-history"></i><span>Historial</span></NavLink></li>
                     }
                 </ul>
             </aside>

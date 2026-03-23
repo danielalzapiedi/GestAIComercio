@@ -1,0 +1,107 @@
+@page "/invoices/{Id:int}"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Detalle de factura</PageTitle>
+
+@if (_detail is null)
+{
+    <div class="card"><div class="card-body">Cargando factura...</div></div>
+}
+else
+{
+    <section class="page-hero">
+        <div>
+            <div class="page-hero-title">@_detail.Number</div>
+            <div class="page-hero-subtitle">Documento fiscal separado de la venta, con trazabilidad de ARCA, CAE y remitos relacionados.</div>
+        </div>
+        <div class="page-hero-meta">
+            <StatusBadge Text="@InvoiceStatusLabel(_detail.Status)" CssClass="@InvoiceStatusClass(_detail.Status)" />
+            <a class="btn btn-outline-secondary" href="/sales/@_detail.SaleId">Ver venta</a>
+            <button class="btn btn-primary" type="button" @onclick="SubmitToArca">Enviar a ARCA</button>
+        </div>
+    </section>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card ui-data-card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Cabecera fiscal</div><h5 class="ui-card-title">Datos del comprobante</h5></div></div>
+                <div class="row g-3">
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Cliente</span><span class="ui-table-meta">@_detail.CustomerName</span></div></div>
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Venta origen</span><span class="ui-table-meta">@_detail.SaleNumber</span></div></div>
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Tipo</span><span class="ui-table-meta">@_detail.InvoiceType</span></div></div>
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Punto de venta</span><span class="ui-table-meta">@_detail.PointOfSale</span></div></div>
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">CAE</span><span class="ui-table-meta">@(_detail.Cae ?? "Sin autorizar")</span></div></div>
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Vto. CAE</span><span class="ui-table-meta">@(_detail.CaeDueDateUtc.HasValue ? _detail.CaeDueDateUtc.Value.ToLocalTime().ToString("dd/MM/yyyy") : "-")</span></div></div>
+                </div>
+            </div></div>
+            <div class="card ui-data-card mt-3"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Detalle</div><h5 class="ui-card-title">Líneas facturadas</h5></div></div>
+                <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Descripción</th><th>Cantidad</th><th>Precio</th><th>IVA</th><th>Subtotal</th></tr></thead><tbody>
+                @foreach (var line in _detail.Items)
+                {
+                    <tr><td><div class="ui-table-stack"><span class="fw-semibold">@line.Description</span><span class="ui-table-meta">@line.InternalCode</span></div></td><td>@line.Quantity</td><td>@line.UnitPrice.ToString("C")</td><td>@line.TaxAmount.ToString("C")</td><td class="fw-semibold">@line.LineSubtotal.ToString("C")</td></tr>
+                }
+                </tbody></table></div>
+            </div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Fiscal / compliance</div><h5 class="ui-card-title">Estado ARCA</h5></div></div>
+                <div class="ui-list-stack">
+                    <div class="ui-check-card"><i class="bi bi-patch-check text-primary"></i><div><strong>@InvoiceStatusLabel(_detail.Status)</strong><div class="ui-table-meta">@(_detail.FiscalStatusDetail ?? "Sin detalle fiscal")</div></div></div>
+                    <div class="ui-check-card"><i class="bi bi-calculator text-primary"></i><div><strong>Total</strong><div class="ui-table-meta">@_detail.Total.ToString("C")</div></div></div>
+                    <div class="ui-check-card"><i class="bi bi-receipt text-primary"></i><div><strong>Remitos vinculados</strong><div class="ui-table-meta">@string.Join(", ", _detail.RelatedDeliveryNotes.Select(x => x.Name).DefaultIfEmpty("Sin remitos"))</div></div></div>
+                </div>
+            </div></div>
+            <div class="card mt-3"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Request / response</div><h5 class="ui-card-title">Trazabilidad fiscal</h5></div></div>
+                @if (_detail.Submissions.Count == 0)
+                {
+                    <EmptyState Title="Sin envíos todavía" Description="Todavía no se registraron requests a ARCA para esta factura." Icon="bi-cloud-slash" />
+                }
+                else
+                {
+                    @foreach (var item in _detail.Submissions)
+                    {
+                        <div class="ui-check-card mb-2"><i class="bi bi-arrow-left-right text-primary"></i><div><strong>Intento @item.AttemptNumber · @item.Status</strong><div class="ui-table-meta">@item.RequestedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div><div class="ui-table-meta">@item.ErrorMessage</div></div></div>
+                    }
+                }
+            </div></div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private CommercialInvoiceDetailDto? _detail;
+
+    protected override async Task OnParametersSetAsync()
+        => _detail = (await Api.GetAsync<AppResult<CommercialInvoiceDetailDto>>($"api/commerce/invoices/{Id}"))?.Data;
+
+    private async Task SubmitToArca()
+    {
+        await Api.PostAsync<AppResult>($"api/commerce/invoices/{Id}/submit-arca", new { });
+        _detail = (await Api.GetAsync<AppResult<CommercialInvoiceDetailDto>>($"api/commerce/invoices/{Id}"))?.Data;
+    }
+
+    private static string InvoiceStatusLabel(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Draft => "Borrador",
+        InvoiceStatus.PendingAuthorization => "Pendiente",
+        InvoiceStatus.Authorized => "Autorizada",
+        InvoiceStatus.Rejected => "Rechazada",
+        InvoiceStatus.IntegrationError => "Error integración",
+        InvoiceStatus.Cancelled => "Cancelada",
+        _ => status.ToString()
+    };
+
+    private static string InvoiceStatusClass(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Authorized => "ui-badge ui-badge-success",
+        InvoiceStatus.PendingAuthorization => "ui-badge ui-badge-warning",
+        InvoiceStatus.Rejected or InvoiceStatus.IntegrationError => "ui-badge ui-badge-danger",
+        _ => "ui-badge ui-badge-neutral"
+    };
+}

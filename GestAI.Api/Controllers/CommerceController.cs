@@ -234,6 +234,59 @@ public sealed class CommerceController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> CreateSale([FromBody] CreateSaleCommand command, CancellationToken ct)
         => Ok(await mediator.Send(command, ct));
 
+
+    [HttpGet("release6/seed")]
+    public async Task<IActionResult> GetRelease6Seed(CancellationToken ct)
+        => Ok(await mediator.Send(new GetRelease6SeedDataQuery(), ct));
+
+    [HttpGet("fiscal/configuration")]
+    public async Task<IActionResult> GetFiscalConfiguration(CancellationToken ct)
+        => Ok(await mediator.Send(new GetFiscalConfigurationQuery(), ct));
+
+    [HttpPut("fiscal/configuration")]
+    public async Task<IActionResult> UpsertFiscalConfiguration([FromBody] UpsertFiscalConfigurationCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
+
+    [HttpGet("reports/operational")]
+    public async Task<IActionResult> GetOperationalReport([FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] int top = 10, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetOperationalReportQuery(from, to, top), ct));
+
+    [HttpGet("release6/dashboard")]
+    public async Task<IActionResult> GetRelease6Dashboard(CancellationToken ct)
+        => Ok(await mediator.Send(new GetRelease6DashboardQuery(), ct));
+
+    [HttpGet("traceability")]
+    public async Task<IActionResult> GetTraceability([FromQuery] string? entityName = null, [FromQuery] string? search = null, [FromQuery] int take = 100, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetDocumentTraceabilityQuery(entityName, search, take), ct));
+
+    [HttpGet("invoices")]
+    public async Task<IActionResult> GetInvoices([FromQuery] string? search = null, [FromQuery] InvoiceStatus? status = null, [FromQuery] int? saleId = null, [FromQuery] int? customerId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetInvoicesQuery(search, status, saleId, customerId, page, pageSize), ct));
+
+    [HttpGet("invoices/{id:int}")]
+    public async Task<IActionResult> GetInvoice(int id, CancellationToken ct)
+        => Ok(await mediator.Send(new GetInvoiceByIdQuery(id), ct));
+
+    [HttpPost("invoices")]
+    public async Task<IActionResult> CreateInvoice([FromBody] CreateInvoiceCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
+
+    [HttpPost("invoices/{id:int}/submit-arca")]
+    public async Task<IActionResult> SubmitInvoiceToArca(int id, CancellationToken ct)
+        => Ok(await mediator.Send(new SubmitInvoiceToArcaCommand(id), ct));
+
+    [HttpGet("delivery-notes")]
+    public async Task<IActionResult> GetDeliveryNotes([FromQuery] string? search = null, [FromQuery] DeliveryNoteStatus? status = null, [FromQuery] int? saleId = null, [FromQuery] int? warehouseId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        => Ok(await mediator.Send(new GetDeliveryNotesQuery(search, status, saleId, warehouseId, page, pageSize), ct));
+
+    [HttpGet("delivery-notes/{id:int}")]
+    public async Task<IActionResult> GetDeliveryNote(int id, CancellationToken ct)
+        => Ok(await mediator.Send(new GetDeliveryNoteByIdQuery(id), ct));
+
+    [HttpPost("delivery-notes")]
+    public async Task<IActionResult> CreateDeliveryNote([FromBody] CreateDeliveryNoteCommand command, CancellationToken ct)
+        => Ok(await mediator.Send(command, ct));
+
     [HttpPut("sales/{id:int}")]
     public async Task<IActionResult> UpdateSale(int id, [FromBody] UpdateSaleCommand command, CancellationToken ct)
         => Ok(await mediator.Send(command with { Id = id }, ct));

@@ -1,0 +1,85 @@
+@page "/delivery-notes/{Id:int}"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Detalle de remito</PageTitle>
+
+@if (_detail is null)
+{
+    <div class="card"><div class="card-body">Cargando remito...</div></div>
+}
+else
+{
+    <section class="page-hero">
+        <div>
+            <div class="page-hero-title">@_detail.Number</div>
+            <div class="page-hero-subtitle">Documento de entrega con referencia a venta, factura y depósito de salida.</div>
+        </div>
+        <div class="page-hero-meta">
+            <StatusBadge Text="@DeliveryStatusLabel(_detail.Status)" CssClass="@DeliveryStatusClass(_detail.Status)" />
+            <a class="btn btn-outline-secondary" href="/sales/@_detail.SaleId">Ver venta</a>
+            @if (_detail.CommercialInvoiceId.HasValue)
+            {
+                <a class="btn btn-outline-primary" href="/invoices/@_detail.CommercialInvoiceId.Value">Ver factura</a>
+            }
+        </div>
+    </section>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card ui-data-card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Entrega</div><h5 class="ui-card-title">Cabecera logística</h5></div></div>
+                <div class="row g-3">
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Cliente</span><span class="ui-table-meta">@_detail.CustomerName</span></div></div>
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Venta</span><span class="ui-table-meta">@_detail.SaleNumber</span></div></div>
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Depósito</span><span class="ui-table-meta">@_detail.WarehouseName</span></div></div>
+                    <div class="col-md-6"><div class="ui-table-stack"><span class="fw-semibold">Factura relacionada</span><span class="ui-table-meta">@(_detail.CommercialInvoiceNumber ?? "Sin factura asociada")</span></div></div>
+                    <div class="col-md-6"><div class="ui-table-stack"><span class="fw-semibold">Observaciones</span><span class="ui-table-meta">@(!string.IsNullOrWhiteSpace(_detail.Observations) ? _detail.Observations : "Sin observaciones")</span></div></div>
+                </div>
+            </div></div>
+            <div class="card ui-data-card mt-3"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Cantidades</div><h5 class="ui-card-title">Detalle entregado</h5></div></div>
+                <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Descripción</th><th>Pedida</th><th>Entregada</th><th>Resto</th></tr></thead><tbody>
+                @foreach (var line in _detail.Items)
+                {
+                    <tr><td><div class="ui-table-stack"><span class="fw-semibold">@line.Description</span><span class="ui-table-meta">@line.InternalCode</span></div></td><td>@line.QuantityOrdered</td><td>@line.QuantityDelivered</td><td>@line.RemainingQuantity</td></tr>
+                }
+                </tbody></table></div>
+            </div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Resumen</div><h5 class="ui-card-title">Impacto operativo</h5></div></div>
+                <div class="ui-list-stack">
+                    <div class="ui-check-card"><i class="bi bi-box-arrow-up-right text-primary"></i><div><strong>@_detail.TotalQuantity unidades remitidas</strong><div class="ui-table-meta">Se descontaron del depósito @_detail.WarehouseName.</div></div></div>
+                    <div class="ui-check-card"><i class="bi bi-hourglass-split text-primary"></i><div><strong>@_detail.PendingQuantity pendientes</strong><div class="ui-table-meta">Saldo aún no entregado para esta operación.</div></div></div>
+                </div>
+            </div></div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private DeliveryNoteDetailDto? _detail;
+
+    protected override async Task OnParametersSetAsync()
+        => _detail = (await Api.GetAsync<AppResult<DeliveryNoteDetailDto>>($"api/commerce/delivery-notes/{Id}"))?.Data;
+
+    private static string DeliveryStatusLabel(DeliveryNoteStatus status) => status switch
+    {
+        DeliveryNoteStatus.Issued => "Emitido",
+        DeliveryNoteStatus.PartiallyDelivered => "Parcial",
+        DeliveryNoteStatus.Delivered => "Entregado",
+        DeliveryNoteStatus.Cancelled => "Cancelado",
+        _ => "Borrador"
+    };
+
+    private static string DeliveryStatusClass(DeliveryNoteStatus status) => status switch
+    {
+        DeliveryNoteStatus.Delivered => "ui-badge ui-badge-success",
+        DeliveryNoteStatus.PartiallyDelivered => "ui-badge ui-badge-warning",
+        DeliveryNoteStatus.Cancelled => "ui-badge ui-badge-danger",
+        _ => "ui-badge ui-badge-primary"
+    };
+}

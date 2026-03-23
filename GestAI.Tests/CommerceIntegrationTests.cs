@@ -5,6 +5,7 @@ using GestAI.Domain.Entities;
 using GestAI.Domain.Entities.Commerce;
 using GestAI.Domain.Enums;
 using GestAI.Infrastructure.Persistence;
+using GestAI.Infrastructure.Commerce;
 using GestAI.Infrastructure.Saas;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -978,6 +979,122 @@ public sealed class CommerceIntegrationTests
         var currentUser = new TestCurrentUser(user.Id);
         var access = new UserAccessService(db, currentUser);
         return new CommerceFixture(account, currentUser, access);
+    }
+
+
+    [Fact]
+    public async Task CreateInvoice_AndSubmitToMockArca_PersistsFiscalResult()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-invoice@test");
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Fiscal", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.Customers.Add(customer);
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+
+        var product = new Product { AccountId = fixture.Account.Id, Name = "Producto A", InternalCode = "INV-1", Description = "Producto", CategoryId = category.Id, Brand = "Marca", UnitOfMeasure = UnitOfMeasure.Unit, Cost = 10, SalePrice = 100, MinimumStock = 1, IsActive = true };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var saleId = (await new CreateSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService())
+            .Handle(new CreateSaleCommand(customer.Id, SaleStatus.Confirmed, DateTime.UtcNow, null, new[] { new CommercialLineInput(product.Id, null, null, 2, 100, 1) }), CancellationToken.None)).Data;
+
+        db.FiscalConfigurations.Add(new FiscalConfiguration
+        {
+            AccountId = fixture.Account.Id,
+            LegalName = "Demo SA",
+            TaxIdentifier = "30712345678",
+            PointOfSale = 5,
+            DefaultInvoiceType = InvoiceType.InvoiceB,
+            IntegrationMode = FiscalIntegrationMode.Mock,
+            UseSandbox = true,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedByUserId = fixture.CurrentUser.UserId
+        });
+        await db.SaveChangesAsync();
+
+        var create = new CreateInvoiceCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var created = await create.Handle(new CreateInvoiceCommand(saleId, null, InvoiceType.InvoiceB, DateTime.UtcNow, 0.21m), CancellationToken.None);
+        Assert.True(created.Success);
+
+        var submit = new SubmitInvoiceToArcaCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService(), new FiscalIntegrationService());
+        var submitted = await submit.Handle(new SubmitInvoiceToArcaCommand(created.Data), CancellationToken.None);
+        Assert.True(submitted.Success);
+
+        var invoice = await db.CommercialInvoices.Include(x => x.FiscalSubmissions).SingleAsync(x => x.Id == created.Data);
+        Assert.Equal(InvoiceStatus.Authorized, invoice.Status);
+        Assert.False(string.IsNullOrWhiteSpace(invoice.Cae));
+        Assert.Single(invoice.FiscalSubmissions);
+        Assert.Equal(FiscalSubmissionStatus.Authorized, invoice.FiscalSubmissions.Single().Status);
+    }
+
+    [Fact]
+    public async Task CreateDeliveryNote_DecrementsWarehouseStock_AndTracksPending()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-delivery@test");
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Entrega", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        var branch = new Branch { AccountId = fixture.Account.Id, Name = "Casa Central", Code = "CC", IsActive = true };
+        db.Customers.Add(customer);
+        db.ProductCategories.Add(category);
+        db.Branches.Add(branch);
+        await db.SaveChangesAsync();
+
+        var warehouse = new Warehouse { AccountId = fixture.Account.Id, BranchId = branch.Id, Name = "Principal", Code = "P1", IsActive = true };
+        var product = new Product { AccountId = fixture.Account.Id, Name = "Producto R", InternalCode = "REM-1", Description = "Producto", CategoryId = category.Id, Brand = "Marca", UnitOfMeasure = UnitOfMeasure.Unit, Cost = 10, SalePrice = 50, MinimumStock = 1, IsActive = true };
+        db.Warehouses.Add(warehouse);
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        db.ProductWarehouseStocks.Add(new ProductWarehouseStock { AccountId = fixture.Account.Id, WarehouseId = warehouse.Id, ProductId = product.Id, QuantityOnHand = 10, CreatedAtUtc = DateTime.UtcNow, CreatedByUserId = fixture.CurrentUser.UserId });
+        await db.SaveChangesAsync();
+
+        var saleId = (await new CreateSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService())
+            .Handle(new CreateSaleCommand(customer.Id, SaleStatus.Confirmed, DateTime.UtcNow, null, new[] { new CommercialLineInput(product.Id, null, null, 4, 50, 1) }), CancellationToken.None)).Data;
+
+        var create = new CreateDeliveryNoteCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var result = await create.Handle(new CreateDeliveryNoteCommand(saleId, warehouse.Id, null, DateTime.UtcNow, "Entrega parcial", new[] { new CreateDeliveryNoteLineInput(await db.SaleItems.Where(x => x.SaleId == saleId).Select(x => x.Id).SingleAsync(), 3m) }), CancellationToken.None);
+
+        Assert.True(result.Success);
+        var stock = await db.ProductWarehouseStocks.SingleAsync(x => x.AccountId == fixture.Account.Id && x.WarehouseId == warehouse.Id && x.ProductId == product.Id);
+        var note = await db.DeliveryNotes.Include(x => x.Items).SingleAsync(x => x.Id == result.Data);
+        Assert.Equal(7m, stock.QuantityOnHand);
+        Assert.Equal(DeliveryNoteStatus.PartiallyDelivered, note.Status);
+        Assert.Equal(1m, note.PendingQuantity);
+        Assert.Single(note.Items);
+    }
+
+    [Fact]
+    public async Task UpsertFiscalConfiguration_AndCreateSale_WritesDocumentHistory()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-history@test");
+
+        var fiscal = new UpsertFiscalConfigurationCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var fiscalResult = await fiscal.Handle(new UpsertFiscalConfigurationCommand(0, "Demo SA", "30712345678", null, 1, InvoiceType.InvoiceB, FiscalIntegrationMode.Mock, true, true, null, null, null, null), CancellationToken.None);
+        Assert.True(fiscalResult.Success);
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Hist", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.Customers.Add(customer);
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+        var product = new Product { AccountId = fixture.Account.Id, Name = "Producto H", InternalCode = "HIS-1", Description = "Producto", CategoryId = category.Id, Brand = "Marca", UnitOfMeasure = UnitOfMeasure.Unit, Cost = 10, SalePrice = 60, MinimumStock = 0, IsActive = true };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var saleResult = await new CreateSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService())
+            .Handle(new CreateSaleCommand(customer.Id, SaleStatus.Confirmed, DateTime.UtcNow, "Alta inicial", new[] { new CommercialLineInput(product.Id, null, null, 1, 60, 1) }), CancellationToken.None);
+        Assert.True(saleResult.Success);
+
+        var history = await db.DocumentChangeLogs.Where(x => x.AccountId == fixture.Account.Id).OrderBy(x => x.Id).ToListAsync();
+        Assert.Contains(history, x => x.EntityName == nameof(FiscalConfiguration));
+        Assert.Contains(history, x => x.EntityName == "Sale");
     }
 
     private sealed record CommerceFixture(Account Account, TestCurrentUser CurrentUser, UserAccessService Access);

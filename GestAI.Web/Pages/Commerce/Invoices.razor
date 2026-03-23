@@ -1,0 +1,134 @@
+@page "/invoices"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Facturación</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Facturación</div>
+        <div class="page-hero-subtitle">Ventas y factura son documentos distintos: acá se controla la capa fiscal, el punto de venta y el estado ARCA.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-file-earmark-medical"></i> @_result?.TotalCount ?? 0 facturas</span>
+        <button class="btn btn-primary" type="button" @onclick="GenerateInvoice"><i class="bi bi-plus-circle me-2"></i>Generar factura</button>
+    </div>
+</section>
+
+<div class="row g-3 ui-summary-grid mb-1">
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Autorizadas</div><div class="ui-stat-value">@AuthorizedCount</div><div class="ui-stat-foot">Facturas con CAE/autorización válida.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Pendientes</div><div class="ui-stat-value">@PendingCount</div><div class="ui-stat-foot">Todavía sin autorización fiscal.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Total visible</div><div class="ui-stat-value">@VisibleTotal.ToString("C")</div><div class="ui-stat-foot">Importe acumulado de la página.</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Modo fiscal</div><div class="ui-stat-value">@FiscalModeLabel</div><div class="ui-stat-foot">Configuración activa del tenant.</div></div></div></div>
+</div>
+
+<div class="card ui-filter-card"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-lg-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Factura, venta o cliente" /></div>
+        <div class="col-lg-4"><label class="form-label">Venta origen</label><select class="form-select" @bind="_saleId"><option value="0">Todas</option>@foreach (var sale in _seed.Sales){<option value="@sale.Id">@sale.Name</option>}</select></div>
+        <div class="col-lg-3"><label class="form-label">Estado fiscal</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<InvoiceStatus>()){<option value="@status">@InvoiceStatusLabel(status)</option>}</select></div>
+        <div class="col-lg-1"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
+    </div>
+</div></div>
+
+<div class="row g-3 mt-1">
+    <div class="col-xl-8">
+        <div class="card ui-data-card"><div class="card-body">
+            <div class="ui-card-header"><div><div class="ui-card-eyebrow">Comprobantes fiscales</div><h5 class="ui-card-title">Listado de facturas</h5></div></div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead><tr><th>Factura</th><th>Cliente</th><th>Venta</th><th>Fecha</th><th>Total</th><th>Fiscal</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var item in _result?.Items ?? Enumerable.Empty<CommercialInvoiceListItemDto>())
+                    {
+                        <tr>
+                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.Number</span><span class="ui-table-meta">PV @item.PointOfSale · @item.InvoiceType</span></div></td>
+                            <td>@item.CustomerName</td>
+                            <td>@item.SaleNumber</td>
+                            <td>@item.IssuedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                            <td class="fw-semibold">@item.Total.ToString("C")</td>
+                            <td><StatusBadge Text="@InvoiceStatusLabel(item.Status)" CssClass="@InvoiceStatusClass(item.Status)" /></td>
+                            <td><a class="btn btn-sm btn-outline-primary" href="/invoices/@item.Id">Detalle</a></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div></div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card ui-form-card"><div class="card-body">
+            <div class="ui-card-header"><div><div class="ui-card-eyebrow">Nueva factura</div><h5 class="ui-card-title">Generación desde venta</h5></div></div>
+            <div class="row g-3">
+                <div class="col-12"><label class="form-label">Venta origen</label><select class="form-select" @bind="_create.SaleId"><option value="0">Seleccionar venta</option>@foreach (var sale in _seed.Sales){<option value="@sale.Id">@sale.Name</option>}</select></div>
+                <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" @bind="_create.InvoiceType">@foreach (var type in Enum.GetValues<InvoiceType>()){<option value="@type">@type</option>}</select></div>
+                <div class="col-md-6"><label class="form-label">IVA</label><input class="form-control" type="number" step="0.01" @bind="_create.TaxRate" /></div>
+                <div class="col-12"><div class="ui-check-card"><i class="bi bi-building-check text-primary"></i><div><strong>Configuración fiscal activa</strong><div class="ui-table-meta">@FiscalConfigurationLabel</div></div></div></div>
+            </div>
+            <div class="ui-action-bar mt-3"><button class="btn btn-primary" type="button" @onclick="GenerateInvoice">Generar factura</button></div>
+        </div></div>
+    </div>
+</div>
+
+@code {
+    private PagedResult<CommercialInvoiceListItemDto>? _result;
+    private Release6SeedDataDto _seed = new(Array.Empty<LookupDto>(), Array.Empty<LookupDto>(), Array.Empty<LookupDto>(), null);
+    private CreateInvoiceCommandDto _create = new() { TaxRate = 0.21m, InvoiceType = InvoiceType.InvoiceB };
+    private string _search = string.Empty;
+    private string _status = string.Empty;
+    private int _saleId;
+
+    private int AuthorizedCount => _result?.Items.Count(x => x.Status == InvoiceStatus.Authorized) ?? 0;
+    private int PendingCount => _result?.Items.Count(x => x.Status != InvoiceStatus.Authorized && x.Status != InvoiceStatus.Cancelled) ?? 0;
+    private decimal VisibleTotal => _result?.Items.Sum(x => x.Total) ?? 0m;
+    private string FiscalModeLabel => _seed.FiscalConfiguration is null ? "Sin configurar" : $"{_seed.FiscalConfiguration.IntegrationMode} / PV {_seed.FiscalConfiguration.PointOfSale}";
+    private string FiscalConfigurationLabel => _seed.FiscalConfiguration is null ? "Primero configurá el punto de venta fiscal." : $"{_seed.FiscalConfiguration.LegalName} · CUIT {_seed.FiscalConfiguration.TaxIdentifier} · PV {_seed.FiscalConfiguration.PointOfSale}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSeed();
+        await Load();
+    }
+
+    private async Task LoadSeed() => _seed = (await Api.GetAsync<AppResult<Release6SeedDataDto>>("api/commerce/release6/seed"))?.Data ?? _seed;
+
+    private async Task Load()
+    {
+        var status = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&status={_status}";
+        var sale = _saleId == 0 ? string.Empty : $"&saleId={_saleId}";
+        _result = (await Api.GetAsync<AppResult<PagedResult<CommercialInvoiceListItemDto>>>($"api/commerce/invoices?search={Uri.EscapeDataString(_search ?? string.Empty)}{status}{sale}&page=1&pageSize=20"))?.Data;
+    }
+
+    private async Task Search() => await Load();
+
+    private async Task GenerateInvoice()
+    {
+        if (_create.SaleId <= 0) return;
+        var body = new { saleId = _create.SaleId, fiscalConfigurationId = _seed.FiscalConfiguration?.Id, invoiceType = _create.InvoiceType, taxRate = _create.TaxRate, issuedAtUtc = DateTime.UtcNow };
+        var result = await Api.PostAsync<AppResult<int>>("api/commerce/invoices", body);
+        if (result?.Succeeded == true && result.Data > 0)
+        {
+            Navigation.NavigateTo($"/invoices/{result.Data}");
+        }
+    }
+
+    private static string InvoiceStatusLabel(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Draft => "Borrador",
+        InvoiceStatus.PendingAuthorization => "Pendiente",
+        InvoiceStatus.Authorized => "Autorizada",
+        InvoiceStatus.Rejected => "Rechazada",
+        InvoiceStatus.IntegrationError => "Error integración",
+        InvoiceStatus.Cancelled => "Cancelada",
+        _ => status.ToString()
+    };
+
+    private static string InvoiceStatusClass(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Authorized => "ui-badge ui-badge-success",
+        InvoiceStatus.PendingAuthorization => "ui-badge ui-badge-warning",
+        InvoiceStatus.Rejected or InvoiceStatus.IntegrationError => "ui-badge ui-badge-danger",
+        _ => "ui-badge ui-badge-neutral"
+    };
+}

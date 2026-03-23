@@ -1,0 +1,148 @@
+@page "/reports"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Reportes operativos</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Reportes operativos</div>
+        <div class="page-hero-subtitle">Ventas, compras, productos movidos, stock y saldos comerciales en una sola vista de gestión.</div>
+    </div>
+    <div class="page-hero-meta">
+        <span class="page-hero-chip"><i class="bi bi-calendar-range"></i> @_from.ToString("dd/MM/yyyy") - @_to.ToString("dd/MM/yyyy")</span>
+        <button class="btn btn-primary" type="button" @onclick="Load"><i class="bi bi-arrow-repeat me-2"></i>Actualizar</button>
+    </div>
+</section>
+
+<div class="card ui-filter-card mb-3"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4"><label class="form-label">Desde</label><input class="form-control" type="date" @bind-value="_fromText" /></div>
+        <div class="col-md-4"><label class="form-label">Hasta</label><input class="form-control" type="date" @bind-value="_toText" /></div>
+        <div class="col-md-4"><label class="form-label">Top productos</label><input class="form-control" type="number" min="3" max="20" @bind="_top" /></div>
+    </div>
+</div></div>
+
+@if (_report is null)
+{
+    <div class="card"><div class="card-body">Cargando reportes...</div></div>
+}
+else
+{
+    <div class="row g-3 ui-summary-grid mb-1">
+        @foreach (var metric in _report.Metrics)
+        {
+            <div class="col-md-6 col-xl-4">
+                <div class="card ui-stat-card"><div class="card-body">
+                    <div class="ui-stat-label">@metric.Title</div>
+                    <div class="ui-stat-value">@metric.Value</div>
+                    <div class="ui-stat-foot">@metric.Hint</div>
+                </div></div>
+            </div>
+        }
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-6">
+            <div class="card ui-data-card h-100"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Ventas por período</div><h5 class="ui-card-title">Serie diaria</h5></div></div>
+                <div class="table-responsive">
+                    <table class="table table-striped ui-compact-table">
+                        <thead><tr><th>Fecha</th><th>Documentos</th><th>Importe</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in _report.SalesByDay)
+                        {
+                            <tr><td>@item.Date.ToLocalTime().ToString("dd/MM/yyyy")</td><td>@item.Count</td><td class="fw-semibold">@item.Amount.ToString("C")</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div></div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card ui-data-card h-100"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Compras por período</div><h5 class="ui-card-title">Serie diaria</h5></div></div>
+                <div class="table-responsive">
+                    <table class="table table-striped ui-compact-table">
+                        <thead><tr><th>Fecha</th><th>Documentos</th><th>Importe</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in _report.PurchasesByDay)
+                        {
+                            <tr><td>@item.Date.ToLocalTime().ToString("dd/MM/yyyy")</td><td>@item.Count</td><td class="fw-semibold">@item.Amount.ToString("C")</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-xl-6">
+            <div class="card ui-data-card h-100"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Productos más movidos</div><h5 class="ui-card-title">Ranking comercial</h5></div></div>
+                <div class="table-responsive">
+                    <table class="table table-striped ui-compact-table">
+                        <thead><tr><th>SKU</th><th>Cantidad</th><th>Revenue</th><th>Docs.</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in _report.TopProducts)
+                        {
+                            <tr>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@item.Description</span><span class="ui-table-meta">@item.InternalCode</span></div></td>
+                                <td>@item.Quantity</td>
+                                <td class="fw-semibold">@item.Revenue.ToString("C")</td>
+                                <td>@item.Documents</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div></div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card ui-data-card h-100"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Estado básico de stock</div><h5 class="ui-card-title">Alertas de inventario</h5></div></div>
+                <div class="table-responsive">
+                    <table class="table table-striped ui-compact-table">
+                        <thead><tr><th>SKU</th><th>Depósito</th><th>Stock</th><th>Mínimo</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in _report.Stock.Take(30))
+                        {
+                            <tr>
+                                <td><div class="ui-table-stack"><span class="fw-semibold">@item.Description</span><span class="ui-table-meta">@item.InternalCode</span></div></td>
+                                <td>@item.WarehouseName</td>
+                                <td class="fw-semibold @(item.IsCritical ? "text-danger" : string.Empty)">@item.QuantityOnHand</td>
+                                <td>@item.MinimumStock</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div></div>
+        </div>
+    </div>
+}
+
+@code {
+    private OperationalReportDto? _report;
+    private DateTime _from = DateTime.UtcNow.Date.AddDays(-29);
+    private DateTime _to = DateTime.UtcNow.Date;
+    private int _top = 10;
+
+    private string _fromText
+    {
+        get => _from.ToString("yyyy-MM-dd");
+        set => _from = DateTime.TryParse(value, out var parsed) ? parsed.Date : _from;
+    }
+
+    private string _toText
+    {
+        get => _to.ToString("yyyy-MM-dd");
+        set => _to = DateTime.TryParse(value, out var parsed) ? parsed.Date : _to;
+    }
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+        => _report = (await Api.GetAsync<AppResult<OperationalReportDto>>($"api/commerce/reports/operational?from={DateOnly.FromDateTime(_from):yyyy-MM-dd}&to={DateOnly.FromDateTime(_to):yyyy-MM-dd}&top={_top}"))?.Data;
+}

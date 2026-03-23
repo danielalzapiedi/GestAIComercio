@@ -9,6 +9,7 @@ using GestAI.Application.Security;
 using GestAI.Domain.Entities;
 using GestAI.Infrastructure;
 using GestAI.Infrastructure.Identity;
+using GestAI.Infrastructure.Commerce;
 using GestAI.Infrastructure.Payments;
 using GestAI.Infrastructure.Persistence;
 using MediatR;
@@ -60,6 +61,7 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<IUserAccessService, GestAI.Infrastructure.Saas.UserAccessService>();
 builder.Services.AddScoped<ISaasPlanService, GestAI.Infrastructure.Saas.SaasPlanService>();
 builder.Services.AddScoped<IAuditService, GestAI.Infrastructure.Saas.AuditService>();
+builder.Services.AddScoped<IFiscalIntegrationService, FiscalIntegrationService>();
 
 var app = builder.Build();
 

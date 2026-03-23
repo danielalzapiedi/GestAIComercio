@@ -19,4 +19,6 @@ public sealed class SaleItem : AuditableEntity
     public decimal UnitPrice { get; set; }
     public decimal LineSubtotal { get; set; }
     public int SortOrder { get; set; }
+    public ICollection<CommercialInvoiceItem> CommercialInvoiceItems { get; set; } = new List<CommercialInvoiceItem>();
+    public ICollection<DeliveryNoteItem> DeliveryNoteItems { get; set; } = new List<DeliveryNoteItem>();
 }

@@ -42,6 +42,14 @@ public class AppDbContext : IdentityDbContext<User>, IAppDbContext
     public DbSet<CashRegister> CashRegisters => Set<CashRegister>();
     public DbSet<CashSession> CashSessions => Set<CashSession>();
     public DbSet<CashMovement> CashMovements => Set<CashMovement>();
+    public DbSet<FiscalConfiguration> FiscalConfigurations => Set<FiscalConfiguration>();
+    public DbSet<DocumentSequence> DocumentSequences => Set<DocumentSequence>();
+    public DbSet<CommercialInvoice> CommercialInvoices => Set<CommercialInvoice>();
+    public DbSet<CommercialInvoiceItem> CommercialInvoiceItems => Set<CommercialInvoiceItem>();
+    public DbSet<DeliveryNote> DeliveryNotes => Set<DeliveryNote>();
+    public DbSet<DeliveryNoteItem> DeliveryNoteItems => Set<DeliveryNoteItem>();
+    public DbSet<FiscalDocumentSubmission> FiscalDocumentSubmissions => Set<FiscalDocumentSubmission>();
+    public DbSet<DocumentChangeLog> DocumentChangeLogs => Set<DocumentChangeLog>();
     DbSet<User> IAppDbContext.Users => Set<User>();
 
     public async Task<IDbContextTransactionAdapter> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken ct = default)

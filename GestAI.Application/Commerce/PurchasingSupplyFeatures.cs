@@ -419,6 +419,7 @@ public sealed class CreatePurchaseDocumentCommandHandler(IAppDbContext db, IUser
         await PurchasingSupplyHelpers.UpsertSupplierMovementAsync(db, document, current, ct);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync(scope.AccountId, null, nameof(PurchaseDocument), document.Id, "created", $"Compra {document.Number} creada para {supplier.Name} por {document.Total:C}.", ct);
+        await Release6Helpers.AppendChangeAsync(db, current, scope.AccountId, nameof(PurchaseDocument), document.Id, document.Number, "created", $"Compra {document.Number} creada.", new { document.SupplierId, document.Status, document.Total }, null, ct);
         return AppResult<int>.Ok(document.Id);
     }
 }
@@ -454,6 +455,7 @@ public sealed class UpdatePurchaseDocumentCommandHandler(IAppDbContext db, IUser
         await PurchasingSupplyHelpers.UpsertSupplierMovementAsync(db, document, current, ct);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync(scope.AccountId, null, nameof(PurchaseDocument), document.Id, "updated", $"Compra {document.Number} actualizada.", ct);
+        await Release6Helpers.AppendChangeAsync(db, current, scope.AccountId, nameof(PurchaseDocument), document.Id, document.Number, "updated", $"Compra {document.Number} actualizada.", new { document.SupplierId, document.Status, document.Total, document.SupplierDocumentNumber }, null, ct);
         return AppResult.Ok();
     }
 }

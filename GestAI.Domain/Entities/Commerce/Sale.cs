@@ -19,4 +19,6 @@ public sealed class Sale : AuditableEntity
     public int? SourceQuoteId { get; set; }
     public Quote? SourceQuote { get; set; }
     public ICollection<SaleItem> Items { get; set; } = new List<SaleItem>();
+    public ICollection<CommercialInvoice> Invoices { get; set; } = new List<CommercialInvoice>();
+    public ICollection<DeliveryNote> DeliveryNotes { get; set; } = new List<DeliveryNote>();
 }

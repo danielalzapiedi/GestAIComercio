@@ -589,6 +589,7 @@ public sealed class CreateSaleCommandHandler(IAppDbContext db, IUserAccessServic
         await FinancialHelpers.UpsertCustomerMovementAsync(db, sale, current, ct);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync(scope.AccountId, null, "Sale", sale.Id, "created", $"Venta {sale.Number} creada", ct);
+        await Release6Helpers.AppendChangeAsync(db, current, scope.AccountId, "Sale", sale.Id, sale.Number, "created", $"Venta {sale.Number} creada.", new { sale.CustomerId, sale.Status, sale.Total }, sale.SourceQuote?.Number, ct);
         return AppResult<int>.Ok(sale.Id);
     }
 }
@@ -620,6 +621,7 @@ public sealed class UpdateSaleCommandHandler(IAppDbContext db, IUserAccessServic
         await FinancialHelpers.UpsertCustomerMovementAsync(db, sale, current, ct);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync(scope.AccountId, null, "Sale", sale.Id, "updated", $"Venta {sale.Number} actualizada", ct);
+        await Release6Helpers.AppendChangeAsync(db, current, scope.AccountId, "Sale", sale.Id, sale.Number, "updated", $"Venta {sale.Number} actualizada.", new { sale.CustomerId, sale.Status, sale.Total, sale.Observations }, sale.SourceQuote?.Number, ct);
         return AppResult.Ok();
     }
 }
