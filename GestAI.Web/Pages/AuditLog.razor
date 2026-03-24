@@ -7,13 +7,22 @@
 <section class="page-hero">
     <div>
         <div class="page-hero-title">Auditoría</div>
-        <div class="page-hero-subtitle">Revisá los últimos movimientos del tenant para entender quién hizo qué, cuándo y sobre qué entidad.</div>
+        <div class="page-hero-subtitle">Log de negocio legible: usuario, fecha, entidad, acción y resumen entendible para operación administrativa.</div>
     </div>
     <div class="page-hero-meta">
         <span class="page-hero-chip"><i class="bi bi-journal-text"></i> @TotalItems registros</span>
-        <span class="page-hero-chip"><i class="bi bi-diagram-3"></i> @DistinctEntities entidades</span>
+        <a class="btn btn-outline-secondary" href="/document-history">Ver historial documental</a>
     </div>
 </section>
+
+<div class="card ui-filter-card mb-3"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-lg-4"><label class="form-label">Entidad</label><input class="form-control" @bind="_entityName" placeholder="Sale, PurchaseDocument, CommercialInvoice..." /></div>
+        <div class="col-lg-4"><label class="form-label">Usuario</label><input class="form-control" @bind="_userName" placeholder="Nombre o email" /></div>
+        <div class="col-lg-2"><label class="form-label">Desde</label><input class="form-control" type="date" @bind-value="_from" /></div>
+        <div class="col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Load">Filtrar</button></div>
+    </div>
+</div></div>
 
 @if (_items is null)
 {
@@ -80,14 +89,22 @@ else
 
 @code {
     private List<AccountAuditItemDto>? _items;
+    private string _entityName = string.Empty;
+    private string _userName = string.Empty;
+    private DateTime? _from;
 
     private int TotalItems => _items?.Count ?? 0;
     private int DistinctEntities => _items?.Select(x => x.EntityName).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).Count() ?? 0;
     private int DistinctUsers => _items?.Select(x => x.UserName).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).Count() ?? 0;
-    private string LatestEventLabel => _items?.FirstOrDefault() is { } item
-        ? item.CreatedAtUtc.ToLocalTime().ToString("dd/MM")
-        : "-";
+    private string LatestEventLabel => _items?.FirstOrDefault() is { } item ? item.CreatedAtUtc.ToLocalTime().ToString("dd/MM") : "-";
 
-    protected override async Task OnInitializedAsync()
-        => _items = (await Api.GetAsync<AppResult<List<AccountAuditItemDto>>>("api/saas/account/audit?take=50"))?.Data ?? new();
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        var entity = string.IsNullOrWhiteSpace(_entityName) ? string.Empty : $"&entityName={Uri.EscapeDataString(_entityName)}";
+        var user = string.IsNullOrWhiteSpace(_userName) ? string.Empty : $"&userName={Uri.EscapeDataString(_userName)}";
+        var from = _from.HasValue ? $"&from={DateOnly.FromDateTime(_from.Value):yyyy-MM-dd}" : string.Empty;
+        _items = (await Api.GetAsync<AppResult<List<AccountAuditItemDto>>>($"api/saas/account/audit?take=100{entity}{user}{from}"))?.Data ?? new();
+    }
 }

@@ -5,8 +5,13 @@ using GestAI.Domain.Entities;
 using GestAI.Domain.Entities.Commerce;
 using GestAI.Domain.Enums;
 using GestAI.Infrastructure.Persistence;
+using GestAI.Infrastructure.Commerce;
 using GestAI.Infrastructure.Saas;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace GestAI.Tests;
@@ -980,6 +985,288 @@ public sealed class CommerceIntegrationTests
         return new CommerceFixture(account, currentUser, access);
     }
 
+
+    [Fact]
+    public async Task CreateInvoice_AndSubmitToMockArca_PersistsFiscalResult()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-invoice@test");
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Fiscal", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.Customers.Add(customer);
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+
+        var product = new Product { AccountId = fixture.Account.Id, Name = "Producto A", InternalCode = "INV-1", Description = "Producto", CategoryId = category.Id, Brand = "Marca", UnitOfMeasure = UnitOfMeasure.Unit, Cost = 10, SalePrice = 100, MinimumStock = 1, IsActive = true };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var saleId = (await new CreateSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService())
+            .Handle(new CreateSaleCommand(customer.Id, SaleStatus.Confirmed, DateTime.UtcNow, null, new[] { new CommercialLineInput(product.Id, null, null, 2, 100, 1) }), CancellationToken.None)).Data;
+
+        db.FiscalConfigurations.Add(new FiscalConfiguration
+        {
+            AccountId = fixture.Account.Id,
+            LegalName = "Demo SA",
+            TaxIdentifier = "30712345678",
+            PointOfSale = 5,
+            DefaultInvoiceType = InvoiceType.InvoiceB,
+            IntegrationMode = FiscalIntegrationMode.Mock,
+            UseSandbox = true,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedByUserId = fixture.CurrentUser.UserId
+        });
+        await db.SaveChangesAsync();
+
+        var create = new CreateInvoiceCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var created = await create.Handle(new CreateInvoiceCommand(saleId, null, InvoiceType.InvoiceB, DateTime.UtcNow, 0.21m), CancellationToken.None);
+        Assert.True(created.Success);
+
+        var submit = new SubmitInvoiceToArcaCommandHandler(
+            db,
+            fixture.Access,
+            fixture.CurrentUser,
+            new TestAuditService(),
+            new FiscalIntegrationService(new TestHttpClientFactory(), new MemoryCache(new MemoryCacheOptions()), new TestWebHostEnvironment(), NullLogger<FiscalIntegrationService>.Instance));
+        var submitted = await submit.Handle(new SubmitInvoiceToArcaCommand(created.Data), CancellationToken.None);
+        Assert.True(submitted.Success);
+
+        var invoice = await db.CommercialInvoices.Include(x => x.FiscalSubmissions).SingleAsync(x => x.Id == created.Data);
+        Assert.Equal(InvoiceStatus.Authorized, invoice.Status);
+        Assert.False(string.IsNullOrWhiteSpace(invoice.Cae));
+        Assert.Single(invoice.FiscalSubmissions);
+        Assert.Equal(FiscalSubmissionStatus.Authorized, invoice.FiscalSubmissions.Single().Status);
+    }
+
+    [Fact]
+    public async Task CreateDeliveryNote_DecrementsWarehouseStock_AndTracksPending()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-delivery@test");
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Entrega", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        var branch = new Branch { AccountId = fixture.Account.Id, Name = "Casa Central", Code = "CC", IsActive = true };
+        db.Customers.Add(customer);
+        db.ProductCategories.Add(category);
+        db.Branches.Add(branch);
+        await db.SaveChangesAsync();
+
+        var warehouse = new Warehouse { AccountId = fixture.Account.Id, BranchId = branch.Id, Name = "Principal", IsActive = true };
+        var product = new Product { AccountId = fixture.Account.Id, Name = "Producto R", InternalCode = "REM-1", Description = "Producto", CategoryId = category.Id, Brand = "Marca", UnitOfMeasure = UnitOfMeasure.Unit, Cost = 10, SalePrice = 50, MinimumStock = 1, IsActive = true };
+        db.Warehouses.Add(warehouse);
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        db.ProductWarehouseStocks.Add(new ProductWarehouseStock { AccountId = fixture.Account.Id, WarehouseId = warehouse.Id, ProductId = product.Id, QuantityOnHand = 10, CreatedAtUtc = DateTime.UtcNow, CreatedByUserId = fixture.CurrentUser.UserId });
+        await db.SaveChangesAsync();
+
+        var saleId = (await new CreateSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService())
+            .Handle(new CreateSaleCommand(customer.Id, SaleStatus.Confirmed, DateTime.UtcNow, null, new[] { new CommercialLineInput(product.Id, null, null, 4, 50, 1) }), CancellationToken.None)).Data;
+
+        var create = new CreateDeliveryNoteCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var result = await create.Handle(new CreateDeliveryNoteCommand(saleId, warehouse.Id, null, DateTime.UtcNow, "Entrega parcial", new[] { new CreateDeliveryNoteLineInput(await db.SaleItems.Where(x => x.SaleId == saleId).Select(x => x.Id).SingleAsync(), 3m) }), CancellationToken.None);
+
+        Assert.True(result.Success);
+        var stock = await db.ProductWarehouseStocks.SingleAsync(x => x.AccountId == fixture.Account.Id && x.WarehouseId == warehouse.Id && x.ProductId == product.Id);
+        var note = await db.DeliveryNotes.Include(x => x.Items).SingleAsync(x => x.Id == result.Data);
+        Assert.Equal(7m, stock.QuantityOnHand);
+        Assert.Equal(DeliveryNoteStatus.PartiallyDelivered, note.Status);
+        Assert.Equal(1m, note.PendingQuantity);
+        Assert.Single(note.Items);
+    }
+
+    [Fact]
+    public async Task UpsertFiscalConfiguration_AndCreateSale_WritesDocumentHistory()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-history@test");
+
+        var fiscal = new UpsertFiscalConfigurationCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var fiscalResult = await fiscal.Handle(new UpsertFiscalConfigurationCommand(0, "Demo SA", "30712345678", null, 1, InvoiceType.InvoiceB, FiscalIntegrationMode.Mock, true, true, null, null, null, null), CancellationToken.None);
+        Assert.True(fiscalResult.Success);
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Hist", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.Customers.Add(customer);
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+        var product = new Product { AccountId = fixture.Account.Id, Name = "Producto H", InternalCode = "HIS-1", Description = "Producto", CategoryId = category.Id, Brand = "Marca", UnitOfMeasure = UnitOfMeasure.Unit, Cost = 10, SalePrice = 60, MinimumStock = 0, IsActive = true };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var saleResult = await new CreateSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService())
+            .Handle(new CreateSaleCommand(customer.Id, SaleStatus.Confirmed, DateTime.UtcNow, "Alta inicial", new[] { new CommercialLineInput(product.Id, null, null, 1, 60, 1) }), CancellationToken.None);
+        Assert.True(saleResult.Success);
+
+        var history = await db.DocumentChangeLogs.Where(x => x.AccountId == fixture.Account.Id).OrderBy(x => x.Id).ToListAsync();
+        Assert.Contains(history, x => x.EntityName == nameof(FiscalConfiguration));
+        Assert.Contains(history, x => x.EntityName == "Sale");
+    }
+
+    [Theory]
+    [InlineData(InvoiceType.InvoiceB, CustomerType.Consumer, 99, 5)]
+    [InlineData(InvoiceType.InvoiceB, CustomerType.Mixed, 80, 1)]
+    [InlineData(InvoiceType.InvoiceA, CustomerType.Company, 80, 1)]
+    [InlineData(InvoiceType.InvoiceC, CustomerType.Company, 80, 5)]
+    public void FiscalIntegrationService_ResolveRecipientIvaConditionId_UsesExpectedFallback(
+        InvoiceType invoiceType,
+        CustomerType customerType,
+        int documentType,
+        int expected)
+    {
+        var method = typeof(FiscalIntegrationService).GetMethod("ResolveRecipientIvaConditionId", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var result = method!.Invoke(null, new object[] { invoiceType, customerType, documentType });
+
+        Assert.Equal(expected, Assert.IsType<int>(result));
+    }
+
+    [Fact]
+    public async Task CommercialDocumentPdfService_BuildInvoicePdfAsync_ReturnsPdfBytes()
+    {
+        var service = new CommercialDocumentPdfService();
+        var invoice = new CommercialInvoice
+        {
+            Number = "FC-0001-00000001",
+            InvoiceType = InvoiceType.InvoiceB,
+            Status = InvoiceStatus.Authorized,
+            Sale = new Sale { Number = "V-000001" },
+            Customer = new Customer { Name = "Cliente PDF" },
+            PointOfSale = 1,
+            IssuedAtUtc = DateTime.UtcNow,
+            CurrencyCode = "ARS",
+            Subtotal = 100m,
+            TaxAmount = 21m,
+            OtherTaxesAmount = 0m,
+            Total = 121m,
+            Cae = "12345678901234",
+            CaeDueDateUtc = DateTime.UtcNow.Date.AddDays(10),
+            FiscalStatusDetail = "Autorizada",
+            Items = new List<CommercialInvoiceItem>
+            {
+                new()
+                {
+                    Description = "Producto PDF",
+                    InternalCode = "PDF-1",
+                    Quantity = 1,
+                    UnitPrice = 100m,
+                    LineSubtotal = 100m,
+                    TaxAmount = 21m,
+                    SortOrder = 1
+                }
+            }
+        };
+
+        var result = await service.BuildInvoicePdfAsync(invoice, CancellationToken.None);
+
+        Assert.Equal("application/pdf", result.ContentType);
+        Assert.NotEmpty(result.Content);
+    }
+
+    [Fact]
+    public async Task CommercialDocumentPdfService_BuildQuotePdfAsync_ReturnsPdfBytes()
+    {
+        var service = new CommercialDocumentPdfService();
+        var quote = new Quote
+        {
+            Number = "P-000001",
+            Status = QuoteStatus.Sent,
+            Customer = new Customer { Name = "Cliente PDF" },
+            IssuedAtUtc = DateTime.UtcNow,
+            ValidUntilUtc = DateTime.UtcNow.Date.AddDays(7),
+            Observations = "Presupuesto de prueba",
+            Subtotal = 100m,
+            Total = 100m,
+            Items = new List<QuoteItem>
+            {
+                new()
+                {
+                    Description = "Producto PDF",
+                    InternalCode = "PDF-1",
+                    Quantity = 1,
+                    UnitPrice = 100m,
+                    LineSubtotal = 100m,
+                    SortOrder = 1
+                }
+            }
+        };
+
+        var result = await service.BuildQuotePdfAsync(quote, CancellationToken.None);
+
+        Assert.Equal("application/pdf", result.ContentType);
+        Assert.NotEmpty(result.Content);
+    }
+
+    [Fact]
+    public async Task CommercialDocumentPdfService_BuildSalePdfAsync_ReturnsPdfBytes()
+    {
+        var service = new CommercialDocumentPdfService();
+        var sale = new Sale
+        {
+            Number = "V-000001",
+            Status = SaleStatus.Confirmed,
+            Customer = new Customer { Name = "Cliente PDF" },
+            IssuedAtUtc = DateTime.UtcNow,
+            Observations = "Venta de prueba",
+            Subtotal = 100m,
+            Total = 100m,
+            Items = new List<SaleItem>
+            {
+                new()
+                {
+                    Description = "Producto PDF",
+                    InternalCode = "PDF-1",
+                    Quantity = 1,
+                    UnitPrice = 100m,
+                    LineSubtotal = 100m,
+                    SortOrder = 1
+                }
+            }
+        };
+
+        var result = await service.BuildSalePdfAsync(sale, CancellationToken.None);
+
+        Assert.Equal("application/pdf", result.ContentType);
+        Assert.NotEmpty(result.Content);
+    }
+
+    [Fact]
+    public async Task CommercialDocumentPdfService_BuildDeliveryNotePdfAsync_ReturnsPdfBytes()
+    {
+        var service = new CommercialDocumentPdfService();
+        var note = new DeliveryNote
+        {
+            Number = "RM-0001-00000001",
+            Status = DeliveryNoteStatus.Delivered,
+            Sale = new Sale { Number = "V-000001" },
+            Customer = new Customer { Name = "Cliente PDF" },
+            Warehouse = new Warehouse { Name = "Principal" },
+            DeliveredAtUtc = DateTime.UtcNow,
+            TotalQuantity = 2m,
+            PendingQuantity = 0m,
+            Items = new List<DeliveryNoteItem>
+            {
+                new()
+                {
+                    Description = "Producto PDF",
+                    InternalCode = "PDF-1",
+                    QuantityOrdered = 2m,
+                    QuantityDelivered = 2m,
+                    SortOrder = 1
+                }
+            }
+        };
+
+        var result = await service.BuildDeliveryNotePdfAsync(note, CancellationToken.None);
+
+        Assert.Equal("application/pdf", result.ContentType);
+        Assert.NotEmpty(result.Content);
+    }
+
     private sealed record CommerceFixture(Account Account, TestCurrentUser CurrentUser, UserAccessService Access);
 
     private sealed class TestCurrentUser(string userId, params string[] roles) : ICurrentUser
@@ -1008,5 +1295,20 @@ public sealed class CommerceIntegrationTests
 
         public Task<(bool Success, string? UserId, string? Error)> FindUserIdByEmailAsync(string email, CancellationToken ct)
             => Task.FromResult((true, userId, (string?)null));
+    }
+
+    private sealed class TestHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
+    }
+
+    private sealed class TestWebHostEnvironment : IWebHostEnvironment
+    {
+        public string ApplicationName { get; set; } = "GestAI.Tests";
+        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
+        public string WebRootPath { get; set; } = AppContext.BaseDirectory;
+        public string EnvironmentName { get; set; } = "Development";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

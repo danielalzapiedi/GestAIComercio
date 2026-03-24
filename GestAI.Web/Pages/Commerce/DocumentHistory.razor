@@ -1,0 +1,73 @@
+@page "/document-history"
+@using GestAI.Web.Dtos
+@inject ApiClient Api
+
+<PageTitle>Historial documental</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Historial y trazabilidad</div>
+        <div class="page-hero-subtitle">Separa log de negocio legible de historial de cambios estructurado para ventas, compras, facturas, remitos y fiscal.</div>
+    </div>
+    <div class="page-hero-meta">
+        <a class="btn btn-outline-secondary" href="/audit-log">Ir a auditoría</a>
+        <button class="btn btn-primary" type="button" @onclick="Load"><i class="bi bi-arrow-repeat me-2"></i>Actualizar</button>
+    </div>
+</section>
+
+<div class="card ui-filter-card mb-3"><div class="card-body">
+    <div class="row g-2 align-items-end">
+        <div class="col-lg-4"><label class="form-label">Entidad</label><input class="form-control" @bind="_entity" placeholder="Sale, PurchaseDocument, CommercialInvoice, DeliveryNote..." /></div>
+        <div class="col-lg-6"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Documento, resumen, texto libre" /></div>
+        <div class="col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Load">Filtrar</button></div>
+    </div>
+</div></div>
+
+@if (_traceability is null)
+{
+    <div class="card"><div class="card-body">Cargando historial...</div></div>
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-xl-7">
+            <div class="card ui-data-card h-100"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Historial de cambios</div><h5 class="ui-card-title">Qué cambió y sobre qué documento</h5></div></div>
+                <div class="table-responsive"><table class="table table-striped ui-compact-table"><thead><tr><th>Fecha</th><th>Documento</th><th>Acción</th><th>Resumen</th><th>Usuario</th></tr></thead><tbody>
+                @foreach (var item in _traceability.History)
+                {
+                    <tr>
+                        <td>@item.ChangedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</td>
+                        <td><div class="ui-table-stack"><span class="fw-semibold">@item.DocumentNumber</span><span class="ui-table-meta">@item.EntityName</span></div></td>
+                        <td><StatusBadge Text="@item.Action" /></td>
+                        <td><div class="ui-table-stack"><span>@item.Summary</span>@if (!string.IsNullOrWhiteSpace(item.RelatedDocumentNumber)){<span class="ui-table-meta">Relacionado con @item.RelatedDocumentNumber</span>}</div></td>
+                        <td>@(item.UserName ?? "Sistema")</td>
+                    </tr>
+                }
+                </tbody></table></div>
+            </div></div>
+        </div>
+        <div class="col-xl-5">
+            <div class="card ui-data-card h-100"><div class="card-body">
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Audit trail</div><h5 class="ui-card-title">Eventos de negocio legibles</h5></div></div>
+                <div class="ui-list-stack">
+                    @foreach (var item in _traceability.AuditTrail)
+                    {
+                        <div class="ui-check-card"><i class="bi bi-journal-text text-primary"></i><div><strong>@item.EntityName · @item.Action</strong><div class="ui-table-meta">@item.Summary</div><div class="ui-table-meta">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") · @(item.UserName ?? "Sistema")</div></div></div>
+                    }
+                </div>
+            </div></div>
+        </div>
+    </div>
+}
+
+@code {
+    private DocumentTraceabilityDto? _traceability;
+    private string _entity = string.Empty;
+    private string _search = string.Empty;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+        => _traceability = (await Api.GetAsync<AppResult<DocumentTraceabilityDto>>($"api/commerce/traceability?entityName={Uri.EscapeDataString(_entity ?? string.Empty)}&search={Uri.EscapeDataString(_search ?? string.Empty)}&take=100"))?.Data;
+}

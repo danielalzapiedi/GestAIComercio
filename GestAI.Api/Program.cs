@@ -9,12 +9,14 @@ using GestAI.Application.Security;
 using GestAI.Domain.Entities;
 using GestAI.Infrastructure;
 using GestAI.Infrastructure.Identity;
+using GestAI.Infrastructure.Commerce;
 using GestAI.Infrastructure.Payments;
 using GestAI.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,6 +55,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddPayPal(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient();
 
 // Interfaces Application
 builder.Services.AddScoped<IIdentityService, IdentityService>();
@@ -60,8 +64,13 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<IUserAccessService, GestAI.Infrastructure.Saas.UserAccessService>();
 builder.Services.AddScoped<ISaasPlanService, GestAI.Infrastructure.Saas.SaasPlanService>();
 builder.Services.AddScoped<IAuditService, GestAI.Infrastructure.Saas.AuditService>();
+builder.Services.AddScoped<IFiscalIntegrationService, FiscalIntegrationService>();
+builder.Services.AddScoped<IFiscalCredentialStore, FiscalCredentialStore>();
+builder.Services.AddScoped<ICommercialDocumentPdfService, CommercialDocumentPdfService>();
 
 var app = builder.Build();
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -91,7 +100,9 @@ using (var scope = app.Services.CreateScope())
             AdminEmail: "admin@local.test",
             AdminPassword: "Admin123$",
             PropertyName: "Tenant Demo",
-            UnitNames: new[] { "Workspace A", "Workspace B" }
+            UnitNames: new[] { "Workspace A", "Workspace B" },
+            DemoOwnerEmail: "daniel@daniel.com",
+            DemoOwnerPassword: "Temp123$"
         )
     );
 }

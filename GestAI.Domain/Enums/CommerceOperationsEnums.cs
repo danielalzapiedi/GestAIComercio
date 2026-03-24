@@ -28,6 +28,50 @@ public enum BulkPriceAdjustmentType
     FixedAmount = 1
 }
 
+
+public enum InvoiceType
+{
+    InvoiceA = 0,
+    InvoiceB = 1,
+    InvoiceC = 2,
+    CreditNoteA = 3,
+    CreditNoteB = 4,
+    CreditNoteC = 5
+}
+
+public enum InvoiceStatus
+{
+    Draft = 0,
+    PendingAuthorization = 1,
+    Authorized = 2,
+    Rejected = 3,
+    IntegrationError = 4,
+    Cancelled = 5
+}
+
+public enum DeliveryNoteStatus
+{
+    Draft = 0,
+    Issued = 1,
+    PartiallyDelivered = 2,
+    Delivered = 3,
+    Cancelled = 4
+}
+
+public enum FiscalIntegrationMode
+{
+    Mock = 0,
+    ArcaWsfe = 1
+}
+
+public enum FiscalSubmissionStatus
+{
+    Pending = 0,
+    Authorized = 1,
+    Rejected = 2,
+    Error = 3
+}
+
 public enum QuoteStatus
 {
     Draft = 0,

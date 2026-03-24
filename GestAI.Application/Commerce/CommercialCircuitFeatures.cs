@@ -14,12 +14,14 @@ public sealed record GetCommercialDocumentSeedDataQuery : IRequest<AppResult<Com
 
 public sealed record GetQuotesQuery(string? Search = null, QuoteStatus? Status = null, int? CustomerId = null, bool? OnlyConvertible = null, int Page = 1, int PageSize = 20) : IRequest<AppResult<PagedResult<QuoteListItemDto>>>;
 public sealed record GetQuoteByIdQuery(int Id) : IRequest<AppResult<QuoteDetailDto>>;
+public sealed record GetQuotePdfQuery(int Id) : IRequest<AppResult<DocumentFileResult>>;
 public sealed record CreateQuoteCommand(int CustomerId, QuoteStatus Status, DateTime IssuedAtUtc, DateTime? ValidUntilUtc, string? Observations, IReadOnlyList<CommercialLineInput> Items) : IRequest<AppResult<int>>;
 public sealed record UpdateQuoteCommand(int Id, int CustomerId, QuoteStatus Status, DateTime IssuedAtUtc, DateTime? ValidUntilUtc, string? Observations, IReadOnlyList<CommercialLineInput> Items) : IRequest<AppResult>;
 public sealed record ConvertQuoteToSaleCommand(int QuoteId, SaleStatus SaleStatus, DateTime? IssuedAtUtc, string? Observations) : IRequest<AppResult<int>>;
 
 public sealed record GetSalesQuery(string? Search = null, SaleStatus? Status = null, int? CustomerId = null, int Page = 1, int PageSize = 20) : IRequest<AppResult<PagedResult<SaleListItemDto>>>;
 public sealed record GetSaleByIdQuery(int Id) : IRequest<AppResult<SaleDetailDto>>;
+public sealed record GetSalePdfQuery(int Id) : IRequest<AppResult<DocumentFileResult>>;
 public sealed record CreateSaleCommand(int CustomerId, SaleStatus Status, DateTime IssuedAtUtc, string? Observations, IReadOnlyList<CommercialLineInput> Items) : IRequest<AppResult<int>>;
 public sealed record UpdateSaleCommand(int Id, int CustomerId, SaleStatus Status, DateTime IssuedAtUtc, string? Observations, IReadOnlyList<CommercialLineInput> Items) : IRequest<AppResult>;
 public sealed record CreateQuickSaleCommand(int CustomerId, SaleStatus Status, DateTime IssuedAtUtc, string? Observations, IReadOnlyList<QuickCommercialLineDto> Items) : IRequest<AppResult<int>>;
@@ -350,6 +352,26 @@ public sealed class GetQuoteByIdQueryHandler(IAppDbContext db, IUserAccessServic
     }
 }
 
+public sealed class GetQuotePdfQueryHandler(IAppDbContext db, IUserAccessService access, ICommercialDocumentPdfService pdfService)
+    : IRequestHandler<GetQuotePdfQuery, AppResult<DocumentFileResult>>
+{
+    public async Task<AppResult<DocumentFileResult>> Handle(GetQuotePdfQuery request, CancellationToken ct)
+    {
+        var scope = await CommercialCircuitHelpers.RequireQuotesAsync(access, ct);
+        if (!scope.Success) return AppResult<DocumentFileResult>.Fail(scope.ErrorCode, scope.Message);
+
+        var quote = await db.Quotes.AsNoTracking()
+            .Include(x => x.Items)
+            .Include(x => x.GeneratedSales)
+            .Include(x => x.Customer)
+            .FirstOrDefaultAsync(x => x.AccountId == scope.AccountId && x.Id == request.Id, ct);
+
+        if (quote is null) return AppResult<DocumentFileResult>.Fail("not_found", "Presupuesto no encontrado.");
+
+        return AppResult<DocumentFileResult>.Ok(await pdfService.BuildQuotePdfAsync(quote, ct));
+    }
+}
+
 public sealed class CreateQuoteCommandHandler(IAppDbContext db, IUserAccessService access, ICurrentUser current, IAuditService audit)
     : IRequestHandler<CreateQuoteCommand, AppResult<int>>
 {
@@ -558,6 +580,26 @@ public sealed class GetSaleByIdQueryHandler(IAppDbContext db, IUserAccessService
     }
 }
 
+public sealed class GetSalePdfQueryHandler(IAppDbContext db, IUserAccessService access, ICommercialDocumentPdfService pdfService)
+    : IRequestHandler<GetSalePdfQuery, AppResult<DocumentFileResult>>
+{
+    public async Task<AppResult<DocumentFileResult>> Handle(GetSalePdfQuery request, CancellationToken ct)
+    {
+        var scope = await CommercialCircuitHelpers.RequireSalesAsync(access, ct);
+        if (!scope.Success) return AppResult<DocumentFileResult>.Fail(scope.ErrorCode, scope.Message);
+
+        var sale = await db.Sales.AsNoTracking()
+            .Include(x => x.Items)
+            .Include(x => x.SourceQuote)
+            .Include(x => x.Customer)
+            .FirstOrDefaultAsync(x => x.AccountId == scope.AccountId && x.Id == request.Id, ct);
+
+        if (sale is null) return AppResult<DocumentFileResult>.Fail("not_found", "Venta no encontrada.");
+
+        return AppResult<DocumentFileResult>.Ok(await pdfService.BuildSalePdfAsync(sale, ct));
+    }
+}
+
 public sealed class CreateSaleCommandHandler(IAppDbContext db, IUserAccessService access, ICurrentUser current, IAuditService audit)
     : IRequestHandler<CreateSaleCommand, AppResult<int>>
 {
@@ -589,6 +631,7 @@ public sealed class CreateSaleCommandHandler(IAppDbContext db, IUserAccessServic
         await FinancialHelpers.UpsertCustomerMovementAsync(db, sale, current, ct);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync(scope.AccountId, null, "Sale", sale.Id, "created", $"Venta {sale.Number} creada", ct);
+        await Release6Helpers.AppendChangeAsync(db, current, scope.AccountId, "Sale", sale.Id, sale.Number, "created", $"Venta {sale.Number} creada.", new { sale.CustomerId, sale.Status, sale.Total }, sale.SourceQuote?.Number, ct);
         return AppResult<int>.Ok(sale.Id);
     }
 }
@@ -620,6 +663,7 @@ public sealed class UpdateSaleCommandHandler(IAppDbContext db, IUserAccessServic
         await FinancialHelpers.UpsertCustomerMovementAsync(db, sale, current, ct);
         await db.SaveChangesAsync(ct);
         await audit.WriteAsync(scope.AccountId, null, "Sale", sale.Id, "updated", $"Venta {sale.Number} actualizada", ct);
+        await Release6Helpers.AppendChangeAsync(db, current, scope.AccountId, "Sale", sale.Id, sale.Number, "updated", $"Venta {sale.Number} actualizada.", new { sale.CustomerId, sale.Status, sale.Total, sale.Observations }, sale.SourceQuote?.Number, ct);
         return AppResult.Ok();
     }
 }

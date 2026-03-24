@@ -86,6 +86,17 @@ else
         }
     </div>
 
+
+    @if (_release6 is not null && CanAccess(SaasModule.Sales))
+    {
+        <div class="row g-3 ui-summary-grid mt-1">
+            <div class="col-md-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Facturación autorizada</div><div class="ui-stat-value">@_release6.InvoicedAmount.ToString("C")</div><div class="ui-stat-foot">Documentos fiscales autorizados en la lectura reciente.</div></div></div></div>
+            <div class="col-md-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Pendientes de facturar</div><div class="ui-stat-value">@_release6.PendingInvoices</div><div class="ui-stat-foot">Ventas/comprobantes sin resolución fiscal final.</div></div></div></div>
+            <div class="col-md-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Remitos pendientes</div><div class="ui-stat-value">@_release6.PendingDeliveryNotes</div><div class="ui-stat-foot">Entregas abiertas o parciales por completar.</div></div></div></div>
+            <div class="col-md-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Stock crítico</div><div class="ui-stat-value">@_release6.CriticalStock</div><div class="ui-stat-foot">Alertas operativas para reposición inmediata.</div></div></div></div>
+        </div>
+    }
+
     <div class="row g-3 mt-1">
         <div class="col-xl-7">
             <div class="card h-100 ui-highlight-card">
@@ -251,6 +262,7 @@ else
     private PagedResult<CustomerListItemDto>? _customers;
     private PagedResult<ProductListItemDto>? _products;
     private InventoryOverviewDto? _inventory;
+    private Release6DashboardDto? _release6;
     private List<StockMovementListItemDto> _movements = new();
     private bool _loaded;
 
@@ -394,7 +406,10 @@ else
         _account = (await Api.GetAsync<AppResult<AccountSummaryDto>>("api/saas/account/summary"))?.Data;
 
         if (CanAccess(SaasModule.Sales))
+        {
             _sales = (await Api.GetAsync<AppResult<PagedResult<SaleListItemDto>>>("api/commerce/sales?page=1&pageSize=100"))?.Data;
+            _release6 = (await Api.GetAsync<AppResult<Release6DashboardDto>>("api/commerce/release6/dashboard"))?.Data;
+        }
 
         if (CanAccess(SaasModule.Quotes))
             _quotes = (await Api.GetAsync<AppResult<PagedResult<QuoteListItemDto>>>("api/commerce/quotes?page=1&pageSize=100"))?.Data;

@@ -38,6 +38,14 @@ public interface IAppDbContext
     DbSet<SupplierAccountAllocation> SupplierAccountAllocations { get; }
     DbSet<CashRegister> CashRegisters { get; }
     DbSet<CashSession> CashSessions { get; }
+    DbSet<FiscalConfiguration> FiscalConfigurations { get; }
+    DbSet<DocumentSequence> DocumentSequences { get; }
+    DbSet<CommercialInvoice> CommercialInvoices { get; }
+    DbSet<CommercialInvoiceItem> CommercialInvoiceItems { get; }
+    DbSet<DeliveryNote> DeliveryNotes { get; }
+    DbSet<DeliveryNoteItem> DeliveryNoteItems { get; }
+    DbSet<FiscalDocumentSubmission> FiscalDocumentSubmissions { get; }
+    DbSet<DocumentChangeLog> DocumentChangeLogs { get; }
     DbSet<CashMovement> CashMovements { get; }
     DbSet<User> Users { get; }
     DatabaseFacade Database { get; }
@@ -94,3 +102,36 @@ public interface IAccountResolver
     Task<int?> GetCurrentAccountIdAsync(string userId, CancellationToken ct);
     Task<bool> HasAccessAsync(string userId, int accountId, CancellationToken ct);
 }
+
+public interface IFiscalIntegrationService
+{
+    Task<FiscalAuthorizationResult> AuthorizeInvoiceAsync(GestAI.Domain.Entities.Commerce.CommercialInvoice invoice, GestAI.Domain.Entities.Commerce.FiscalConfiguration configuration, CancellationToken ct);
+}
+
+public interface IFiscalCredentialStore
+{
+    Task<string> SaveAsync(int accountId, string fileName, byte[] content, bool isPrivateKey, CancellationToken ct);
+}
+
+public interface ICommercialDocumentPdfService
+{
+    Task<DocumentFileResult> BuildQuotePdfAsync(Quote quote, CancellationToken ct);
+    Task<DocumentFileResult> BuildSalePdfAsync(Sale sale, CancellationToken ct);
+    Task<DocumentFileResult> BuildInvoicePdfAsync(CommercialInvoice invoice, CancellationToken ct);
+    Task<DocumentFileResult> BuildDeliveryNotePdfAsync(DeliveryNote note, CancellationToken ct);
+}
+
+public sealed record FiscalAuthorizationResult(
+    GestAI.Domain.Enums.FiscalSubmissionStatus Status,
+    string RequestPayload,
+    string? ResponsePayload,
+    string? ErrorMessage,
+    string? Cae,
+    DateTime? CaeDueDateUtc,
+    string? ExternalReference,
+    string StatusDetail);
+
+public sealed record DocumentFileResult(
+    string FileName,
+    byte[] Content,
+    string ContentType);
