@@ -1,6 +1,9 @@
 @page "/customers"
+@page "/customers/new"
+@page "/customers/edit/{EditId:int}"
 @using GestAI.Web.Dtos
 @inject ApiClient Api
+@inject NavigationManager Nav
 
 <PageTitle>Clientes</PageTitle>
 
@@ -10,23 +13,51 @@
         <div class="page-hero-subtitle">Centralizá datos comerciales y mantené un padrón claro de clientes.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-person-vcard"></i> @_result?.TotalCount ?? 0 clientes</span>
-        <button class="btn btn-primary" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nuevo cliente</button>
+        @if (IsEditorRoute)
+        {
+            <button class="btn btn-outline-secondary" @onclick="BackToList"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button>
+        }
+        else
+        {
+            <span class="page-hero-chip"><i class="bi bi-person-vcard"></i> @_result?.TotalCount ?? 0 clientes</span>
+            <button class="btn btn-primary" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nuevo cliente</button>
+        }
     </div>
 </section>
-
-<div class="card ui-filter-card"><div class="card-body">
-    <div class="row g-2 align-items-end">
-        <div class="col-md-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre, doc, teléfono" /></div>
-        <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
-        <div class="col-md-2"><button class="btn btn-outline-primary" @onclick="Search">Buscar</button></div>
-        <div class="col-md-3 text-md-end ui-table-meta">Base comercial de clientes</div>
-    </div>
-</div></div>
 
 @if (!_loaded)
 {
     <div class="card"><div class="card-body">Cargando clientes...</div></div>
+}
+else if (IsEditorRoute)
+{
+    <div class="card ui-form-card">
+        <div class="card-body">
+            <div class="ui-card-header">
+                <div>
+                    <div class="ui-card-eyebrow">Editor</div>
+                    <h5 class="ui-card-title">@(_form.Id == 0 ? "Nuevo cliente" : "Editar cliente")</h5>
+                    <div class="ui-card-subtitle">Completá datos fiscales, de contacto y clasificación.</div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-8"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
+                <div class="col-md-4"><label class="form-label">CUIT/DNI</label><input class="form-control" @bind="_form.DocumentNumber" /></div>
+                <div class="col-md-6"><label class="form-label">Teléfono</label><input class="form-control" @bind="_form.Phone" /></div>
+                <div class="col-md-6"><label class="form-label">Dirección</label><input class="form-control" @bind="_form.Address" /></div>
+                <div class="col-md-6"><label class="form-label">Localidad</label><input class="form-control" @bind="_form.City" /></div>
+                <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" @bind="_form.CustomerType">@foreach (var type in Enum.GetValues<CustomerType>()){<option value="@type">@type</option>}</select></div>
+                <div class="col-md-6"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Cliente activo" : "Cliente inactivo")</span></div></div>
+            </div>
+            <div class="ui-action-bar">
+                <div class="ui-inline-actions">
+                    <button class="btn btn-primary" @onclick="Save">Guardar</button>
+                    <button class="btn btn-outline-secondary" @onclick="BackToList">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 else if (_result?.Items.Count == 0)
 {
@@ -38,135 +69,128 @@ else if (_result?.Items.Count == 0)
 }
 else
 {
-    <div class="ui-split-layout">
-        <div class="card ui-data-card">
-            <div class="card-body">
-                <div class="ui-card-header">
-                    <div>
-                        <div class="ui-card-eyebrow">Base comercial</div>
-                        <h5 class="ui-card-title">Listado de clientes</h5>
-                        <div class="ui-card-subtitle">Información principal y segmento comercial.</div>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead><tr><th>Nombre</th><th>Documento</th><th>Teléfono</th><th>Localidad</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
-                    <tbody>
-                    @foreach (var item in _result!.Items)
-                    {
-                        <tr>
-                            <td class="fw-semibold">@item.Name</td>
-                            <td>@(item.DocumentNumber ?? "-")</td>
-                            <td>@item.Phone</td>
-                            <td>@item.City</td>
-                            <td><StatusBadge Text="@item.CustomerType.ToString()" /></td>
-                            <td><StatusBadge IsActive="@item.IsActive" /></td>
-                            <td>
-                                <div class="ui-inline-actions">
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(item)">Editar</button>
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => Toggle(item)">@(item.IsActive ? "Desactivar" : "Activar")</button>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
-                </div>
-                <div class="ui-action-bar">
-                    <span class="text-muted">Página @_page de @TotalPages</span>
-                    <div class="btn-group">
-                        <button class="btn btn-outline-secondary" disabled="@(_page <= 1)" @onclick="PrevPage">Anterior</button>
-                        <button class="btn btn-outline-secondary" disabled="@(_page >= TotalPages)" @onclick="NextPage">Siguiente</button>
-                    </div>
+    <div class="card ui-filter-card"><div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre, doc, teléfono" /></div>
+            <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
+            <div class="col-md-2"><button class="btn btn-outline-primary" @onclick="Search">Buscar</button></div>
+            <div class="col-md-3 text-md-end ui-table-meta">Base comercial de clientes</div>
+        </div>
+    </div></div>
+
+    <div class="card ui-data-card">
+        <div class="card-body">
+            <div class="ui-card-header">
+                <div>
+                    <div class="ui-card-eyebrow">Base comercial</div>
+                    <h5 class="ui-card-title">Listado de clientes</h5>
+                    <div class="ui-card-subtitle">Información principal y segmento comercial.</div>
                 </div>
             </div>
-        </div>
-
-        <div class="card ui-form-card @(_showForm ? "ui-editor-open" : "ui-editor-hidden")">
-            <div class="card-body">
-                <div class="ui-card-header">
-                    <div>
-                        <div class="ui-card-eyebrow">Editor</div>
-                        <h5 class="ui-card-title">@(_showForm ? (_form.Id == 0 ? "Nuevo cliente" : "Editar cliente") : "Detalle y edición")</h5>
-                        <div class="ui-card-subtitle">Completá datos fiscales, de contacto y clasificación.</div>
-                    </div>
+            <div class="table-responsive">
+            <table class="table table-striped">
+                <thead><tr><th>Nombre</th><th>Documento</th><th>Teléfono</th><th>Localidad</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var item in _result!.Items)
+                {
+                    <tr>
+                        <td class="fw-semibold">@item.Name</td>
+                        <td>@(item.DocumentNumber ?? "-")</td>
+                        <td>@item.Phone</td>
+                        <td>@item.City</td>
+                        <td><StatusBadge Text="@item.CustomerType.ToString()" /></td>
+                        <td><StatusBadge IsActive="@item.IsActive" /></td>
+                        <td>
+                            <div class="ui-inline-actions">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(item)">Editar</button>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => Toggle(item)">@(item.IsActive ? "Desactivar" : "Activar")</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+            </div>
+            <div class="ui-action-bar">
+                <span class="text-muted">Página @_page de @TotalPages</span>
+                <div class="btn-group">
+                    <button class="btn btn-outline-secondary" disabled="@(_page <= 1)" @onclick="PrevPage">Anterior</button>
+                    <button class="btn btn-outline-secondary" disabled="@(_page >= TotalPages)" @onclick="NextPage">Siguiente</button>
                 </div>
-
-                @if (!_showForm)
-                {
-                    <EmptyState Title="Seleccioná una acción"
-                                Description="Creá un cliente nuevo o editá uno existente desde la tabla."
-                                Icon="bi-pencil-square">
-                        <button class="btn btn-primary" @onclick="NewItem">Nuevo cliente</button>
-                    </EmptyState>
-                }
-                else
-                {
-                    <div class="row g-3">
-                        <div class="col-md-8"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
-                        <div class="col-md-4"><label class="form-label">CUIT/DNI</label><input class="form-control" @bind="_form.DocumentNumber" /></div>
-                        <div class="col-md-6"><label class="form-label">Teléfono</label><input class="form-control" @bind="_form.Phone" /></div>
-                        <div class="col-md-6"><label class="form-label">Dirección</label><input class="form-control" @bind="_form.Address" /></div>
-                        <div class="col-md-6"><label class="form-label">Localidad</label><input class="form-control" @bind="_form.City" /></div>
-                        <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" @bind="_form.CustomerType">@foreach (var type in Enum.GetValues<CustomerType>()){<option value="@type">@type</option>}</select></div>
-                        <div class="col-md-6"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Cliente activo" : "Cliente inactivo")</span></div></div>
-                    </div>
-                    <div class="ui-action-bar">
-                        <div class="ui-inline-actions">
-                            <button class="btn btn-primary" @onclick="Save">Guardar</button>
-                            <button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
-                        </div>
-                    </div>
-                }
             </div>
         </div>
     </div>
 }
 
 @code {
+    [Parameter] public int? EditId { get; set; }
+
     private PagedResult<CustomerListItemDto>? _result;
     private string _search = string.Empty;
     private string _status = string.Empty;
     private bool _loaded;
-    private bool _showForm;
     private int _page = 1;
     private const int PageSize = 10;
     private CustomerUpsertCommand _form = new();
 
+    private bool IsNewRoute => Nav.Uri.EndsWith("/customers/new", StringComparison.OrdinalIgnoreCase);
+    private bool IsEditorRoute => IsNewRoute || EditId.HasValue;
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
 
-    protected override async Task OnInitializedAsync() => await Load();
+    protected override async Task OnParametersSetAsync()
+    {
+        _loaded = false;
+
+        if (IsEditorRoute)
+            await LoadEditor();
+        else
+            await Load();
+
+        _loaded = true;
+    }
 
     private async Task Search() { _page = 1; await Load(); }
 
     private async Task Load()
     {
-        _loaded = false;
         var active = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&isActive={_status}";
         _result = (await Api.GetAsync<AppResult<PagedResult<CustomerListItemDto>>>($"api/commerce/customers?search={Uri.EscapeDataString(_search ?? string.Empty)}{active}&page={_page}&pageSize={PageSize}"))?.Data;
-        _loaded = true;
     }
 
-    private void NewItem()
+    private async Task LoadEditor()
     {
-        _form = new CustomerUpsertCommand { IsActive = true, CustomerType = CustomerType.Mixed };
-        _showForm = true;
-    }
+        if (IsNewRoute)
+        {
+            _form = new CustomerUpsertCommand { IsActive = true, CustomerType = CustomerType.Mixed };
+            return;
+        }
 
-    private async Task Edit(CustomerListItemDto item)
-    {
-        var detail = (await Api.GetAsync<AppResult<CustomerDetailDto>>($"api/commerce/customers/{item.Id}"))?.Data;
-        if (detail is null) return;
+        if (!EditId.HasValue)
+        {
+            BackToList();
+            return;
+        }
+
+        var detail = (await Api.GetAsync<AppResult<CustomerDetailDto>>($"api/commerce/customers/{EditId.Value}"))?.Data;
+        if (detail is null)
+        {
+            BackToList();
+            return;
+        }
+
         _form = new CustomerUpsertCommand { Id = detail.Id, Name = detail.Name, DocumentNumber = detail.DocumentNumber, Phone = detail.Phone, Address = detail.Address, City = detail.City, CustomerType = detail.CustomerType, IsActive = detail.IsActive };
-        _showForm = true;
     }
+
+    private void NewItem() => Nav.NavigateTo("/customers/new");
+
+    private void Edit(CustomerListItemDto item) => Nav.NavigateTo($"/customers/edit/{item.Id}");
 
     private async Task Save()
     {
         if (_form.Id == 0) await Api.PostAsync("api/commerce/customers", new { _form.Name, _form.DocumentNumber, _form.Phone, _form.Address, _form.City, _form.CustomerType, _form.IsActive });
         else await Api.PutAsync($"api/commerce/customers/{_form.Id}", new { _form.Id, _form.Name, _form.DocumentNumber, _form.Phone, _form.Address, _form.City, _form.CustomerType, _form.IsActive });
-        _showForm = false;
-        await Load();
+
+        BackToList();
     }
 
     private async Task Toggle(CustomerListItemDto item)
@@ -175,7 +199,7 @@ else
         await Load();
     }
 
-    private void Cancel() => _showForm = false;
+    private void BackToList() => Nav.NavigateTo("/customers");
     private async Task PrevPage() { if (_page > 1) { _page--; await Load(); } }
     private async Task NextPage() { if (_page < TotalPages) { _page++; await Load(); } }
 }
