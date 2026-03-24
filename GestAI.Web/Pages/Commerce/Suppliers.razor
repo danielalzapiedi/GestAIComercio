@@ -1,6 +1,9 @@
 @page "/suppliers"
+@page "/suppliers/new"
+@page "/suppliers/edit/{EditId:int}"
 @using GestAI.Web.Dtos
 @inject ApiClient Api
+@inject NavigationManager Nav
 
 <PageTitle>Proveedores</PageTitle>
 
@@ -10,23 +13,48 @@
         <div class="page-hero-subtitle">Mantené ordenado el padrón de proveedores y su estado comercial.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-truck"></i> @_result?.TotalCount ?? 0 proveedores</span>
-        <button class="btn btn-primary" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nuevo proveedor</button>
+        @if (IsEditorRoute)
+        {
+            <button class="btn btn-outline-secondary" @onclick="BackToList"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button>
+        }
+        else
+        {
+            <span class="page-hero-chip"><i class="bi bi-truck"></i> @_result?.TotalCount ?? 0 proveedores</span>
+            <button class="btn btn-primary" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nuevo proveedor</button>
+        }
     </div>
 </section>
-
-<div class="card ui-filter-card"><div class="card-body">
-    <div class="row g-2 align-items-end">
-        <div class="col-md-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre, CUIT, teléfono" /></div>
-        <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
-        <div class="col-md-2"><button class="btn btn-outline-primary" @onclick="Search">Buscar</button></div>
-        <div class="col-md-3 text-md-end ui-table-meta">Red de abastecimiento</div>
-    </div>
-</div></div>
 
 @if (!_loaded)
 {
     <div class="card"><div class="card-body">Cargando proveedores...</div></div>
+}
+else if (IsEditorRoute)
+{
+    <div class="card ui-form-card">
+        <div class="card-body">
+            <div class="ui-card-header">
+                <div>
+                    <div class="ui-card-eyebrow">Editor</div>
+                    <h5 class="ui-card-title">@(_form.Id == 0 ? "Nuevo proveedor" : "Editar proveedor")</h5>
+                    <div class="ui-card-subtitle">Completá datos básicos y estado del proveedor.</div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-8"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
+                <div class="col-md-4"><label class="form-label">CUIT/DNI</label><input class="form-control" @bind="_form.TaxId" /></div>
+                <div class="col-md-8"><label class="form-label">Teléfono</label><input class="form-control" @bind="_form.Phone" /></div>
+                <div class="col-md-4"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Proveedor activo" : "Proveedor inactivo")</span></div></div>
+            </div>
+            <div class="ui-action-bar">
+                <div class="ui-inline-actions">
+                    <button class="btn btn-primary" @onclick="Save">Guardar</button>
+                    <button class="btn btn-outline-secondary" @onclick="BackToList">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 else if (_result?.Items.Count == 0)
 {
@@ -38,130 +66,126 @@ else if (_result?.Items.Count == 0)
 }
 else
 {
-    <div class="ui-split-layout">
-        <div class="card ui-data-card">
-            <div class="card-body">
-                <div class="ui-card-header">
-                    <div>
-                        <div class="ui-card-eyebrow">Abastecimiento</div>
-                        <h5 class="ui-card-title">Listado de proveedores</h5>
-                        <div class="ui-card-subtitle">Información fiscal y de contacto del abastecimiento.</div>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead><tr><th>Nombre</th><th>CUIT</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
-                    <tbody>
-                    @foreach (var item in _result!.Items)
-                    {
-                        <tr>
-                            <td class="fw-semibold">@item.Name</td>
-                            <td>@item.TaxId</td>
-                            <td>@item.Phone</td>
-                            <td><StatusBadge IsActive="@item.IsActive" /></td>
-                            <td>
-                                <div class="ui-inline-actions">
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(item)">Editar</button>
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => Toggle(item)">@(item.IsActive ? "Desactivar" : "Activar")</button>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
-                </div>
-                <div class="ui-action-bar">
-                    <span class="text-muted">Página @_page de @TotalPages</span>
-                    <div class="btn-group">
-                        <button class="btn btn-outline-secondary" disabled="@(_page <= 1)" @onclick="PrevPage">Anterior</button>
-                        <button class="btn btn-outline-secondary" disabled="@(_page >= TotalPages)" @onclick="NextPage">Siguiente</button>
-                    </div>
+    <div class="card ui-filter-card"><div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre, CUIT, teléfono" /></div>
+            <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
+            <div class="col-md-2"><button class="btn btn-outline-primary" @onclick="Search">Buscar</button></div>
+            <div class="col-md-3 text-md-end ui-table-meta">Red de abastecimiento</div>
+        </div>
+    </div></div>
+
+    <div class="card ui-data-card">
+        <div class="card-body">
+            <div class="ui-card-header">
+                <div>
+                    <div class="ui-card-eyebrow">Abastecimiento</div>
+                    <h5 class="ui-card-title">Listado de proveedores</h5>
+                    <div class="ui-card-subtitle">Información fiscal y de contacto del abastecimiento.</div>
                 </div>
             </div>
-        </div>
-
-        <div class="card ui-form-card @(_showForm ? "ui-editor-open" : "ui-editor-hidden")">
-            <div class="card-body">
-                <div class="ui-card-header">
-                    <div>
-                        <div class="ui-card-eyebrow">Editor</div>
-                        <h5 class="ui-card-title">@(_showForm ? (_form.Id == 0 ? "Nuevo proveedor" : "Editar proveedor") : "Detalle y edición")</h5>
-                        <div class="ui-card-subtitle">Completá datos básicos y estado del proveedor.</div>
-                    </div>
+            <div class="table-responsive">
+            <table class="table table-striped">
+                <thead><tr><th>Nombre</th><th>CUIT</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var item in _result!.Items)
+                {
+                    <tr>
+                        <td class="fw-semibold">@item.Name</td>
+                        <td>@item.TaxId</td>
+                        <td>@item.Phone</td>
+                        <td><StatusBadge IsActive="@item.IsActive" /></td>
+                        <td>
+                            <div class="ui-inline-actions">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(item)">Editar</button>
+                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => Toggle(item)">@(item.IsActive ? "Desactivar" : "Activar")</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+            </div>
+            <div class="ui-action-bar">
+                <span class="text-muted">Página @_page de @TotalPages</span>
+                <div class="btn-group">
+                    <button class="btn btn-outline-secondary" disabled="@(_page <= 1)" @onclick="PrevPage">Anterior</button>
+                    <button class="btn btn-outline-secondary" disabled="@(_page >= TotalPages)" @onclick="NextPage">Siguiente</button>
                 </div>
-
-                @if (!_showForm)
-                {
-                    <EmptyState Title="Seleccioná una acción"
-                                Description="Creá un proveedor nuevo o editá uno existente desde la tabla."
-                                Icon="bi-pencil-square">
-                        <button class="btn btn-primary" @onclick="NewItem">Nuevo proveedor</button>
-                    </EmptyState>
-                }
-                else
-                {
-                    <div class="row g-3">
-                        <div class="col-md-8"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
-                        <div class="col-md-4"><label class="form-label">CUIT/DNI</label><input class="form-control" @bind="_form.TaxId" /></div>
-                        <div class="col-md-8"><label class="form-label">Teléfono</label><input class="form-control" @bind="_form.Phone" /></div>
-                        <div class="col-md-4"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Proveedor activo" : "Proveedor inactivo")</span></div></div>
-                    </div>
-                    <div class="ui-action-bar">
-                        <div class="ui-inline-actions">
-                            <button class="btn btn-primary" @onclick="Save">Guardar</button>
-                            <button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
-                        </div>
-                    </div>
-                }
             </div>
         </div>
     </div>
 }
 
 @code {
+    [Parameter] public int? EditId { get; set; }
+
     private PagedResult<SupplierListItemDto>? _result;
     private string _search = string.Empty;
     private string _status = string.Empty;
     private bool _loaded;
-    private bool _showForm;
     private int _page = 1;
     private const int PageSize = 10;
     private SupplierUpsertCommand _form = new();
 
+    private bool IsNewRoute => Nav.Uri.EndsWith("/suppliers/new", StringComparison.OrdinalIgnoreCase);
+    private bool IsEditorRoute => IsNewRoute || EditId.HasValue;
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
 
-    protected override async Task OnInitializedAsync() => await Load();
+    protected override async Task OnParametersSetAsync()
+    {
+        _loaded = false;
+
+        if (IsEditorRoute)
+            await LoadEditor();
+        else
+            await Load();
+
+        _loaded = true;
+    }
 
     private async Task Search() { _page = 1; await Load(); }
 
     private async Task Load()
     {
-        _loaded = false;
         var active = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&isActive={_status}";
         _result = (await Api.GetAsync<AppResult<PagedResult<SupplierListItemDto>>>($"api/commerce/suppliers?search={Uri.EscapeDataString(_search ?? string.Empty)}{active}&page={_page}&pageSize={PageSize}"))?.Data;
-        _loaded = true;
     }
 
-    private void NewItem()
+    private async Task LoadEditor()
     {
-        _form = new SupplierUpsertCommand { IsActive = true };
-        _showForm = true;
-    }
+        if (IsNewRoute)
+        {
+            _form = new SupplierUpsertCommand { IsActive = true };
+            return;
+        }
 
-    private async Task Edit(SupplierListItemDto item)
-    {
-        var detail = (await Api.GetAsync<AppResult<SupplierDetailDto>>($"api/commerce/suppliers/{item.Id}"))?.Data;
-        if (detail is null) return;
+        if (!EditId.HasValue)
+        {
+            BackToList();
+            return;
+        }
+
+        var detail = (await Api.GetAsync<AppResult<SupplierDetailDto>>($"api/commerce/suppliers/{EditId.Value}"))?.Data;
+        if (detail is null)
+        {
+            BackToList();
+            return;
+        }
+
         _form = new SupplierUpsertCommand { Id = detail.Id, Name = detail.Name, TaxId = detail.TaxId, Phone = detail.Phone, IsActive = detail.IsActive };
-        _showForm = true;
     }
+
+    private void NewItem() => Nav.NavigateTo("/suppliers/new");
+
+    private void Edit(SupplierListItemDto item) => Nav.NavigateTo($"/suppliers/edit/{item.Id}");
 
     private async Task Save()
     {
         if (_form.Id == 0) await Api.PostAsync("api/commerce/suppliers", new { _form.Name, _form.TaxId, _form.Phone, _form.IsActive });
         else await Api.PutAsync($"api/commerce/suppliers/{_form.Id}", new { _form.Id, _form.Name, _form.TaxId, _form.Phone, _form.IsActive });
-        _showForm = false;
-        await Load();
+
+        BackToList();
     }
 
     private async Task Toggle(SupplierListItemDto item)
@@ -170,7 +194,7 @@ else
         await Load();
     }
 
-    private void Cancel() => _showForm = false;
+    private void BackToList() => Nav.NavigateTo("/suppliers");
     private async Task PrevPage() { if (_page > 1) { _page--; await Load(); } }
     private async Task NextPage() { if (_page < TotalPages) { _page++; await Load(); } }
 }
