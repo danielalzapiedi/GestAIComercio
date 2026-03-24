@@ -1,6 +1,7 @@
 @page "/sales/{Id:int}"
 @using GestAI.Web.Dtos
 @inject ApiClient Api
+@inject IJSRuntime JS
 @inject NavigationManager Navigation
 
 <PageTitle>Detalle de venta</PageTitle>
@@ -19,6 +20,7 @@ else
         <div class="page-hero-meta">
             <StatusBadge Text="@SaleStatusLabel(_detail.Status)" CssClass="@SaleStatusClass(_detail.Status)" />
             <button class="btn btn-outline-secondary" @onclick="GoBack">Volver</button>
+            <button class="btn btn-outline-primary" @onclick="DownloadPdf">Descargar PDF</button>
             @if (_detail.SourceQuoteId.HasValue)
             {
                 <a class="btn btn-outline-primary" href="/quotes/@_detail.SourceQuoteId.Value">Ver presupuesto origen</a>
@@ -76,6 +78,15 @@ else
 
     protected override async Task OnParametersSetAsync()
         => _detail = (await Api.GetAsync<AppResult<SaleDetailDto>>($"api/commerce/sales/{Id}"))?.Data;
+
+    private async Task DownloadPdf()
+    {
+        if (_detail is null)
+            return;
+
+        var bytes = await Api.GetBytesAsync($"api/commerce/sales/{Id}/pdf");
+        await JS.InvokeVoidAsync("gestAiDownloadFile", $"{_detail.Number}.pdf", "application/pdf", Convert.ToBase64String(bytes));
+    }
 
     private void GoBack() => Navigation.NavigateTo("/sales");
 

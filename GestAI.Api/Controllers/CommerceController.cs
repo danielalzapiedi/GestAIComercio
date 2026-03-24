@@ -210,6 +210,18 @@ public sealed class CommerceController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetQuote(int id, CancellationToken ct)
         => Ok(await mediator.Send(new GetQuoteByIdQuery(id), ct));
 
+    [HttpGet("quotes/{id:int}/pdf")]
+    public async Task<IActionResult> GetQuotePdf(int id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetQuotePdfQuery(id), ct);
+        if (!result.Success || result.Data is null)
+            return result.ErrorCode == "not_found"
+                ? NotFound(new { result.ErrorCode, result.Message })
+                : BadRequest(new { result.ErrorCode, result.Message });
+
+        return File(result.Data.Content, result.Data.ContentType, result.Data.FileName);
+    }
+
     [HttpPost("quotes")]
     public async Task<IActionResult> CreateQuote([FromBody] CreateQuoteCommand command, CancellationToken ct)
         => Ok(await mediator.Send(command, ct));
@@ -229,6 +241,18 @@ public sealed class CommerceController(IMediator mediator) : ControllerBase
     [HttpGet("sales/{id:int}")]
     public async Task<IActionResult> GetSale(int id, CancellationToken ct)
         => Ok(await mediator.Send(new GetSaleByIdQuery(id), ct));
+
+    [HttpGet("sales/{id:int}/pdf")]
+    public async Task<IActionResult> GetSalePdf(int id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetSalePdfQuery(id), ct);
+        if (!result.Success || result.Data is null)
+            return result.ErrorCode == "not_found"
+                ? NotFound(new { result.ErrorCode, result.Message })
+                : BadRequest(new { result.ErrorCode, result.Message });
+
+        return File(result.Data.Content, result.Data.ContentType, result.Data.FileName);
+    }
 
     [HttpPost("sales")]
     public async Task<IActionResult> CreateSale([FromBody] CreateSaleCommand command, CancellationToken ct)

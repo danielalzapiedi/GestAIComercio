@@ -12,6 +12,60 @@ public sealed class CommercialDocumentPdfService : ICommercialDocumentPdfService
 {
     private const string PdfContentType = "application/pdf";
 
+    public Task<DocumentFileResult> BuildQuotePdfAsync(Quote quote, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var bytes = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(28);
+                page.Size(PageSizes.A4);
+                page.DefaultTextStyle(x => x.FontSize(10));
+
+                page.Header().Element(c => BuildHeader(c, "Presupuesto", quote.Number, QuoteStatusLabel(quote.Status)));
+                page.Content().Element(c => BuildQuoteContent(c, quote));
+                page.Footer().AlignCenter().Text(text =>
+                {
+                    text.Span("Generado por GestAI Comercio · ");
+                    text.CurrentPageNumber();
+                    text.Span(" / ");
+                    text.TotalPages();
+                });
+            });
+        }).GeneratePdf();
+
+        return Task.FromResult(new DocumentFileResult($"{SanitizeFileName(quote.Number)}.pdf", bytes, PdfContentType));
+    }
+
+    public Task<DocumentFileResult> BuildSalePdfAsync(Sale sale, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var bytes = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(28);
+                page.Size(PageSizes.A4);
+                page.DefaultTextStyle(x => x.FontSize(10));
+
+                page.Header().Element(c => BuildHeader(c, "Venta", sale.Number, SaleStatusLabel(sale.Status)));
+                page.Content().Element(c => BuildSaleContent(c, sale));
+                page.Footer().AlignCenter().Text(text =>
+                {
+                    text.Span("Generado por GestAI Comercio · ");
+                    text.CurrentPageNumber();
+                    text.Span(" / ");
+                    text.TotalPages();
+                });
+            });
+        }).GeneratePdf();
+
+        return Task.FromResult(new DocumentFileResult($"{SanitizeFileName(sale.Number)}.pdf", bytes, PdfContentType));
+    }
+
     public Task<DocumentFileResult> BuildInvoicePdfAsync(CommercialInvoice invoice, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
@@ -90,6 +144,70 @@ public sealed class CommercialDocumentPdfService : ICommercialDocumentPdfService
         });
     }
 
+    private static void BuildQuoteContent(IContainer container, Quote quote)
+    {
+        container.Column(column =>
+        {
+            column.Spacing(12);
+
+            column.Item().Element(c => BuildSectionCard(c, "Datos generales", info =>
+            {
+                info.Item().Element(i => BuildTwoColumnInfo(i,
+                    ("Cliente", quote.Customer.Name),
+                    ("Fecha", quote.IssuedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")),
+                    ("Validez", quote.ValidUntilUtc?.ToLocalTime().ToString("dd/MM/yyyy") ?? "Sin fecha"),
+                    ("Estado", QuoteStatusLabel(quote.Status)),
+                    ("Observaciones", string.IsNullOrWhiteSpace(quote.Observations) ? "-" : quote.Observations)));
+            }));
+
+            column.Item().Element(c => BuildSectionCard(c, "Detalle", info =>
+            {
+                info.Item().Element(i => BuildCommercialLinesTable(i, quote.Items.OrderBy(x => x.SortOrder).Select(x => new CommercialLineRow(
+                    x.Description,
+                    x.InternalCode,
+                    x.Quantity,
+                    x.UnitPrice,
+                    x.LineSubtotal))));
+            }));
+
+            column.Item().AlignRight().Width(240).Element(c => BuildTotalsCard(c,
+                ("Subtotal", FormatMoney(quote.Subtotal), false),
+                ("Total", FormatMoney(quote.Total), true)));
+        });
+    }
+
+    private static void BuildSaleContent(IContainer container, Sale sale)
+    {
+        container.Column(column =>
+        {
+            column.Spacing(12);
+
+            column.Item().Element(c => BuildSectionCard(c, "Datos generales", info =>
+            {
+                info.Item().Element(i => BuildTwoColumnInfo(i,
+                    ("Cliente", sale.Customer.Name),
+                    ("Fecha", sale.IssuedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")),
+                    ("Estado", SaleStatusLabel(sale.Status)),
+                    ("Presupuesto origen", sale.SourceQuote?.Number ?? "Venta manual"),
+                    ("Observaciones", string.IsNullOrWhiteSpace(sale.Observations) ? "-" : sale.Observations)));
+            }));
+
+            column.Item().Element(c => BuildSectionCard(c, "Detalle", info =>
+            {
+                info.Item().Element(i => BuildCommercialLinesTable(i, sale.Items.OrderBy(x => x.SortOrder).Select(x => new CommercialLineRow(
+                    x.Description,
+                    x.InternalCode,
+                    x.Quantity,
+                    x.UnitPrice,
+                    x.LineSubtotal))));
+            }));
+
+            column.Item().AlignRight().Width(240).Element(c => BuildTotalsCard(c,
+                ("Subtotal", FormatMoney(sale.Subtotal), false),
+                ("Total", FormatMoney(sale.Total), true)));
+        });
+    }
+
     private static void BuildInvoiceContent(IContainer container, CommercialInvoice invoice)
     {
         container.Column(column =>
@@ -118,35 +236,13 @@ public sealed class CommercialDocumentPdfService : ICommercialDocumentPdfService
 
             column.Item().Element(c => BuildSectionCard(c, "Detalle", info =>
             {
-                info.Item().Table(table =>
-                {
-                    table.ColumnsDefinition(columns =>
-                    {
-                        columns.RelativeColumn(4);
-                        columns.RelativeColumn(1.2f);
-                        columns.RelativeColumn(1.4f);
-                        columns.RelativeColumn(1.4f);
-                        columns.RelativeColumn(1.6f);
-                    });
-
-                    table.Header(header =>
-                    {
-                        HeaderCell(header, "Descripción");
-                        HeaderCell(header, "Cant.");
-                        HeaderCell(header, "Precio");
-                        HeaderCell(header, "IVA");
-                        HeaderCell(header, "Subtotal");
-                    });
-
-                    foreach (var item in invoice.Items.OrderBy(x => x.SortOrder))
-                    {
-                        BodyCell(table, $"{item.Description}\n{item.InternalCode}");
-                        BodyCell(table, item.Quantity.ToString("0.##", CultureInfo.InvariantCulture));
-                        BodyCell(table, FormatMoney(item.UnitPrice));
-                        BodyCell(table, FormatMoney(item.TaxAmount));
-                        BodyCell(table, FormatMoney(item.LineSubtotal));
-                    }
-                });
+                info.Item().Element(i => BuildInvoiceLinesTable(i, invoice.Items.OrderBy(x => x.SortOrder).Select(x => new InvoiceLineRow(
+                    x.Description,
+                    x.InternalCode,
+                    x.Quantity,
+                    x.UnitPrice,
+                    x.TaxAmount,
+                    x.LineSubtotal))));
             }));
 
             column.Item().AlignRight().Width(240).Element(c => BuildTotalsCard(c,
@@ -185,32 +281,12 @@ public sealed class CommercialDocumentPdfService : ICommercialDocumentPdfService
 
             column.Item().Element(c => BuildSectionCard(c, "Detalle entregado", info =>
             {
-                info.Item().Table(table =>
-                {
-                    table.ColumnsDefinition(columns =>
-                    {
-                        columns.RelativeColumn(4);
-                        columns.RelativeColumn(1.4f);
-                        columns.RelativeColumn(1.4f);
-                        columns.RelativeColumn(1.4f);
-                    });
-
-                    table.Header(header =>
-                    {
-                        HeaderCell(header, "Descripción");
-                        HeaderCell(header, "Pedida");
-                        HeaderCell(header, "Entregada");
-                        HeaderCell(header, "Pendiente");
-                    });
-
-                    foreach (var item in note.Items.OrderBy(x => x.SortOrder))
-                    {
-                        BodyCell(table, $"{item.Description}\n{item.InternalCode}");
-                        BodyCell(table, item.QuantityOrdered.ToString("0.##", CultureInfo.InvariantCulture));
-                        BodyCell(table, item.QuantityDelivered.ToString("0.##", CultureInfo.InvariantCulture));
-                        BodyCell(table, (item.QuantityOrdered - item.QuantityDelivered).ToString("0.##", CultureInfo.InvariantCulture));
-                    }
-                });
+                info.Item().Element(i => BuildDeliveryNoteLinesTable(i, note.Items.OrderBy(x => x.SortOrder).Select(x => new DeliveryLineRow(
+                    x.Description,
+                    x.InternalCode,
+                    x.QuantityOrdered,
+                    x.QuantityDelivered,
+                    x.QuantityOrdered - x.QuantityDelivered))));
             }));
 
             column.Item().AlignRight().Width(240).Element(c => BuildTotalsCard(c,
@@ -285,6 +361,102 @@ public sealed class CommercialDocumentPdfService : ICommercialDocumentPdfService
             });
     }
 
+    private static void BuildCommercialLinesTable(IContainer container, IEnumerable<CommercialLineRow> rows)
+    {
+        container.Table(table =>
+        {
+            table.ColumnsDefinition(columns =>
+            {
+                columns.RelativeColumn(4);
+                columns.RelativeColumn(1.5f);
+                columns.RelativeColumn(1.2f);
+                columns.RelativeColumn(1.4f);
+                columns.RelativeColumn(1.6f);
+            });
+
+            table.Header(header =>
+            {
+                HeaderCell(header, "Descripción");
+                HeaderCell(header, "Código");
+                HeaderCell(header, "Cant.");
+                HeaderCell(header, "Precio");
+                HeaderCell(header, "Subtotal");
+            });
+
+            foreach (var row in rows)
+            {
+                BodyCell(table, row.Description);
+                BodyCell(table, row.InternalCode);
+                BodyCell(table, row.Quantity.ToString("0.##", CultureInfo.InvariantCulture));
+                BodyCell(table, FormatMoney(row.UnitPrice));
+                BodyCell(table, FormatMoney(row.LineSubtotal));
+            }
+        });
+    }
+
+    private static void BuildInvoiceLinesTable(IContainer container, IEnumerable<InvoiceLineRow> rows)
+    {
+        container.Table(table =>
+        {
+            table.ColumnsDefinition(columns =>
+            {
+                columns.RelativeColumn(4);
+                columns.RelativeColumn(1.2f);
+                columns.RelativeColumn(1.4f);
+                columns.RelativeColumn(1.4f);
+                columns.RelativeColumn(1.6f);
+            });
+
+            table.Header(header =>
+            {
+                HeaderCell(header, "Descripción");
+                HeaderCell(header, "Cant.");
+                HeaderCell(header, "Precio");
+                HeaderCell(header, "IVA");
+                HeaderCell(header, "Subtotal");
+            });
+
+            foreach (var row in rows)
+            {
+                BodyCell(table, $"{row.Description}\n{row.InternalCode}");
+                BodyCell(table, row.Quantity.ToString("0.##", CultureInfo.InvariantCulture));
+                BodyCell(table, FormatMoney(row.UnitPrice));
+                BodyCell(table, FormatMoney(row.TaxAmount));
+                BodyCell(table, FormatMoney(row.LineSubtotal));
+            }
+        });
+    }
+
+    private static void BuildDeliveryNoteLinesTable(IContainer container, IEnumerable<DeliveryLineRow> rows)
+    {
+        container.Table(table =>
+        {
+            table.ColumnsDefinition(columns =>
+            {
+                columns.RelativeColumn(4);
+                columns.RelativeColumn(1.4f);
+                columns.RelativeColumn(1.4f);
+                columns.RelativeColumn(1.4f);
+            });
+
+            table.Header(header =>
+            {
+                HeaderCell(header, "Descripción");
+                HeaderCell(header, "Pedida");
+                HeaderCell(header, "Entregada");
+                HeaderCell(header, "Pendiente");
+            });
+
+            foreach (var row in rows)
+            {
+                BodyCell(table, $"{row.Description}\n{row.InternalCode}");
+                BodyCell(table, row.QuantityOrdered.ToString("0.##", CultureInfo.InvariantCulture));
+                BodyCell(table, row.QuantityDelivered.ToString("0.##", CultureInfo.InvariantCulture));
+                BodyCell(table, row.PendingQuantity.ToString("0.##", CultureInfo.InvariantCulture));
+            }
+        });
+    }
+
     private static void HeaderCell(TableCellDescriptor header, string text)
     {
         header.Cell().Background(Colors.Grey.Lighten3).Padding(6).Text(text).SemiBold();
@@ -334,4 +506,28 @@ public sealed class CommercialDocumentPdfService : ICommercialDocumentPdfService
         DeliveryNoteStatus.Cancelled => "Cancelado",
         _ => "Borrador"
     };
+
+    private static string QuoteStatusLabel(QuoteStatus status) => status switch
+    {
+        QuoteStatus.Draft => "Borrador",
+        QuoteStatus.Sent => "Enviado",
+        QuoteStatus.Approved => "Aprobado",
+        QuoteStatus.Rejected => "Rechazado",
+        QuoteStatus.Expired => "Vencido",
+        QuoteStatus.Converted => "Convertido",
+        _ => status.ToString()
+    };
+
+    private static string SaleStatusLabel(SaleStatus status) => status switch
+    {
+        SaleStatus.Draft => "Borrador",
+        SaleStatus.Confirmed => "Confirmada",
+        SaleStatus.Completed => "Completada",
+        SaleStatus.Cancelled => "Cancelada",
+        _ => status.ToString()
+    };
+
+    private sealed record CommercialLineRow(string Description, string InternalCode, decimal Quantity, decimal UnitPrice, decimal LineSubtotal);
+    private sealed record InvoiceLineRow(string Description, string InternalCode, decimal Quantity, decimal UnitPrice, decimal TaxAmount, decimal LineSubtotal);
+    private sealed record DeliveryLineRow(string Description, string InternalCode, decimal QuantityOrdered, decimal QuantityDelivered, decimal PendingQuantity);
 }

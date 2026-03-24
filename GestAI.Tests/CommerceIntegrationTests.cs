@@ -1168,6 +1168,73 @@ public sealed class CommerceIntegrationTests
     }
 
     [Fact]
+    public async Task CommercialDocumentPdfService_BuildQuotePdfAsync_ReturnsPdfBytes()
+    {
+        var service = new CommercialDocumentPdfService();
+        var quote = new Quote
+        {
+            Number = "P-000001",
+            Status = QuoteStatus.Sent,
+            Customer = new Customer { Name = "Cliente PDF" },
+            IssuedAtUtc = DateTime.UtcNow,
+            ValidUntilUtc = DateTime.UtcNow.Date.AddDays(7),
+            Observations = "Presupuesto de prueba",
+            Subtotal = 100m,
+            Total = 100m,
+            Items = new List<QuoteItem>
+            {
+                new()
+                {
+                    Description = "Producto PDF",
+                    InternalCode = "PDF-1",
+                    Quantity = 1,
+                    UnitPrice = 100m,
+                    LineSubtotal = 100m,
+                    SortOrder = 1
+                }
+            }
+        };
+
+        var result = await service.BuildQuotePdfAsync(quote, CancellationToken.None);
+
+        Assert.Equal("application/pdf", result.ContentType);
+        Assert.NotEmpty(result.Content);
+    }
+
+    [Fact]
+    public async Task CommercialDocumentPdfService_BuildSalePdfAsync_ReturnsPdfBytes()
+    {
+        var service = new CommercialDocumentPdfService();
+        var sale = new Sale
+        {
+            Number = "V-000001",
+            Status = SaleStatus.Confirmed,
+            Customer = new Customer { Name = "Cliente PDF" },
+            IssuedAtUtc = DateTime.UtcNow,
+            Observations = "Venta de prueba",
+            Subtotal = 100m,
+            Total = 100m,
+            Items = new List<SaleItem>
+            {
+                new()
+                {
+                    Description = "Producto PDF",
+                    InternalCode = "PDF-1",
+                    Quantity = 1,
+                    UnitPrice = 100m,
+                    LineSubtotal = 100m,
+                    SortOrder = 1
+                }
+            }
+        };
+
+        var result = await service.BuildSalePdfAsync(sale, CancellationToken.None);
+
+        Assert.Equal("application/pdf", result.ContentType);
+        Assert.NotEmpty(result.Content);
+    }
+
+    [Fact]
     public async Task CommercialDocumentPdfService_BuildDeliveryNotePdfAsync_ReturnsPdfBytes()
     {
         var service = new CommercialDocumentPdfService();

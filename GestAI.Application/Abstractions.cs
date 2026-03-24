@@ -115,6 +115,8 @@ public interface IFiscalCredentialStore
 
 public interface ICommercialDocumentPdfService
 {
+    Task<DocumentFileResult> BuildQuotePdfAsync(Quote quote, CancellationToken ct);
+    Task<DocumentFileResult> BuildSalePdfAsync(Sale sale, CancellationToken ct);
     Task<DocumentFileResult> BuildInvoicePdfAsync(CommercialInvoice invoice, CancellationToken ct);
     Task<DocumentFileResult> BuildDeliveryNotePdfAsync(DeliveryNote note, CancellationToken ct);
 }
