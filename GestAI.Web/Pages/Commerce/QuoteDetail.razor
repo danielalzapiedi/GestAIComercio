@@ -99,7 +99,7 @@ else
             return;
 
         var bytes = await Api.GetBytesAsync($"api/commerce/quotes/{Id}/pdf");
-        await JS.InvokeVoidAsync("gestAiDownloadFile", $"{_detail.Number}.pdf", "application/pdf", Convert.ToBase64String(bytes));
+        await JS.InvokeVoidAsync("gestAiDownloadFile", $"{_detail.Number}.pdf", "application/pdf", global::System.Convert.ToBase64String(bytes));
     }
 
     private void GoBack() => Navigation.NavigateTo("/quotes");
