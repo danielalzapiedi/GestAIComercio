@@ -1007,9 +1007,9 @@ body {
 }
 
 @media (max-width: 1499px) {
-    .ui-split-layout,
-    .ui-auth-shell {
+    .ui-split-layout {
         grid-template-columns: 1fr;
+        position: relative;
     }
 
     .ui-split-layout .ui-form-card {
@@ -1017,12 +1017,31 @@ body {
         top: auto;
     }
 
-    .ui-split-layout-focus-editor > :first-child {
-        order: 1;
+    .ui-split-layout .ui-form-card.ui-editor-hidden {
+        display: none;
     }
 
-    .ui-split-layout-focus-editor > :last-child {
-        order: 2;
+    .ui-split-layout .ui-form-card.ui-editor-open {
+        position: fixed;
+        inset: 92px clamp(12px, 4vw, 48px) clamp(12px, 4vw, 36px);
+        z-index: 1085;
+        margin: 0;
+        overflow: hidden;
+        border-radius: 20px;
+        box-shadow: 0 22px 60px rgba(15, 23, 42, 0.28);
+    }
+
+    .ui-split-layout .ui-form-card.ui-editor-open .card-body {
+        max-height: 100%;
+        overflow-y: auto;
+    }
+
+    .ui-split-layout:has(.ui-form-card.ui-editor-open)::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.38);
+        z-index: 1080;
     }
 }
 
@@ -1055,31 +1074,9 @@ body {
     }
 
 
-    .ui-split-layout .ui-form-card {
-        position: static;
-        top: auto;
-        right: auto;
-        bottom: auto;
-        width: 100%;
-        max-width: 100%;
-        z-index: auto;
-        border-radius: 20px;
-        transform: none;
-        transition: none;
-    }
-
-    .ui-split-layout .ui-form-card .card-body {
-        height: 100%;
-        overflow-y: auto;
-    }
-
-    .ui-split-layout .ui-form-card.ui-editor-hidden {
-        display: none;
-    }
-
     .ui-split-layout .ui-form-card.ui-editor-open {
-        display: block;
-        box-shadow: none;
+        inset: 84px 10px 10px;
+        border-radius: 18px;
     }
 }
 
