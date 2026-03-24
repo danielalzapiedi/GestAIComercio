@@ -45,7 +45,7 @@ public sealed record GetOperationalReportQuery(DateOnly From, DateOnly To, int T
 public sealed record GetRelease6DashboardQuery : IRequest<AppResult<Release6DashboardDto>>;
 public sealed record GetDocumentTraceabilityQuery(string? EntityName = null, string? Search = null, int Take = 100) : IRequest<AppResult<DocumentTraceabilityDto>>;
 
-internal static class Release6Helpers
+public static class Release6Helpers
 {
     public const int CommercialInvoiceFiscalStatusMaxLength = 500;
     public const int FiscalSubmissionErrorMaxLength = 1000;
