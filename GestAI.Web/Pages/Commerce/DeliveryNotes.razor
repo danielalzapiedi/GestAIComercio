@@ -11,8 +11,15 @@
         <div class="page-hero-subtitle">El remito representa la entrega física y es el documento que impacta stock en el circuito comercial.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-truck-flatbed"></i> @_result?.TotalCount ?? 0 remitos</span>
-        <button class="btn btn-primary" type="button" @onclick="CreateDeliveryNote"><i class="bi bi-plus-circle me-2"></i>Emitir remito</button>
+        @if (_showForm)
+        {
+            <button class="btn btn-outline-secondary" type="button" @onclick="CloseCreateForm"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button>
+        }
+        else
+        {
+            <span class="page-hero-chip"><i class="bi bi-truck-flatbed"></i> @_result?.TotalCount ?? 0 remitos</span>
+            <button class="btn btn-primary" type="button" @onclick="OpenCreateForm"><i class="bi bi-plus-circle me-2"></i>Emitir remito</button>
+        }
     </div>
 </section>
 
@@ -24,7 +31,7 @@
 </div>
 
 <div class="row g-3 mt-1">
-    <div class="col-xl-8">
+    <div class="col-xl-8 @(_showForm ? "d-none" : string.Empty)">
         <div class="card ui-data-card"><div class="card-body">
             <div class="ui-card-header"><div><div class="ui-card-eyebrow">Entregas comerciales</div><h5 class="ui-card-title">Listado de remitos</h5></div></div>
             <div class="table-responsive"><table class="table table-striped"><thead><tr><th>Remito</th><th>Cliente</th><th>Venta</th><th>Depósito</th><th>Cantidad</th><th>Estado</th><th></th></tr></thead><tbody>
@@ -43,17 +50,32 @@
             </tbody></table></div>
         </div></div>
     </div>
-    <div class="col-xl-4">
+    <div class="@(_showForm ? "col-12" : "col-xl-4")">
         <div class="card ui-form-card"><div class="card-body">
             <div class="ui-card-header"><div><div class="ui-card-eyebrow">Nuevo remito</div><h5 class="ui-card-title">Entrega desde venta</h5></div></div>
-            <div class="row g-3">
-                <div class="col-12"><label class="form-label">Venta origen</label><select class="form-select" @bind="_create.SaleId"><option value="0">Seleccionar venta</option>@foreach (var sale in _seed.Sales){<option value="@sale.Id">@sale.Name</option>}</select></div>
-                <div class="col-12"><label class="form-label">Depósito de salida</label><select class="form-select" @bind="_create.WarehouseId"><option value="0">Seleccionar depósito</option>@foreach (var warehouse in _seed.Warehouses){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
-                <div class="col-12"><label class="form-label">Factura relacionada</label><select class="form-select" @bind="_create.CommercialInvoiceId"><option value="0">Sin factura</option>@foreach (var invoice in _seed.Invoices){<option value="@invoice.Id">@invoice.Name</option>}</select></div>
-                <div class="col-12"><label class="form-label">Observaciones</label><input class="form-control" @bind="_create.Observations" placeholder="Transportista, entrega parcial, referencia" /></div>
-                <div class="col-12"><div class="ui-card-subtitle">El remito toma las cantidades pendientes de la venta elegida y descuenta stock del depósito seleccionado.</div></div>
-            </div>
-            <div class="ui-action-bar mt-3"><button class="btn btn-primary" type="button" @onclick="CreateDeliveryNote">Emitir remito</button></div>
+            @if (!_showForm)
+            {
+                <EmptyState Title="Seleccioná una acción"
+                            Description="Usá Emitir remito para abrir el formulario de entrega."
+                            Icon="bi-truck">
+                    <button class="btn btn-primary" type="button" @onclick="OpenCreateForm">Emitir remito</button>
+                </EmptyState>
+            }
+            else
+            {
+                @if (!string.IsNullOrWhiteSpace(_error))
+                {
+                    <div class="alert alert-danger" role="alert">@_error</div>
+                }
+                <div class="row g-3">
+                    <div class="col-12"><label class="form-label">Venta origen</label><select class="form-select" @bind="_create.SaleId"><option value="0">Seleccionar venta</option>@foreach (var sale in _seed.Sales){<option value="@sale.Id">@sale.Name</option>}</select></div>
+                    <div class="col-12"><label class="form-label">Depósito de salida</label><select class="form-select" @bind="_create.WarehouseId"><option value="0">Seleccionar depósito</option>@foreach (var warehouse in _seed.Warehouses){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
+                    <div class="col-12"><label class="form-label">Factura relacionada</label><select class="form-select" @bind="_create.CommercialInvoiceId"><option value="0">Sin factura</option>@foreach (var invoice in _seed.Invoices){<option value="@invoice.Id">@invoice.Name</option>}</select></div>
+                    <div class="col-12"><label class="form-label">Observaciones</label><input class="form-control" @bind="_create.Observations" placeholder="Transportista, entrega parcial, referencia" /></div>
+                    <div class="col-12"><div class="ui-card-subtitle">El remito toma las cantidades pendientes de la venta elegida y descuenta stock del depósito seleccionado.</div></div>
+                </div>
+                <div class="ui-action-bar mt-3"><button class="btn btn-primary" type="button" @onclick="CreateDeliveryNote" disabled="@_saving">Emitir remito</button></div>
+            }
         </div></div>
     </div>
 </div>
@@ -62,6 +84,9 @@
     private PagedResult<DeliveryNoteListItemDto>? _result;
     private Release6SeedDataDto _seed = new(Array.Empty<LookupDto>(), Array.Empty<LookupDto>(), Array.Empty<LookupDto>(), null);
     private CreateDeliveryNoteCommandDto _create = new();
+    private bool _showForm;
+    private bool _saving;
+    private string? _error;
 
     private int DeliveredCount => _result?.Items.Count(x => x.Status == DeliveryNoteStatus.Delivered) ?? 0;
     private int PendingCount => _result?.Items.Count(x => x.PendingQuantity > 0m) ?? 0;
@@ -75,23 +100,52 @@
 
     private async Task LoadSeed() => _seed = (await Api.GetAsync<AppResult<Release6SeedDataDto>>("api/commerce/release6/seed"))?.Data ?? _seed;
     private async Task Load() => _result = (await Api.GetAsync<AppResult<PagedResult<DeliveryNoteListItemDto>>>("api/commerce/delivery-notes?page=1&pageSize=20"))?.Data;
+    private void OpenCreateForm() => _showForm = true;
+    private void CloseCreateForm()
+    {
+        _showForm = false;
+        _error = null;
+    }
 
     private async Task CreateDeliveryNote()
     {
-        if (_create.SaleId <= 0 || _create.WarehouseId <= 0) return;
-        var body = new
+        if (_create.SaleId <= 0 || _create.WarehouseId <= 0)
         {
-            saleId = _create.SaleId,
-            warehouseId = _create.WarehouseId,
-            commercialInvoiceId = _create.CommercialInvoiceId == 0 ? null : _create.CommercialInvoiceId,
-            deliveredAtUtc = DateTime.UtcNow,
-            observations = _create.Observations,
-            items = Array.Empty<object>()
-        };
-        var result = await Api.PostAsync<AppResult<int>>("api/commerce/delivery-notes", body);
-        if (result?.Success == true && result.Data > 0)
+            _error = "Seleccioná la venta y el depósito para emitir el remito.";
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+        try
         {
-            Navigation.NavigateTo($"/delivery-notes/{result.Data}");
+            var body = new
+            {
+                saleId = _create.SaleId,
+                warehouseId = _create.WarehouseId,
+                commercialInvoiceId = _create.CommercialInvoiceId == 0 ? null : _create.CommercialInvoiceId,
+                deliveredAtUtc = DateTime.UtcNow,
+                observations = _create.Observations,
+                items = Array.Empty<object>()
+            };
+            var result = await Api.PostAsync<AppResult<int>>("api/commerce/delivery-notes", body);
+            if (result?.Success == true && result.Data > 0)
+            {
+                _showForm = false;
+                Navigation.NavigateTo($"/delivery-notes/{result.Data}");
+            }
+            else
+            {
+                _error = result?.Message ?? "No se pudo emitir el remito.";
+            }
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 

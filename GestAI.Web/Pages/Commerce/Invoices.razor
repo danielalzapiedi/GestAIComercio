@@ -11,9 +11,16 @@
         <div class="page-hero-subtitle">Ventas y factura son documentos distintos: acá se controla la capa fiscal, el punto de venta y el estado ARCA.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-file-earmark-medical"></i> @_result?.TotalCount ?? 0 facturas</span>
-        <a class="btn btn-outline-secondary" href="/fiscal-configuration"><i class="bi bi-gear me-2"></i>Configurar ARCA</a>
-        <button class="btn btn-primary" type="button" @onclick="GenerateInvoice"><i class="bi bi-plus-circle me-2"></i>Generar factura</button>
+        @if (_showForm)
+        {
+            <button class="btn btn-outline-secondary" type="button" @onclick="CloseCreateForm"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button>
+        }
+        else
+        {
+            <span class="page-hero-chip"><i class="bi bi-file-earmark-medical"></i> @_result?.TotalCount ?? 0 facturas</span>
+            <a class="btn btn-outline-secondary" href="/fiscal-configuration"><i class="bi bi-gear me-2"></i>Configurar ARCA</a>
+            <button class="btn btn-primary" type="button" @onclick="OpenCreateForm"><i class="bi bi-plus-circle me-2"></i>Generar factura</button>
+        }
     </div>
 </section>
 
@@ -34,7 +41,7 @@
 </div></div>
 
 <div class="row g-3 mt-1">
-    <div class="col-xl-8">
+    <div class="col-xl-8 @(_showForm ? "d-none" : string.Empty)">
         <div class="card ui-data-card"><div class="card-body">
             <div class="ui-card-header"><div><div class="ui-card-eyebrow">Comprobantes fiscales</div><h5 class="ui-card-title">Listado de facturas</h5></div></div>
             <div class="table-responsive">
@@ -58,17 +65,32 @@
             </div>
         </div></div>
     </div>
-    <div class="col-xl-4">
+    <div class="@(_showForm ? "col-12" : "col-xl-4")">
         <div class="card ui-form-card"><div class="card-body">
             <div class="ui-card-header"><div><div class="ui-card-eyebrow">Nueva factura</div><h5 class="ui-card-title">Generación desde venta</h5></div></div>
-            <div class="row g-3">
-                <div class="col-12"><label class="form-label">Venta origen</label><select class="form-select" @bind="_create.SaleId"><option value="0">Seleccionar venta</option>@foreach (var sale in _seed.Sales){<option value="@sale.Id">@sale.Name</option>}</select></div>
-                <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" @bind="_create.InvoiceType">@foreach (var type in Enum.GetValues<InvoiceType>()){<option value="@type">@type</option>}</select></div>
-                <div class="col-md-6"><label class="form-label">IVA</label><input class="form-control" type="number" step="0.01" @bind="_create.TaxRate" /></div>
-                <div class="col-12"><div class="ui-check-card"><i class="bi bi-building-check text-primary"></i><div><strong>Configuración fiscal activa</strong><div class="ui-table-meta">@FiscalConfigurationLabel</div></div></div></div>
-                <div class="col-12"><a class="btn btn-sm btn-outline-secondary" href="/fiscal-configuration">Ir a configuración fiscal / ARCA</a></div>
-            </div>
-            <div class="ui-action-bar mt-3"><button class="btn btn-primary" type="button" @onclick="GenerateInvoice">Generar factura</button></div>
+            @if (!_showForm)
+            {
+                <EmptyState Title="Seleccioná una acción"
+                            Description="Usá Generar factura para abrir el formulario de emisión fiscal."
+                            Icon="bi-file-earmark-plus">
+                    <button class="btn btn-primary" type="button" @onclick="OpenCreateForm">Generar factura</button>
+                </EmptyState>
+            }
+            else
+            {
+                @if (!string.IsNullOrWhiteSpace(_error))
+                {
+                    <div class="alert alert-danger" role="alert">@_error</div>
+                }
+                <div class="row g-3">
+                    <div class="col-12"><label class="form-label">Venta origen</label><select class="form-select" @bind="_create.SaleId"><option value="0">Seleccionar venta</option>@foreach (var sale in _seed.Sales){<option value="@sale.Id">@sale.Name</option>}</select></div>
+                    <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" @bind="_create.InvoiceType">@foreach (var type in Enum.GetValues<InvoiceType>()){<option value="@type">@type</option>}</select></div>
+                    <div class="col-md-6"><label class="form-label">IVA</label><input class="form-control" type="number" step="0.01" @bind="_create.TaxRate" /></div>
+                    <div class="col-12"><div class="ui-check-card"><i class="bi bi-building-check text-primary"></i><div><strong>Configuración fiscal activa</strong><div class="ui-table-meta">@FiscalConfigurationLabel</div></div></div></div>
+                    <div class="col-12"><a class="btn btn-sm btn-outline-secondary" href="/fiscal-configuration">Ir a configuración fiscal / ARCA</a></div>
+                </div>
+                <div class="ui-action-bar mt-3"><button class="btn btn-primary" type="button" @onclick="GenerateInvoice" disabled="@_saving">Generar factura</button></div>
+            }
         </div></div>
     </div>
 </div>
@@ -80,6 +102,9 @@
     private string _search = string.Empty;
     private string _status = string.Empty;
     private int _saleId;
+    private bool _showForm;
+    private bool _saving;
+    private string? _error;
 
     private int AuthorizedCount => _result?.Items.Count(x => x.Status == InvoiceStatus.Authorized) ?? 0;
     private int PendingCount => _result?.Items.Count(x => x.Status != InvoiceStatus.Authorized && x.Status != InvoiceStatus.Cancelled) ?? 0;
@@ -103,15 +128,44 @@
     }
 
     private async Task Search() => await Load();
+    private void OpenCreateForm() => _showForm = true;
+    private void CloseCreateForm()
+    {
+        _showForm = false;
+        _error = null;
+    }
 
     private async Task GenerateInvoice()
     {
-        if (_create.SaleId <= 0) return;
-        var body = new { saleId = _create.SaleId, fiscalConfigurationId = _seed.FiscalConfiguration?.Id, invoiceType = _create.InvoiceType, taxRate = _create.TaxRate, issuedAtUtc = DateTime.UtcNow };
-        var result = await Api.PostAsync<AppResult<int>>("api/commerce/invoices", body);
-        if (result?.Success == true && result.Data > 0)
+        if (_create.SaleId <= 0)
         {
-            Navigation.NavigateTo($"/invoices/{result.Data}");
+            _error = "Seleccioná una venta para generar la factura.";
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+        try
+        {
+            var body = new { saleId = _create.SaleId, fiscalConfigurationId = _seed.FiscalConfiguration?.Id, invoiceType = _create.InvoiceType, taxRate = _create.TaxRate, issuedAtUtc = DateTime.UtcNow };
+            var result = await Api.PostAsync<AppResult<int>>("api/commerce/invoices", body);
+            if (result?.Success == true && result.Data > 0)
+            {
+                _showForm = false;
+                Navigation.NavigateTo($"/invoices/{result.Data}");
+            }
+            else
+            {
+                _error = result?.Message ?? "No se pudo generar la factura.";
+            }
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 
