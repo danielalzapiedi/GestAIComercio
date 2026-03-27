@@ -10,10 +10,17 @@
         <div class="page-hero-subtitle">Administración central de tenants, owner inicial y estado de cada cuenta de la plataforma.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-building-gear"></i> Gestión centralizada</span>
-        @if (_canAccess)
+        @if (_showForm)
         {
-            <button class="btn btn-primary" @onclick="NewTenant"><i class="bi bi-plus-circle me-2"></i>Nuevo tenant</button>
+            <button class="btn btn-outline-secondary" @onclick="Cancel"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button>
+        }
+        else
+        {
+            <span class="page-hero-chip"><i class="bi bi-building-gear"></i> Gestión centralizada</span>
+            @if (_canAccess)
+            {
+                <button class="btn btn-primary" @onclick="NewTenant"><i class="bi bi-plus-circle me-2"></i>Nuevo tenant</button>
+            }
         }
     </div>
 </section>
@@ -56,7 +63,7 @@ else
     else
     {
         <div class="ui-split-layout">
-            <div class="card ui-data-card">
+            <div class="card ui-data-card @(_showForm ? "d-none" : string.Empty)">
                 <div class="card-body">
                     <div class="ui-card-header">
                         <div>
@@ -110,7 +117,7 @@ else
                 </div>
             </div>
 
-            <div class="card ui-form-card">
+            <div class="card ui-form-card @(_showForm ? "w-100" : string.Empty)">
                 <div class="card-body">
                     <div class="ui-card-header">
                         <div>
@@ -130,6 +137,10 @@ else
                     }
                     else
                     {
+                        @if (!string.IsNullOrWhiteSpace(_error))
+                        {
+                            <div class="alert alert-danger" role="alert">@_error</div>
+                        }
                         <div class="row g-3">
                             <div class="col-12"><label class="form-label">Nombre tenant</label><input class="form-control" @bind="_form.Name" /></div>
                             <div class="col-md-6"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Tenant activo" : "Tenant inactivo")</span></div></div>
@@ -150,7 +161,7 @@ else
 
                         <div class="ui-action-bar">
                             <div class="ui-inline-actions">
-                                <button class="btn btn-primary" @onclick="Save">Guardar</button>
+                                <button class="btn btn-primary" @onclick="Save" disabled="@_saving">Guardar</button>
                                 <button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
                             </div>
                         </div>
@@ -168,12 +179,14 @@ else
     private int _page = 1;
     private const int PageSize = 10;
     private bool _showForm;
+    private bool _saving;
     private int _editingId;
     private UpdateTenantCommand _form = new();
+    private string? _error;
     private string _ownerFirstName = string.Empty;
     private string _ownerLastName = string.Empty;
     private string _ownerEmail = string.Empty;
-    private string _ownerPassword = "Temp123$";
+    private string _ownerPassword = string.Empty;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
 
@@ -214,7 +227,8 @@ else
         _ownerFirstName = string.Empty;
         _ownerLastName = string.Empty;
         _ownerEmail = string.Empty;
-        _ownerPassword = "Temp123$";
+        _ownerPassword = GenerateTemporaryPassword();
+        _error = null;
         _showForm = true;
     }
 
@@ -222,23 +236,37 @@ else
     {
         _editingId = item.Id;
         _form = new UpdateTenantCommand { TenantId = item.Id, Name = item.Name, IsActive = item.IsActive };
+        _error = null;
         _showForm = true;
     }
 
     private async Task Save()
     {
-        if (_editingId == 0)
+        _error = null;
+        _saving = true;
+        try
         {
-            await Api.PostAsync("api/platform/tenants", new CreateTenantCommand { Name = _form.Name, OwnerFirstName = _ownerFirstName, OwnerLastName = _ownerLastName, OwnerEmail = _ownerEmail, OwnerPassword = _ownerPassword });
-        }
-        else
-        {
-            _form.TenantId = _editingId;
-            await Api.PutAsync($"api/platform/tenants/{_editingId}", _form);
-        }
+            if (_editingId == 0)
+            {
+                await Api.PostAsync("api/platform/tenants", new CreateTenantCommand { Name = _form.Name, OwnerFirstName = _ownerFirstName, OwnerLastName = _ownerLastName, OwnerEmail = _ownerEmail, OwnerPassword = _ownerPassword });
+            }
+            else
+            {
+                _form.TenantId = _editingId;
+                await Api.PutAsync($"api/platform/tenants/{_editingId}", _form);
+            }
 
-        _showForm = false;
-        await Load();
+            _showForm = false;
+            await Load();
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 
     private async Task Toggle(PlatformTenantListItemDto item)
@@ -247,7 +275,17 @@ else
         await Load();
     }
 
-    private void Cancel() => _showForm = false;
+    private void Cancel()
+    {
+        _showForm = false;
+        _error = null;
+    }
     private async Task PrevPage() { if (_page > 1) { _page--; await Load(); } }
     private async Task NextPage() { if (_page < TotalPages) { _page++; await Load(); } }
+
+    private static string GenerateTemporaryPassword()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@$%*?";
+        return new string(Enumerable.Range(0, 12).Select(_ => chars[System.Security.Cryptography.RandomNumberGenerator.GetInt32(chars.Length)]).ToArray());
+    }
 }
