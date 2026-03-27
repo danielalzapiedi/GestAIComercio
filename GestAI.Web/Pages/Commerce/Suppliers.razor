@@ -33,7 +33,7 @@
 }
 else if (IsEditorRoute)
 {
-    <NavigationLock ConfirmExternalNavigation="@_isDirty" OnBeforeInternalNavigation="ConfirmInternalNavigation" />
+    <NavigationLock ConfirmExternalNavigation="@_isDirty" OnBeforeInternalNavigation="@ConfirmInternalNavigation" />
     <div class="card ui-form-card">
         <div class="card-body">
             <div class="ui-card-header">
@@ -280,7 +280,7 @@ else
 
     private void MarkDirty() => _isDirty = true;
 
-    private async ValueTask ConfirmInternalNavigation(LocationChangingContext context)
+    private async Task ConfirmInternalNavigation(LocationChangingContext context)
     {
         if (!_isDirty || _saving)
             return;

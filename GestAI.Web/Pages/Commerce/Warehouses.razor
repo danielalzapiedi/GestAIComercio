@@ -52,7 +52,7 @@ else if (_result?.Items.Count == 0)
 }
 else
 {
-    <NavigationLock ConfirmExternalNavigation="@(_showForm && _isDirty)" OnBeforeInternalNavigation="ConfirmInternalNavigation" />
+    <NavigationLock ConfirmExternalNavigation="@(_showForm && _isDirty)" OnBeforeInternalNavigation="@ConfirmInternalNavigation" />
     @if (!string.IsNullOrWhiteSpace(_error))
     {
         <div class="alert alert-danger" role="alert">@_error</div>
@@ -285,7 +285,7 @@ else
 
     private void MarkDirty() => _isDirty = true;
 
-    private async ValueTask ConfirmInternalNavigation(LocationChangingContext context)
+    private async Task ConfirmInternalNavigation(LocationChangingContext context)
     {
         if (!_showForm || !_isDirty || _saving)
             return;
