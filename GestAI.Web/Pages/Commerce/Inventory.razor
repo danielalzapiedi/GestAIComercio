@@ -10,8 +10,16 @@
         <div class="page-hero-subtitle">Consolidá stock actual, depósitos involucrados y movimientos recientes desde una misma superficie operativa.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-boxes"></i> @(_overview?.DistinctSkus ?? 0) SKUs</span>
-        <span class="page-hero-chip"><i class="bi bi-box-seam"></i> @(_overview?.WarehousesWithStock ?? 0) depósitos con stock</span>
+        @if (_showForm)
+        {
+            <button class="btn btn-outline-secondary" @onclick="CloseMovementForm"><i class="bi bi-arrow-left me-2"></i>Volver al inventario</button>
+        }
+        else
+        {
+            <span class="page-hero-chip"><i class="bi bi-boxes"></i> @(_overview?.DistinctSkus ?? 0) SKUs</span>
+            <span class="page-hero-chip"><i class="bi bi-box-seam"></i> @(_overview?.WarehousesWithStock ?? 0) depósitos con stock</span>
+            <button class="btn btn-primary" @onclick="OpenMovementForm"><i class="bi bi-plus-circle me-2"></i>Registrar movimiento</button>
+        }
     </div>
 </section>
 
@@ -39,7 +47,7 @@ else
     </div></div>
 
     <div class="ui-split-layout">
-        <div>
+        <div class="@(_showForm ? "d-none" : string.Empty)">
             @if (_overview is null || _overview.Items.Count == 0)
             {
                 <EmptyState Title="No hay stock para mostrar"
@@ -113,7 +121,7 @@ else
             }
         </div>
 
-        <div class="ui-section-grid">
+        <div class="ui-section-grid @(_showForm ? "w-100" : string.Empty)">
             <div class="card ui-form-card">
                 <div class="card-body">
                     <div class="ui-card-header">
@@ -123,25 +131,36 @@ else
                             <div class="ui-card-subtitle">El stock no se pisa manualmente: siempre queda trazado por movimiento.</div>
                         </div>
                     </div>
-                    <div class="ui-form-section">
-                        <div class="row g-3">
-                            <div class="col-12"><label class="form-label">SKU</label><select class="form-select" @bind="_movementSkuKey">@foreach (var sku in _seed.Skus){<option value="@ToSkuKey(sku)">@sku.Label</option>}</select></div>
-                            <div class="col-md-6"><label class="form-label">Depósito</label><select class="form-select" @bind="_movement.WarehouseId">@foreach (var warehouse in _seed.Warehouses){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
-                            <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" @bind="_movement.MovementType">@foreach (var type in Enum.GetValues<StockMovementType>()){<option value="@type">@MovementLabel(type)</option>}</select></div>
-                            @if (_movement.MovementType == StockMovementType.TransferOut)
-                            {
-                                <div class="col-12"><label class="form-label">Depósito destino</label><select class="form-select" @bind="_movement.CounterpartWarehouseId"><option value="">Seleccionar</option>@foreach (var warehouse in _seed.Warehouses.Where(x => x.Id != _movement.WarehouseId)){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
-                            }
-                            <div class="col-md-6"><label class="form-label">Cantidad</label><input class="form-control" type="number" step="0.01" @bind="_movement.Quantity" /></div>
-                            <div class="col-md-6"><label class="form-label">Fecha</label><input class="form-control" type="datetime-local" @bind-value="_movementOccurredAtLocal" @bind-value:format="yyyy-MM-ddTHH:mm" /></div>
-                            <div class="col-12"><label class="form-label">Motivo</label><input class="form-control" @bind="_movement.Reason" placeholder="Recepción, conteo, merma, traslado, etc." /></div>
-                            <div class="col-12"><label class="form-label">Observación</label><textarea class="form-control ui-preview-textarea" @bind="_movement.Note"></textarea></div>
+                    @if (!_showForm)
+                    {
+                        <EmptyState Title="Seleccioná una acción"
+                                    Description="Usá Registrar movimiento para abrir el formulario de trazabilidad."
+                                    Icon="bi-arrow-left-right">
+                            <button class="btn btn-primary" @onclick="OpenMovementForm">Registrar movimiento</button>
+                        </EmptyState>
+                    }
+                    else
+                    {
+                        <div class="ui-form-section">
+                            <div class="row g-3">
+                                <div class="col-12"><label class="form-label">SKU</label><select class="form-select" @bind="_movementSkuKey">@foreach (var sku in _seed.Skus){<option value="@ToSkuKey(sku)">@sku.Label</option>}</select></div>
+                                <div class="col-md-6"><label class="form-label">Depósito</label><select class="form-select" @bind="_movement.WarehouseId">@foreach (var warehouse in _seed.Warehouses){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
+                                <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" @bind="_movement.MovementType">@foreach (var type in Enum.GetValues<StockMovementType>()){<option value="@type">@MovementLabel(type)</option>}</select></div>
+                                @if (_movement.MovementType == StockMovementType.TransferOut)
+                                {
+                                    <div class="col-12"><label class="form-label">Depósito destino</label><select class="form-select" @bind="_movement.CounterpartWarehouseId"><option value="">Seleccionar</option>@foreach (var warehouse in _seed.Warehouses.Where(x => x.Id != _movement.WarehouseId)){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
+                                }
+                                <div class="col-md-6"><label class="form-label">Cantidad</label><input class="form-control" type="number" step="0.01" @bind="_movement.Quantity" /></div>
+                                <div class="col-md-6"><label class="form-label">Fecha</label><input class="form-control" type="datetime-local" @bind-value="_movementOccurredAtLocal" @bind-value:format="yyyy-MM-ddTHH:mm" /></div>
+                                <div class="col-12"><label class="form-label">Motivo</label><input class="form-control" @bind="_movement.Reason" placeholder="Recepción, conteo, merma, traslado, etc." /></div>
+                                <div class="col-12"><label class="form-label">Observación</label><textarea class="form-control ui-preview-textarea" @bind="_movement.Note"></textarea></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="ui-action-bar">
-                        <button class="btn btn-primary" @onclick="SaveMovementAsync">Registrar movimiento</button>
-                        <span class="ui-table-meta">@_message</span>
-                    </div>
+                        <div class="ui-action-bar">
+                            <button class="btn btn-primary" @onclick="SaveMovementAsync">Registrar movimiento</button>
+                            <span class="ui-table-meta">@_message</span>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -169,6 +188,7 @@ else
     private InventoryOverviewDto? _overview;
     private List<StockMovementListItemDto> _movements = new();
     private bool _loaded;
+    private bool _showForm;
     private string _search = string.Empty;
     private int _selectedWarehouseId;
     private string _selectedSkuKey = string.Empty;
@@ -227,6 +247,9 @@ else
         _selectedSkuKey = string.Empty;
         await LoadAsync();
     }
+
+    private void OpenMovementForm() => _showForm = true;
+    private void CloseMovementForm() => _showForm = false;
 
     private void EnsureMovementDefaults()
     {
