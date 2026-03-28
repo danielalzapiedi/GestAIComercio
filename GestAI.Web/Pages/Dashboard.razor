@@ -407,12 +407,12 @@ else
 
         if (CanAccess(SaasModule.Sales))
         {
-            _sales = (await Api.GetAsync<AppResult<PagedResult<SaleListItemDto>>>("api/commerce/sales?page=1&pageSize=100"))?.Data;
+            _sales = (await Api.GetAsync<AppResult<PagedResult<SaleListItemDto>>>("api/commerce/sales?page=1&pageSize=50"))?.Data;
             _release6 = (await Api.GetAsync<AppResult<Release6DashboardDto>>("api/commerce/release6/dashboard"))?.Data;
         }
 
         if (CanAccess(SaasModule.Quotes))
-            _quotes = (await Api.GetAsync<AppResult<PagedResult<QuoteListItemDto>>>("api/commerce/quotes?page=1&pageSize=100"))?.Data;
+            _quotes = (await Api.GetAsync<AppResult<PagedResult<QuoteListItemDto>>>("api/commerce/quotes?page=1&pageSize=50"))?.Data;
 
         if (CanAccess(SaasModule.Customers))
             _customers = (await Api.GetAsync<AppResult<PagedResult<CustomerListItemDto>>>("api/commerce/customers?page=1&pageSize=1"))?.Data;
