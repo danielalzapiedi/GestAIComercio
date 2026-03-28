@@ -114,6 +114,7 @@ else
             <div class="card ui-form-card">
                 <div class="card-body">
                     <div class="ui-card-header"><div><div class="ui-card-eyebrow">Editor</div><h5 class="ui-card-title">@(_form.Id == 0 ? "Nueva lista" : "Editar lista")</h5><div class="ui-card-subtitle">Definí nombre, criterio base y alcance del pricing.</div></div></div>
+                    <FormFeedback Error="@_error" Success="@_success" />
                     <div class="ui-form-section">
                         <div class="row g-3">
                             <div class="col-12"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
@@ -122,7 +123,7 @@ else
                             <div class="col-12"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_form.IsActive" /><span>@(_form.IsActive ? "Lista activa" : "Lista inactiva")</span></div></div>
                         </div>
                     </div>
-                    <div class="ui-action-bar"><button class="btn btn-primary" @onclick="SaveListAsync">Guardar lista</button><span class="ui-table-meta">@_message</span></div>
+                    <div class="ui-action-bar"><button class="btn btn-primary" @onclick="SaveListAsync" disabled="@_saving">Guardar lista</button><span class="ui-table-meta">@_message</span></div>
                 </div>
             </div>
 
@@ -138,7 +139,7 @@ else
                                 <div class="col-md-6"><label class="form-label d-block">Estado</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_itemForm.IsActive" /><span>@(_itemForm.IsActive ? "Ítem activo" : "Ítem inactivo")</span></div></div>
                             </div>
                         </div>
-                        <div class="ui-action-bar"><button class="btn btn-outline-primary" @onclick="SaveItemAsync">Guardar precio</button></div>
+                        <div class="ui-action-bar"><button class="btn btn-outline-primary" @onclick="SaveItemAsync" disabled="@_saving">Guardar precio</button></div>
                     </div>
                 </div>
 
@@ -153,7 +154,7 @@ else
                                 <div class="col-md-6"><label class="form-label d-block">Cobertura</label><div class="ui-toggle-field"><input type="checkbox" class="form-check-input" @bind="_bulkForm.IncludeInactiveProducts" /><span>Incluir productos inactivos</span></div></div>
                             </div>
                         </div>
-                        <div class="ui-action-bar"><button class="btn btn-primary" @onclick="ApplyBulkUpdateAsync">Aplicar actualización</button></div>
+                        <div class="ui-action-bar"><button class="btn btn-primary" @onclick="ApplyBulkUpdateAsync" disabled="@_saving">Aplicar actualización</button></div>
                     </div>
                 </div>
             }
@@ -169,6 +170,9 @@ else
     private bool _loaded;
     private bool _editorMode;
     private string _message = "Release 2 prepara múltiples listas sin romper el precio base existente.";
+    private bool _saving;
+    private string? _error;
+    private string? _success;
     private PriceListUpsertCommand _form = new() { BaseMode = PriceListBaseMode.SalePrice, TargetType = PriceListTargetType.Product, IsActive = true };
     private PriceListItemUpsertCommand _itemForm = new() { IsActive = true };
     private BulkPriceUpdateCommand _bulkForm = new() { AdjustmentType = BulkPriceAdjustmentType.Percentage, Value = 10m };
@@ -197,6 +201,8 @@ else
 
     private void NewList()
     {
+        _error = null;
+        _success = null;
         _form = new PriceListUpsertCommand { BaseMode = PriceListBaseMode.SalePrice, TargetType = PriceListTargetType.Product, IsActive = true };
         _selectedList = null;
         _items.Clear();
@@ -205,57 +211,120 @@ else
 
     private async Task EditListAsync(int id)
     {
-        _selectedList = (await Api.GetAsync<AppResult<PriceListDetailDto>>($"api/commerce/price-lists/{id}"))?.Data;
-        if (_selectedList is null)
-            return;
+        _error = null;
+        _success = null;
+        try
+        {
+            _selectedList = (await Api.GetAsync<AppResult<PriceListDetailDto>>($"api/commerce/price-lists/{id}"))?.Data;
+            if (_selectedList is null)
+                return;
 
-        _form = new PriceListUpsertCommand { Id = _selectedList.Id, Name = _selectedList.Name, BaseMode = _selectedList.BaseMode, TargetType = _selectedList.TargetType, IsActive = _selectedList.IsActive };
-        _items = (await Api.GetAsync<AppResult<List<PriceListItemDto>>>($"api/commerce/price-lists/{id}/items"))?.Data?.ToList() ?? new();
-        _selectedItemSkuKey = CurrentSkuOptions.FirstOrDefault() is { } sku ? ToSkuKey(sku) : string.Empty;
-        _editorMode = true;
+            _form = new PriceListUpsertCommand { Id = _selectedList.Id, Name = _selectedList.Name, BaseMode = _selectedList.BaseMode, TargetType = _selectedList.TargetType, IsActive = _selectedList.IsActive };
+            _items = (await Api.GetAsync<AppResult<List<PriceListItemDto>>>($"api/commerce/price-lists/{id}/items"))?.Data?.ToList() ?? new();
+            _selectedItemSkuKey = CurrentSkuOptions.FirstOrDefault() is { } sku ? ToSkuKey(sku) : string.Empty;
+            _editorMode = true;
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
     }
 
     private async Task SaveListAsync()
     {
-        if (_form.Id == 0)
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
         {
-            var created = await Api.PostAsync<PriceListUpsertCommand, AppResult<int>>("api/commerce/price-lists", new PriceListUpsertCommand { Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
-            _message = created?.Success == true ? "Lista creada correctamente." : created?.Message ?? "No se pudo crear la lista.";
-            if (created?.Success == true && created?.Data is int newId)
-                await EditListAsync(newId);
-        }
-        else
-        {
-            var updated = await Api.PutAsync<PriceListUpsertCommand, AppResult>($"api/commerce/price-lists/{_form.Id}", new PriceListUpsertCommand { Id = _form.Id, Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
-            _message = updated?.Success == true ? "Lista actualizada correctamente." : updated?.Message ?? "No se pudo actualizar la lista.";
-            if (updated?.Success == true)
-                await EditListAsync(_form.Id);
-        }
+            if (_form.Id == 0)
+            {
+                var created = await Api.PostAsync<PriceListUpsertCommand, AppResult<int>>("api/commerce/price-lists", new PriceListUpsertCommand { Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
+                _message = created?.Success == true ? "Lista creada correctamente." : created?.Message ?? "No se pudo crear la lista.";
+                if (created?.Success == true && created?.Data is int newId)
+                {
+                    _success = "Lista creada correctamente.";
+                    await EditListAsync(newId);
+                }
+            }
+            else
+            {
+                var updated = await Api.PutAsync<PriceListUpsertCommand, AppResult>($"api/commerce/price-lists/{_form.Id}", new PriceListUpsertCommand { Id = _form.Id, Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
+                _message = updated?.Success == true ? "Lista actualizada correctamente." : updated?.Message ?? "No se pudo actualizar la lista.";
+                if (updated?.Success == true)
+                {
+                    _success = "Lista actualizada correctamente.";
+                    await EditListAsync(_form.Id);
+                }
+            }
 
-        await LoadAsync();
+            await LoadAsync();
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 
     private async Task SaveItemAsync()
     {
         if (_selectedList is null) return;
-        var (productId, variantId) = ParseSkuKey(_selectedItemSkuKey);
-        _itemForm.PriceListId = _selectedList.Id;
-        _itemForm.ProductId = productId;
-        _itemForm.ProductVariantId = variantId;
-        var result = await Api.PostAsync<PriceListItemUpsertCommand, AppResult<int>>($"api/commerce/price-lists/{_selectedList.Id}/items", _itemForm);
-        _message = result?.Success == true ? "Precio guardado correctamente." : result?.Message ?? "No se pudo guardar el precio.";
-        if (result?.Success == true)
-            await EditListAsync(_selectedList.Id);
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
+        {
+            var (productId, variantId) = ParseSkuKey(_selectedItemSkuKey);
+            _itemForm.PriceListId = _selectedList.Id;
+            _itemForm.ProductId = productId;
+            _itemForm.ProductVariantId = variantId;
+            var result = await Api.PostAsync<PriceListItemUpsertCommand, AppResult<int>>($"api/commerce/price-lists/{_selectedList.Id}/items", _itemForm);
+            _message = result?.Success == true ? "Precio guardado correctamente." : result?.Message ?? "No se pudo guardar el precio.";
+            if (result?.Success == true)
+            {
+                _success = "Precio guardado correctamente.";
+                await EditListAsync(_selectedList.Id);
+            }
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 
     private async Task ApplyBulkUpdateAsync()
     {
         if (_selectedList is null) return;
-        _bulkForm.PriceListId = _selectedList.Id;
-        var result = await Api.PostAsync<BulkPriceUpdateCommand, AppResult<BulkPriceUpdateResultDto>>($"api/commerce/price-lists/{_selectedList.Id}/bulk-update", _bulkForm);
-        _message = result?.Success == true ? result.Data?.Summary ?? "Actualización aplicada." : result?.Message ?? "No se pudo aplicar la actualización.";
-        if (result?.Success == true)
-            await EditListAsync(_selectedList.Id);
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
+        {
+            _bulkForm.PriceListId = _selectedList.Id;
+            var result = await Api.PostAsync<BulkPriceUpdateCommand, AppResult<BulkPriceUpdateResultDto>>($"api/commerce/price-lists/{_selectedList.Id}/bulk-update", _bulkForm);
+            _message = result?.Success == true ? result.Data?.Summary ?? "Actualización aplicada." : result?.Message ?? "No se pudo aplicar la actualización.";
+            if (result?.Success == true)
+            {
+                _success = result.Data?.Summary ?? "Actualización aplicada.";
+                await EditListAsync(_selectedList.Id);
+            }
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 
     private void FocusManualPrice() { }

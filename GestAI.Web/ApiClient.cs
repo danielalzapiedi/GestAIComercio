@@ -22,15 +22,17 @@ public sealed class ApiClient
 
     public sealed class ApiClientException : Exception
     {
-        public ApiClientException(string message, HttpStatusCode statusCode, string? errorCode = null)
+        public ApiClientException(string message, HttpStatusCode statusCode, string? errorCode = null, IReadOnlyDictionary<string, string[]>? fieldErrors = null)
             : base(message)
         {
             StatusCode = statusCode;
             ErrorCode = errorCode;
+            FieldErrors = fieldErrors;
         }
 
         public HttpStatusCode StatusCode { get; }
         public string? ErrorCode { get; }
+        public IReadOnlyDictionary<string, string[]>? FieldErrors { get; }
     }
 
     private static string Normalize(string url)
@@ -188,7 +190,7 @@ public sealed class ApiClient
                     {
                         var first = problem.Errors.FirstOrDefault(x => x.Value is { Length: > 0 });
                         if (first.Value is { Length: > 0 })
-                            throw new ApiClientException(first.Value[0], response.StatusCode, first.Key);
+                            throw new ApiClientException(first.Value[0], response.StatusCode, first.Key, problem.Errors);
                     }
 
                     if (!string.IsNullOrWhiteSpace(problem.Detail))

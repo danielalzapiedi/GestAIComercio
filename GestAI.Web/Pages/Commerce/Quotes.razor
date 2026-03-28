@@ -128,6 +128,7 @@
                 }
                 else
                 {
+                    <FormFeedback Error="@_error" Success="@_success" />
                     <div class="ui-form-section">
                         <div class="ui-form-section-title">Cabecera</div>
                         <div class="row g-3">
@@ -198,8 +199,8 @@
 
                     <div class="ui-action-bar">
                         <div class="ui-inline-actions">
-                            <button class="btn btn-primary" type="button" @onclick="Save">Guardar</button>
-                            <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Cancelar</button>
+                            <button class="btn btn-primary" type="button" @onclick="Save" disabled="@_saving">Guardar</button>
+                            <button class="btn btn-outline-secondary" type="button" @onclick="Cancel" disabled="@_saving">Cancelar</button>
                         </div>
                         <div class="ui-table-stack text-end">
                             <span class="fw-semibold">Total @FormTotal.ToString("C")</span>
@@ -246,6 +247,9 @@
     private string _editingNumber = string.Empty;
     private DateTime _issuedAtDate = DateTime.UtcNow.Date;
     private DateTime? _validUntilDate;
+    private bool _saving;
+    private string? _error;
+    private string? _success;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
     private int ConvertibleCount => _result?.Items.Count(x => x.CanConvertToSale) ?? 0;
@@ -286,6 +290,8 @@
 
     private void NewItem()
     {
+        _error = null;
+        _success = null;
         _form = new QuoteUpsertCommand
         {
             Status = QuoteStatus.Draft,
@@ -304,63 +310,101 @@
 
     private async Task Edit(int id)
     {
-        var detail = (await Api.GetAsync<AppResult<QuoteDetailDto>>($"api/commerce/quotes/{id}"))?.Data;
-        if (detail is null) return;
-        _form = new QuoteUpsertCommand
+        _error = null;
+        _success = null;
+        try
         {
-            Id = detail.Id,
-            CustomerId = detail.CustomerId,
-            Status = detail.Status,
-            IssuedAtUtc = detail.IssuedAtUtc,
-            ValidUntilUtc = detail.ValidUntilUtc,
-            Observations = detail.Observations,
-            Items = detail.Items.Select(x => new CommercialLineFormModel
+            var detail = (await Api.GetAsync<AppResult<QuoteDetailDto>>($"api/commerce/quotes/{id}"))?.Data;
+            if (detail is null) return;
+            _form = new QuoteUpsertCommand
             {
-                ProductId = x.ProductId,
-                ProductVariantId = x.ProductVariantId,
-                Description = x.Description,
-                InternalCode = x.InternalCode,
-                Quantity = x.Quantity,
-                UnitPrice = x.UnitPrice
-            }).ToList()
-        };
-        _issuedAtDate = detail.IssuedAtUtc;
-        _validUntilDate = detail.ValidUntilUtc;
-        _editingNumber = detail.Number;
-        _showForm = true;
+                Id = detail.Id,
+                CustomerId = detail.CustomerId,
+                Status = detail.Status,
+                IssuedAtUtc = detail.IssuedAtUtc,
+                ValidUntilUtc = detail.ValidUntilUtc,
+                Observations = detail.Observations,
+                Items = detail.Items.Select(x => new CommercialLineFormModel
+                {
+                    ProductId = x.ProductId,
+                    ProductVariantId = x.ProductVariantId,
+                    Description = x.Description,
+                    InternalCode = x.InternalCode,
+                    Quantity = x.Quantity,
+                    UnitPrice = x.UnitPrice
+                }).ToList()
+            };
+            _issuedAtDate = detail.IssuedAtUtc;
+            _validUntilDate = detail.ValidUntilUtc;
+            _editingNumber = detail.Number;
+            _showForm = true;
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
     }
 
     private async Task Save()
     {
-        _form.IssuedAtUtc = _issuedAtDate;
-        _form.ValidUntilUtc = _validUntilDate;
-        var body = new
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
         {
-            _form.Id,
-            _form.CustomerId,
-            _form.Status,
-            _form.IssuedAtUtc,
-            _form.ValidUntilUtc,
-            _form.Observations,
-            Items = _form.Items.Select((x, idx) => new { x.ProductId, x.ProductVariantId, x.Description, x.Quantity, x.UnitPrice, SortOrder = idx + 1 }).ToList()
-        };
+            _form.IssuedAtUtc = _issuedAtDate;
+            _form.ValidUntilUtc = _validUntilDate;
+            var body = new
+            {
+                _form.Id,
+                _form.CustomerId,
+                _form.Status,
+                _form.IssuedAtUtc,
+                _form.ValidUntilUtc,
+                _form.Observations,
+                Items = _form.Items.Select((x, idx) => new { x.ProductId, x.ProductVariantId, x.Description, x.Quantity, x.UnitPrice, SortOrder = idx + 1 }).ToList()
+            };
 
-        if (_form.Id == 0)
-            await Api.PostAsync("api/commerce/quotes", body);
-        else
-            await Api.PutAsync($"api/commerce/quotes/{_form.Id}", body);
+            if (_form.Id == 0)
+                await Api.PostAsync("api/commerce/quotes", body);
+            else
+                await Api.PutAsync($"api/commerce/quotes/{_form.Id}", body);
 
-        _showForm = false;
-        await Load();
+            _showForm = false;
+            _success = "Presupuesto guardado correctamente.";
+            await Load();
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 
     private async Task Convert(int id)
     {
-        var result = await Api.PostAsync<object, AppResult<int>>($"api/commerce/quotes/{id}/convert-to-sale", new { quoteId = id, saleStatus = SaleStatus.Draft, issuedAtUtc = DateTime.UtcNow, observations = (string?)null });
-        if (result?.Success == true && result.Data is > 0)
+        _error = null;
+        _success = null;
+        try
         {
-            await Load();
-            Navigation.NavigateTo($"/sales/{result.Data}");
+            var result = await Api.PostAsync<object, AppResult<int>>($"api/commerce/quotes/{id}/convert-to-sale", new { quoteId = id, saleStatus = SaleStatus.Draft, issuedAtUtc = DateTime.UtcNow, observations = (string?)null });
+            if (result?.Success == true && result.Data is > 0)
+            {
+                _success = "Presupuesto convertido correctamente.";
+                await Load();
+                Navigation.NavigateTo($"/sales/{result.Data}");
+            }
+            else
+            {
+                _error = result?.Message ?? "No se pudo convertir el presupuesto.";
+            }
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
         }
     }
 

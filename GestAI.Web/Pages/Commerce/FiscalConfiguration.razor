@@ -222,6 +222,11 @@ else
             if (result?.Success == true)
                 await Load();
         }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _messageIsError = true;
+            _message = ex.Message;
+        }
         finally
         {
             _saving = false;
@@ -239,30 +244,38 @@ else
         if (file is null)
             return;
 
-        await using var stream = file.OpenReadStream(MaxFiscalFileSize);
-        using var memory = new MemoryStream();
-        await stream.CopyToAsync(memory);
-
-        var command = new UploadFiscalCredentialCommandDto
+        try
         {
-            FileName = file.Name,
-            ContentType = file.ContentType,
-            ContentBase64 = Convert.ToBase64String(memory.ToArray()),
-            IsPrivateKey = isPrivateKey
-        };
+            await using var stream = file.OpenReadStream(MaxFiscalFileSize);
+            using var memory = new MemoryStream();
+            await stream.CopyToAsync(memory);
 
-        var result = await Api.PostAsync<UploadFiscalCredentialCommandDto, AppResult<string>>("api/commerce/fiscal/credentials", command);
-        _messageIsError = result?.Success != true;
-        _message = result?.Success == true
-            ? (isPrivateKey ? "Clave privada cargada correctamente." : "Certificado cargado correctamente.")
-            : result?.Message ?? "No se pudo cargar el archivo.";
+            var command = new UploadFiscalCredentialCommandDto
+            {
+                FileName = file.Name,
+                ContentType = file.ContentType,
+                ContentBase64 = Convert.ToBase64String(memory.ToArray()),
+                IsPrivateKey = isPrivateKey
+            };
 
-        if (result?.Success == true && !string.IsNullOrWhiteSpace(result.Data))
+            var result = await Api.PostAsync<UploadFiscalCredentialCommandDto, AppResult<string>>("api/commerce/fiscal/credentials", command);
+            _messageIsError = result?.Success != true;
+            _message = result?.Success == true
+                ? (isPrivateKey ? "Clave privada cargada correctamente." : "Certificado cargado correctamente.")
+                : result?.Message ?? "No se pudo cargar el archivo.";
+
+            if (result?.Success == true && !string.IsNullOrWhiteSpace(result.Data))
+            {
+                if (isPrivateKey)
+                    _form.PrivateKeyReference = result.Data;
+                else
+                    _form.CertificateReference = result.Data;
+            }
+        }
+        catch (ApiClient.ApiClientException ex)
         {
-            if (isPrivateKey)
-                _form.PrivateKeyReference = result.Data;
-            else
-                _form.CertificateReference = result.Data;
+            _messageIsError = true;
+            _message = ex.Message;
         }
     }
 
