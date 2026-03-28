@@ -162,6 +162,21 @@ public sealed class CommerceIntegrationTests
         Assert.True(saleResult.Success);
         Assert.NotNull(saleResult.Data);
 
+        db.FiscalConfigurations.Add(new FiscalConfiguration
+        {
+            AccountId = fixture.Account.Id,
+            LegalName = "Smoke SA",
+            TaxIdentifier = "30712345678",
+            PointOfSale = 1,
+            DefaultInvoiceType = InvoiceType.InvoiceB,
+            IntegrationMode = FiscalIntegrationMode.Mock,
+            UseSandbox = true,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedByUserId = fixture.CurrentUser.UserId
+        });
+        await db.SaveChangesAsync();
+
         var createInvoice = new CreateInvoiceCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
         var invoiceResult = await createInvoice.Handle(new CreateInvoiceCommand(saleResult.Data!, null, InvoiceType.InvoiceB, DateTime.UtcNow, 0.21m), CancellationToken.None);
 
