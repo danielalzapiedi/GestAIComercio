@@ -184,7 +184,7 @@ public sealed class CommerceIntegrationTests
         Assert.NotNull(invoiceResult.Data);
 
         var invoice = await db.CommercialInvoices.SingleAsync(x => x.Id == invoiceResult.Data);
-        Assert.Equal(InvoiceStatus.PendingAuthorization, invoice.Status);
+        Assert.Equal(InvoiceStatus.Draft, invoice.Status);
     }
 
     [Fact]

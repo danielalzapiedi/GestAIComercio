@@ -16,7 +16,7 @@
 ## Entregables generados
 - `UnsavedChangesGuardService` corrige referencia a `IJSRuntime` con `using` explícito.
 - `CommercePartyFeatures` incorpora `using GestAI.Application.Common` y `using GestAI.Domain.Enums` para resolver `AppResult`/`PagedResult` y `SaasModule` en handlers MediatR.
-- `CommerceIntegrationTests` ajusta import de `AppResult`, compatibilidad de `quoteResult.Data` para ambos contextos de nullability (`int`/`int?`), estado esperado de factura (`PendingAuthorization`) y setup fiscal para el smoke de facturación.
+- `CommerceIntegrationTests` ajusta import de `AppResult`, compatibilidad de `quoteResult.Data` para ambos contextos de nullability (`int`/`int?`), setup fiscal para el smoke de facturación y estado esperado de la factura recién creada (`Draft`).
 - `SaasCoreTests` alinea el test de validator de productos al límite actual de `PageSize` (50).
 
 ## Validación y QA
