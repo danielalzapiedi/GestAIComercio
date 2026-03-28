@@ -127,6 +127,7 @@
                 }
                 else
                 {
+                    <FormFeedback Error="@_error" Success="@_success" />
                     <div class="row g-3">
                         <div class="col-12"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
                         <div class="col-12"><label class="form-label">Padre</label><select class="form-select" @bind="_form.ParentCategoryId"><option value="">Sin padre</option>@foreach (var item in _allCategories.Where(x => x.Id != _form.Id)){<option value="@item.Id">@item.Name</option>}</select></div>
@@ -134,8 +135,8 @@
                     </div>
                     <div class="ui-action-bar">
                         <div class="ui-inline-actions">
-                            <button class="btn btn-primary" @onclick="Save">Guardar</button>
-                            <button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
+                            <button class="btn btn-primary" @onclick="Save" disabled="@_saving">Guardar</button>
+                            <button class="btn btn-outline-secondary" @onclick="Cancel" disabled="@_saving">Cancelar</button>
                         </div>
                     </div>
                 }
@@ -152,10 +153,13 @@
     private string _status = string.Empty;
     private bool _loaded;
     private bool _showForm;
+    private bool _saving;
     private int _page = 1;
     private const int PageSize = 10;
     private const int ParentOptionsPageSize = 100;
     private CategoryUpsertCommand _form = new();
+    private string? _error;
+    private string? _success;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
 
@@ -201,16 +205,41 @@
 
     private async Task Save()
     {
-        if (_form.Id == 0) await Api.PostAsync("api/commerce/categories", new { _form.Name, _form.ParentCategoryId, _form.IsActive });
-        else await Api.PutAsync($"api/commerce/categories/{_form.Id}", new { _form.Id, _form.Name, _form.ParentCategoryId, _form.IsActive });
-        _showForm = false;
-        await Load();
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
+        {
+            if (_form.Id == 0) await Api.PostAsync("api/commerce/categories", new { _form.Name, _form.ParentCategoryId, _form.IsActive });
+            else await Api.PutAsync($"api/commerce/categories/{_form.Id}", new { _form.Id, _form.Name, _form.ParentCategoryId, _form.IsActive });
+            _showForm = false;
+            _success = "Categoría guardada correctamente.";
+            await Load();
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 
     private async Task Toggle(CategoryListItemDto item)
     {
-        await Api.PostAsync($"api/commerce/categories/{item.Id}/status", new { isActive = !item.IsActive });
-        await Load();
+        _error = null;
+        _success = null;
+        try
+        {
+            await Api.PostAsync($"api/commerce/categories/{item.Id}/status", new { isActive = !item.IsActive });
+            _success = item.IsActive ? "Categoría desactivada." : "Categoría activada.";
+            await Load();
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
     }
 
     private void Cancel() => _showForm = false;

@@ -188,6 +188,7 @@
                 }
                 else
                 {
+                    <FormFeedback Error="@_error" Success="@_success" />
                     <div class="ui-form-section">
                         <div class="ui-form-section-title">Identidad comercial</div>
                         <div class="row g-3">
@@ -215,8 +216,8 @@
 
                     <div class="ui-action-bar">
                         <div class="ui-inline-actions">
-                            <button class="btn btn-primary" @onclick="Save">Guardar</button>
-                            <button class="btn btn-outline-secondary" @onclick="Cancel">Cancelar</button>
+                            <button class="btn btn-primary" @onclick="Save" disabled="@_saving">Guardar</button>
+                            <button class="btn btn-outline-secondary" @onclick="Cancel" disabled="@_saving">Cancelar</button>
                         </div>
                         @if (_form.Id > 0)
                         {
@@ -295,8 +296,8 @@
                                     </div>
                                     <div class="ui-action-bar">
                                         <div class="ui-inline-actions">
-                                            <button class="btn btn-primary btn-sm" @onclick="SaveVariant">Guardar variante</button>
-                                            <button class="btn btn-outline-secondary btn-sm" @onclick="CancelVariant">Cancelar</button>
+                                            <button class="btn btn-primary btn-sm" @onclick="SaveVariant" disabled="@_saving">Guardar variante</button>
+                                            <button class="btn btn-outline-secondary btn-sm" @onclick="CancelVariant" disabled="@_saving">Cancelar</button>
                                         </div>
                                     </div>
                                 </div>
@@ -323,6 +324,9 @@
     private const int PageSize = 10;
     private ProductUpsertCommand _form = new();
     private ProductVariantUpsertCommand _variantForm = new();
+    private bool _saving;
+    private string? _error;
+    private string? _success;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
     private int TotalProducts => _result?.TotalCount ?? 0;
@@ -366,6 +370,8 @@
 
     private void NewItem()
     {
+        _error = null;
+        _success = null;
         _form = new ProductUpsertCommand { IsActive = true, UnitOfMeasure = UnitOfMeasure.Unit, CategoryId = _seed.Categories.FirstOrDefault()?.Id ?? 0 };
         _variantForm = new ProductVariantUpsertCommand();
         _variants = new();
@@ -375,6 +381,8 @@
 
     private async Task Edit(ProductListItemDto item)
     {
+        _error = null;
+        _success = null;
         var detail = (await Api.GetAsync<AppResult<ProductDetailDto>>($"api/commerce/products/{item.Id}"))?.Data;
         if (detail is null) return;
         _form = new ProductUpsertCommand
@@ -399,40 +407,65 @@
 
     private async Task Save()
     {
-        if (_form.Id == 0)
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
         {
-            var response = await Api.PostAsync<object, AppResult<int>>("api/commerce/products", new { _form.Name, _form.InternalCode, _form.Barcode, _form.Description, _form.CategoryId, _form.Brand, _form.UnitOfMeasure, _form.Cost, _form.SalePrice, _form.MinimumStock, _form.IsActive });
-            if (response?.Data is int productId)
+            if (_form.Id == 0)
             {
-                _form.Id = productId;
-                _variants = new();
+                var response = await Api.PostAsync<object, AppResult<int>>("api/commerce/products", new { _form.Name, _form.InternalCode, _form.Barcode, _form.Description, _form.CategoryId, _form.Brand, _form.UnitOfMeasure, _form.Cost, _form.SalePrice, _form.MinimumStock, _form.IsActive });
+                if (response?.Data is int productId)
+                {
+                    _form.Id = productId;
+                    _variants = new();
+                }
             }
-        }
-        else
-        {
-            await Api.PutAsync($"api/commerce/products/{_form.Id}", new { _form.Id, _form.Name, _form.InternalCode, _form.Barcode, _form.Description, _form.CategoryId, _form.Brand, _form.UnitOfMeasure, _form.Cost, _form.SalePrice, _form.MinimumStock, _form.IsActive });
-        }
+            else
+            {
+                await Api.PutAsync($"api/commerce/products/{_form.Id}", new { _form.Id, _form.Name, _form.InternalCode, _form.Barcode, _form.Description, _form.CategoryId, _form.Brand, _form.UnitOfMeasure, _form.Cost, _form.SalePrice, _form.MinimumStock, _form.IsActive });
+            }
 
-        await LoadSeed();
-        await Load();
+            await LoadSeed();
+            await Load();
 
-        if (_form.Id > 0)
-        {
-            _variants = (await Api.GetAsync<AppResult<List<ProductVariantListItemDto>>>($"api/commerce/products/{_form.Id}/variants"))?.Data ?? new();
-            _showForm = true;
-        }
-        else
-        {
-            _showForm = false;
-        }
+            if (_form.Id > 0)
+            {
+                _variants = (await Api.GetAsync<AppResult<List<ProductVariantListItemDto>>>($"api/commerce/products/{_form.Id}/variants"))?.Data ?? new();
+                _showForm = true;
+            }
+            else
+            {
+                _showForm = false;
+            }
 
-        _showVariantForm = false;
+            _showVariantForm = false;
+            _success = "Producto guardado correctamente.";
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 
     private async Task Toggle(ProductListItemDto item)
     {
-        await Api.PostAsync($"api/commerce/products/{item.Id}/status", new { isActive = !item.IsActive });
-        await Load();
+        _error = null;
+        _success = null;
+        try
+        {
+            await Api.PostAsync($"api/commerce/products/{item.Id}/status", new { isActive = !item.IsActive });
+            _success = item.IsActive ? "Producto desactivado." : "Producto activado.";
+            await Load();
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
     }
 
     private void NewVariant()
@@ -462,21 +495,41 @@
 
     private async Task SaveVariant()
     {
-        if (_variantForm.Id == 0)
-            await Api.PostAsync($"api/commerce/products/{_form.Id}/variants", new { ProductId = _form.Id, _variantForm.Name, _variantForm.InternalCode, _variantForm.Barcode, _variantForm.AttributesSummary, _variantForm.Cost, _variantForm.SalePrice, _variantForm.IsActive });
-        else
-            await Api.PutAsync($"api/commerce/product-variants/{_variantForm.Id}", new { _variantForm.Id, ProductId = _form.Id, _variantForm.Name, _variantForm.InternalCode, _variantForm.Barcode, _variantForm.AttributesSummary, _variantForm.Cost, _variantForm.SalePrice, _variantForm.IsActive });
+        _error = null;
+        _success = null;
+        try
+        {
+            if (_variantForm.Id == 0)
+                await Api.PostAsync($"api/commerce/products/{_form.Id}/variants", new { ProductId = _form.Id, _variantForm.Name, _variantForm.InternalCode, _variantForm.Barcode, _variantForm.AttributesSummary, _variantForm.Cost, _variantForm.SalePrice, _variantForm.IsActive });
+            else
+                await Api.PutAsync($"api/commerce/product-variants/{_variantForm.Id}", new { _variantForm.Id, ProductId = _form.Id, _variantForm.Name, _variantForm.InternalCode, _variantForm.Barcode, _variantForm.AttributesSummary, _variantForm.Cost, _variantForm.SalePrice, _variantForm.IsActive });
 
-        _variants = (await Api.GetAsync<AppResult<List<ProductVariantListItemDto>>>($"api/commerce/products/{_form.Id}/variants"))?.Data ?? new();
-        _showVariantForm = false;
-        await Load();
+            _variants = (await Api.GetAsync<AppResult<List<ProductVariantListItemDto>>>($"api/commerce/products/{_form.Id}/variants"))?.Data ?? new();
+            _showVariantForm = false;
+            _success = "Variante guardada correctamente.";
+            await Load();
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
     }
 
     private async Task ToggleVariant(ProductVariantListItemDto item)
     {
-        await Api.PostAsync($"api/commerce/product-variants/{item.Id}/status", new { isActive = !item.IsActive });
-        _variants = (await Api.GetAsync<AppResult<List<ProductVariantListItemDto>>>($"api/commerce/products/{_form.Id}/variants"))?.Data ?? new();
-        await Load();
+        _error = null;
+        _success = null;
+        try
+        {
+            await Api.PostAsync($"api/commerce/product-variants/{item.Id}/status", new { isActive = !item.IsActive });
+            _variants = (await Api.GetAsync<AppResult<List<ProductVariantListItemDto>>>($"api/commerce/products/{_form.Id}/variants"))?.Data ?? new();
+            _success = item.IsActive ? "Variante desactivada." : "Variante activada.";
+            await Load();
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
     }
 
     private string UnitLabel(UnitOfMeasure unit) => unit switch

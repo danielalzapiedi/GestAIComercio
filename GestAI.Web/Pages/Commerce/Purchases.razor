@@ -93,6 +93,7 @@
             }
             else
             {
+                <FormFeedback Error="@_error" Success="@_success" />
                 <div class="ui-form-section">
                     <div class="ui-form-section-title">Cabecera</div>
                     <div class="row g-3">
@@ -129,7 +130,7 @@
                 </div>
 
                 <div class="ui-action-bar">
-                    <div class="ui-inline-actions"><button class="btn btn-primary" type="button" @onclick="Save">Guardar compra</button><button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Cancelar</button></div>
+                    <div class="ui-inline-actions"><button class="btn btn-primary" type="button" @onclick="Save" disabled="@_saving">Guardar compra</button><button class="btn btn-outline-secondary" type="button" @onclick="Cancel" disabled="@_saving">Cancelar</button></div>
                     <div class="text-muted">Total estimado <strong>@FormTotal.ToString("C")</strong></div>
                 </div>
             }
@@ -147,8 +148,11 @@
     private int _supplierId;
     private bool _loaded;
     private bool _showForm;
+    private bool _saving;
     private int _page = 1;
     private const int PageSize = 10;
+    private string? _error;
+    private string? _success;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
     private decimal VisibleTotal => _result?.Items.Sum(x => x.Total) ?? 0m;
@@ -184,6 +188,8 @@
 
     private void NewItem()
     {
+        _error = null;
+        _success = null;
         _editingNumber = string.Empty;
         _form = new PurchaseUpsertCommand { Status = PurchaseDocumentStatus.Draft, IssuedAtUtc = DateTime.UtcNow };
         _form.Items.Add(new PurchaseLineFormModel());
@@ -192,6 +198,8 @@
 
     private async Task Edit(int id)
     {
+        _error = null;
+        _success = null;
         var detail = (await Api.GetAsync<AppResult<PurchaseDetailDto>>($"api/commerce/purchases/{id}"))?.Data;
         if (detail is null || !detail.CanEdit)
         {
@@ -250,23 +258,38 @@
 
     private async Task Save()
     {
-        var body = new
+        _error = null;
+        _success = null;
+        _saving = true;
+        try
         {
-            _form.Id,
-            _form.SupplierId,
-            _form.DocumentType,
-            _form.Status,
-            _form.IssuedAtUtc,
-            _form.SupplierDocumentNumber,
-            _form.Observations,
-            items = _form.Items.Select((x, i) => new { x.ProductId, x.ProductVariantId, Description = x.Description, Quantity = x.QuantityOrdered, x.UnitCost, SortOrder = i + 1 }).ToList()
-        };
+            var body = new
+            {
+                _form.Id,
+                _form.SupplierId,
+                _form.DocumentType,
+                _form.Status,
+                _form.IssuedAtUtc,
+                _form.SupplierDocumentNumber,
+                _form.Observations,
+                items = _form.Items.Select((x, i) => new { x.ProductId, x.ProductVariantId, Description = x.Description, Quantity = x.QuantityOrdered, x.UnitCost, SortOrder = i + 1 }).ToList()
+            };
 
-        if (_form.Id == 0) await Api.PostAsync("api/commerce/purchases", body);
-        else await Api.PutAsync($"api/commerce/purchases/{_form.Id}", body);
+            if (_form.Id == 0) await Api.PostAsync("api/commerce/purchases", body);
+            else await Api.PutAsync($"api/commerce/purchases/{_form.Id}", body);
 
-        _showForm = false;
-        await Load();
+            _showForm = false;
+            _success = "Compra guardada correctamente.";
+            await Load();
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 
     private void Cancel() => _showForm = false;

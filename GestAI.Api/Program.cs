@@ -23,8 +23,34 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("all", p => p
-        .AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
+    opt.AddPolicy("all", p =>
+    {
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        var normalizedOrigins = allowedOrigins
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim().TrimEnd('/'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        p.AllowAnyHeader().AllowAnyMethod();
+
+        if (builder.Environment.IsDevelopment())
+        {
+            if (normalizedOrigins.Length == 0)
+            {
+                p.AllowAnyOrigin();
+                return;
+            }
+
+            p.WithOrigins(normalizedOrigins);
+            return;
+        }
+
+        if (normalizedOrigins.Length == 0)
+            throw new InvalidOperationException("Configurá Cors:AllowedOrigins para ambientes no Development.");
+
+        p.WithOrigins(normalizedOrigins);
+    });
 });
 
 builder.Services.AddInfrastructure(builder.Configuration);
