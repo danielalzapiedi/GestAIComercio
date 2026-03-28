@@ -1,5 +1,6 @@
 using FluentValidation;
 using GestAI.Application.Abstractions;
+using GestAI.Application.Common;
 using GestAI.Domain.Entities.Commerce;
 using MediatR;
 using Microsoft.EntityFrameworkCore;

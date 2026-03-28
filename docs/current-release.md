@@ -10,17 +10,17 @@
 - Se resolvieron ítems 🔥 Críticos, ⚡ Quick Wins, 🧠 Producto, 🧱 Técnica, 🎯 UX y 🚀 Performance.
 
 ## Tarea aplicada en este ciclo
-- **Tarea:** Resolver ítems 🚀 Performance del backlog (budgets ampliados + optimización de payload).
+- **Tarea:** Corrección de regresiones de compilación post-refactor en Commerce/Web/Tests (usings faltantes + ajuste de estado de factura en smoke test).
 - **¿Pertenece al modo actual?** Sí. Prioridad alta dentro del diagnóstico continuo.
 
 ## Entregables generados
-- Ampliación de budgets automatizados de p95/payload en pruebas de integración para `categories`, `sales`, `quotes` y `purchases`.
-- Optimización de transferencia en API vía `ResponseCompression` habilitada para JSON sobre HTTPS.
-- Backlog actualizado con ítems Críticos/Quick Wins/Producto/Técnica/UX/Performance marcados como resueltos.
+- `UnsavedChangesGuardService` corrige referencia a `IJSRuntime` con `using` explícito.
+- `CommercePartyFeatures` incorpora `using GestAI.Application.Common` para resolver `AppResult` y `PagedResult` en handlers MediatR.
+- `CommerceIntegrationTests` ajusta import de `AppResult`, uso de `quoteResult.Data` nullable y estado esperado de factura (`PendingAuthorization`).
 
 ## Validación y QA
 - Se intentó ejecutar build/test, pero el entorno local no dispone de .NET SDK (`dotnet: command not found`).
 - Se deja pendiente validación completa en pipeline CI con `dotnet build` + `dotnet test`.
 
 ## Próximo paso recomendado
-- Ejecutar pipeline CI para evidencia final de cierre del backlog evolutivo actual.
+- Ejecutar pipeline CI para validar build y test suite completa; si aparece nueva regresión, corregir y re-ejecutar hasta verde.

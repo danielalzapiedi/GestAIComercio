@@ -1,3 +1,5 @@
+using Microsoft.JSInterop;
+
 namespace GestAI.Web.Service;
 
 public sealed class UnsavedChangesGuardService

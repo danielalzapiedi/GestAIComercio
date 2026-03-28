@@ -1,4 +1,5 @@
 using GestAI.Application.Abstractions;
+using GestAI.Application.Common;
 using GestAI.Application.Commerce;
 using GestAI.Application.Saas;
 using GestAI.Domain.Entities;
@@ -103,7 +104,7 @@ public sealed class CommerceIntegrationTests
 
         var convert = new ConvertQuoteToSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
         Assert.NotNull(quoteResult.Data);
-        var quoteId = quoteResult.Data!;
+        var quoteId = quoteResult.Data!.Value;
 
         var result = await convert.Handle(new ConvertQuoteToSaleCommand(quoteId, SaleStatus.Confirmed, DateTime.UtcNow, null), CancellationToken.None);
 
@@ -168,7 +169,7 @@ public sealed class CommerceIntegrationTests
         Assert.NotNull(invoiceResult.Data);
 
         var invoice = await db.CommercialInvoices.SingleAsync(x => x.Id == invoiceResult.Data);
-        Assert.Equal(InvoiceStatus.PendingSubmission, invoice.Status);
+        Assert.Equal(InvoiceStatus.PendingAuthorization, invoice.Status);
     }
 
     [Fact]
