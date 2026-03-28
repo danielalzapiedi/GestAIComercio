@@ -10,16 +10,15 @@
 - Se resolvieron ítems 🔥 Críticos, ⚡ Quick Wins, 🧠 Producto, 🧱 Técnica, 🎯 UX y 🚀 Performance.
 
 ## Tarea aplicada en este ciclo
-- **Tarea:** Corrección de regresiones de compilación y estabilización de tests (paging bounds + smoke fiscal en factura).
+- **Tarea:** Corrección de excepción de validación al ingresar al dashboard por `PageSize` fuera de rango en llamadas de ventas/presupuestos.
 - **¿Pertenece al modo actual?** Sí. Prioridad alta dentro del diagnóstico continuo.
 
 ## Entregables generados
-- `UnsavedChangesGuardService` corrige referencia a `IJSRuntime` con `using` explícito.
-- `CommercePartyFeatures` incorpora `using GestAI.Application.Common` y `using GestAI.Domain.Enums` para resolver `AppResult`/`PagedResult` y `SaasModule` en handlers MediatR.
-- `CommerceIntegrationTests` ajusta import de `AppResult`, compatibilidad de `quoteResult.Data` para ambos contextos de nullability (`int`/`int?`), setup fiscal para el smoke de facturación y estado esperado de la factura recién creada (`Draft`).
-- `SaasCoreTests` alinea el test de validator de productos al límite actual de `PageSize` (50).
+- `Dashboard.razor` reduce `pageSize` de `100` a `50` para las cargas de ventas y presupuestos desde `api/commerce/sales` y `api/commerce/quotes`, quedando alineado con el máximo validado por FluentValidation.
+- Se elimina la causa del `ValidationException` que impedía la carga del dashboard cuando el usuario tenía módulo de ventas/presupuestos habilitado.
 
 ## Validación y QA
+- Se validó por inspección de código la coherencia entre frontend (`pageSize=50`) y límites de backend (`PageSize` entre 1 y 50).
 - Se intentó ejecutar build/test, pero el entorno local no dispone de .NET SDK (`dotnet: command not found`).
 - Se deja pendiente validación completa en pipeline CI con `dotnet build` + `dotnet test`.
 
