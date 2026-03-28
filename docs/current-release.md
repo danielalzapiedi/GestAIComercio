@@ -10,11 +10,10 @@
 - Se resolvieron ítems 🔥 Críticos, ⚡ Quick Wins, 🧠 Producto, 🧱 Técnica, 🎯 UX y 🚀 Performance.
 
 ## Tarea aplicada en este ciclo
-- **Tarea:** Estabilización de acceso local en Development (credenciales seed explícitas) + correcciones de compilación/tests.
+- **Tarea:** Corrección de regresiones de compilación y estabilización de tests (paging bounds + smoke fiscal en factura).
 - **¿Pertenece al modo actual?** Sí. Prioridad alta dentro del diagnóstico continuo.
 
 ## Entregables generados
-- Se agrega `GestAI.Api/appsettings.Development.json` con `Seed:AdminPassword`, `Seed:DemoOwnerPassword`, `Seed:LogGeneratedPasswords` y `Cors:AllowedOrigins` para facilitar login local consistente.
 - `UnsavedChangesGuardService` corrige referencia a `IJSRuntime` con `using` explícito.
 - `CommercePartyFeatures` incorpora `using GestAI.Application.Common` y `using GestAI.Domain.Enums` para resolver `AppResult`/`PagedResult` y `SaasModule` en handlers MediatR.
 - `CommerceIntegrationTests` ajusta import de `AppResult`, compatibilidad de `quoteResult.Data` para ambos contextos de nullability (`int`/`int?`), setup fiscal para el smoke de facturación y estado esperado de la factura recién creada (`Draft`).
