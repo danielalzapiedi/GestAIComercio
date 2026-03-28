@@ -134,7 +134,15 @@ else
         }
         else
         {
-            _lines.Add(new QuickLine { ProductId = sku.ProductId, ProductVariantId = sku.ProductVariantId, Label = sku.Label, InternalCode = sku.InternalCode, Quantity = 1, UnitPrice = sku.SalePrice });
+            _lines.Add(new QuickLine
+            {
+                ProductId = sku.ProductId,
+                ProductVariantId = sku.ProductVariantId,
+                Label = sku.Label,
+                InternalCode = sku.InternalCode,
+                Quantity = 1,
+                UnitPrice = PricingPolicy.ResolvePrice(PricingPolicy.QuickSaleMode, sku.SalePrice)
+            });
         }
         _search = string.Empty;
     }

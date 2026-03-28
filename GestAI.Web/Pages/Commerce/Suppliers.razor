@@ -3,9 +3,11 @@
 @page "/suppliers/edit/{EditId:int}"
 @using Microsoft.AspNetCore.Components.Routing
 @using GestAI.Web.Dtos
+@using GestAI.Web.Service
 @inject ApiClient Api
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject ProductTelemetryService Telemetry
 
 <PageTitle>Proveedores</PageTitle>
 
@@ -76,8 +78,9 @@ else
         <div class="row g-2 align-items-end">
             <div class="col-md-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre, CUIT, teléfono" /></div>
             <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
-            <div class="col-md-2"><button class="btn btn-outline-primary" @onclick="Search">Buscar</button></div>
-            <div class="col-md-3 text-md-end ui-table-meta">Red de abastecimiento</div>
+            <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="Search">Buscar</button></div>
+            <div class="col-md-1"><button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">Limpiar</button></div>
+            <div class="col-md-2 text-md-end ui-table-meta">Red de abastecimiento</div>
         </div>
     </div></div>
 
@@ -154,7 +157,21 @@ else
         _loaded = true;
     }
 
-    private async Task Search() { _page = 1; await Load(); }
+    private async Task Search()
+    {
+        _page = 1;
+        await Load();
+        Telemetry.Track("suppliers", "search", "success");
+    }
+
+    private async Task ClearFilters()
+    {
+        _search = string.Empty;
+        _status = string.Empty;
+        _page = 1;
+        await Load();
+        Telemetry.Track("suppliers", "clear-filters", "success");
+    }
 
     private async Task Load()
     {
@@ -163,10 +180,12 @@ else
             _error = null;
             var active = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&isActive={_status}";
             _result = (await Api.GetAsync<AppResult<PagedResult<SupplierListItemDto>>>($"api/commerce/suppliers?search={Uri.EscapeDataString(_search ?? string.Empty)}{active}&page={_page}&pageSize={PageSize}"))?.Data;
+            Telemetry.Track("suppliers", "load", "success");
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("suppliers", "load", "error", ex.Message);
             _result = new PagedResult<SupplierListItemDto>(new List<SupplierListItemDto>(), 0, _page, PageSize);
         }
     }
@@ -226,11 +245,13 @@ else
 
             _isDirty = false;
             _success = _form.Id == 0 ? "Proveedor creado correctamente." : "Proveedor actualizado correctamente.";
+            Telemetry.Track("suppliers", "save", "success", _form.Id == 0 ? "create" : "update");
             BackToList();
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("suppliers", "save", "error", ex.Message);
         }
         finally
         {
@@ -247,10 +268,12 @@ else
             await Api.PostAsync($"api/commerce/suppliers/{item.Id}/status", new { isActive = !item.IsActive });
             _success = item.IsActive ? "Proveedor desactivado." : "Proveedor activado.";
             await Load();
+            Telemetry.Track("suppliers", "toggle", "success", $"id={item.Id}");
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("suppliers", "toggle", "error", ex.Message);
         }
     }
 

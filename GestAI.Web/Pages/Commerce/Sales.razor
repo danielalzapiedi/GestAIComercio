@@ -340,7 +340,15 @@
     private void AddBlankLine() => _form.Items.Add(new CommercialLineFormModel { Quantity = 1 });
     private void AddSku(CommercialSkuLookupDto sku)
     {
-        _form.Items.Add(new CommercialLineFormModel { ProductId = sku.ProductId, ProductVariantId = sku.ProductVariantId, Description = sku.Label, InternalCode = sku.InternalCode, Quantity = 1, UnitPrice = sku.SalePrice });
+        _form.Items.Add(new CommercialLineFormModel
+        {
+            ProductId = sku.ProductId,
+            ProductVariantId = sku.ProductVariantId,
+            Description = sku.Label,
+            InternalCode = sku.InternalCode,
+            Quantity = 1,
+            UnitPrice = PricingPolicy.ResolvePrice(PricingPolicy.StandardSaleMode, sku.SalePrice)
+        });
         _quickSearch = string.Empty;
     }
     private void RemoveLine(int index) { if (index >= 0 && index < _form.Items.Count) _form.Items.RemoveAt(index); }

@@ -1,8 +1,10 @@
 @page "/warehouses"
 @using Microsoft.AspNetCore.Components.Routing
 @using GestAI.Web.Dtos
+@using GestAI.Web.Service
 @inject ApiClient Api
 @inject IJSRuntime JS
+@inject ProductTelemetryService Telemetry
 
 <PageTitle>Depósitos</PageTitle>
 
@@ -29,8 +31,9 @@
         <div class="col-md-3"><label class="form-label">Sucursal</label><select class="form-select" @bind="_selectedBranchId"><option value="0">Todas</option>@foreach (var branch in _branches){<option value="@branch.Id">@branch.Name</option>}</select></div>
         <div class="col-md-3"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre" /></div>
         <div class="col-md-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
-        <div class="col-md-2"><button class="btn btn-outline-primary" @onclick="Search">Buscar</button></div>
-        <div class="col-md-2 text-md-end ui-table-meta">Operación logística</div>
+        <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="Search">Buscar</button></div>
+        <div class="col-md-1"><button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">Limpiar</button></div>
+        <div class="col-md-1 text-md-end ui-table-meta">Operación logística</div>
     </div>
 </div></div>
 
@@ -163,15 +166,32 @@ else
             _error = null;
             _success = null;
             _branches = (await Api.GetAsync<AppResult<PagedResult<BranchListItemDto>>>("api/commerce/branches?pageSize=100"))?.Data?.Items.Select(x => new LookupDto(x.Id, x.Name)).ToList() ?? new();
+            Telemetry.Track("warehouses", "load-branches", "success");
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("warehouses", "load-branches", "error", ex.Message);
             _branches = new();
         }
     }
 
-    private async Task Search() { _page = 1; await Load(); }
+    private async Task Search()
+    {
+        _page = 1;
+        await Load();
+        Telemetry.Track("warehouses", "search", "success");
+    }
+
+    private async Task ClearFilters()
+    {
+        _selectedBranchId = 0;
+        _search = string.Empty;
+        _status = string.Empty;
+        _page = 1;
+        await Load();
+        Telemetry.Track("warehouses", "clear-filters", "success");
+    }
 
     private async Task Load()
     {
@@ -183,10 +203,12 @@ else
             var active = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&isActive={_status}";
             _result = (await Api.GetAsync<AppResult<PagedResult<WarehouseListItemDto>>>($"api/commerce/warehouses?{branch}search={Uri.EscapeDataString(_search ?? string.Empty)}{active}&page={_page}&pageSize={PageSize}"))?.Data;
             _result ??= new PagedResult<WarehouseListItemDto>(new List<WarehouseListItemDto>(), 0, _page, PageSize);
+            Telemetry.Track("warehouses", "load", "success");
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("warehouses", "load", "error", ex.Message);
             _result = new PagedResult<WarehouseListItemDto>(new List<WarehouseListItemDto>(), 0, _page, PageSize);
         }
         _loaded = true;
@@ -234,10 +256,12 @@ else
             _isDirty = false;
             _success = _form.Id == 0 ? "Depósito creado correctamente." : "Depósito actualizado correctamente.";
             await Load();
+            Telemetry.Track("warehouses", "save", "success", _form.Id == 0 ? "create" : "update");
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("warehouses", "save", "error", ex.Message);
         }
         finally
         {
@@ -254,10 +278,12 @@ else
             await Api.PostAsync($"api/commerce/warehouses/{item.Id}/status", new { isActive = !item.IsActive });
             _success = item.IsActive ? "Depósito desactivado." : "Depósito activado.";
             await Load();
+            Telemetry.Track("warehouses", "toggle", "success", $"id={item.Id}");
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("warehouses", "toggle", "error", ex.Message);
         }
     }
 

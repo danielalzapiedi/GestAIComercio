@@ -3,9 +3,11 @@
 @page "/branches/edit/{EditId:int}"
 @using Microsoft.AspNetCore.Components.Routing
 @using GestAI.Web.Dtos
+@using GestAI.Web.Service
 @inject ApiClient Api
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject ProductTelemetryService Telemetry
 
 <PageTitle>Sucursales</PageTitle>
 
@@ -75,8 +77,9 @@ else
         <div class="row g-2 align-items-end">
             <div class="col-md-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre o código" /></div>
             <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
-            <div class="col-md-2"><button class="btn btn-outline-primary" @onclick="Search">Buscar</button></div>
-            <div class="col-md-3 text-md-end ui-table-meta">Gestión de estructura comercial</div>
+            <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="Search">Buscar</button></div>
+            <div class="col-md-1"><button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">Limpiar</button></div>
+            <div class="col-md-2 text-md-end ui-table-meta">Gestión de estructura comercial</div>
         </div>
     </div></div>
 
@@ -153,7 +156,21 @@ else
         _loaded = true;
     }
 
-    private async Task Search() { _page = 1; await Load(); }
+    private async Task Search()
+    {
+        _page = 1;
+        await Load();
+        Telemetry.Track("branches", "search", "success");
+    }
+
+    private async Task ClearFilters()
+    {
+        _search = string.Empty;
+        _status = string.Empty;
+        _page = 1;
+        await Load();
+        Telemetry.Track("branches", "clear-filters", "success");
+    }
 
     private async Task Load()
     {
@@ -162,10 +179,12 @@ else
             _error = null;
             var isActive = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&isActive={_status}";
             _result = (await Api.GetAsync<AppResult<PagedResult<BranchListItemDto>>>($"api/commerce/branches?search={Uri.EscapeDataString(_search ?? string.Empty)}{isActive}&page={_page}&pageSize={PageSize}"))?.Data;
+            Telemetry.Track("branches", "load", "success");
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("branches", "load", "error", ex.Message);
             _result = new PagedResult<BranchListItemDto>(new List<BranchListItemDto>(), 0, _page, PageSize);
         }
     }
@@ -225,11 +244,13 @@ else
 
             _isDirty = false;
             _success = _form.Id == 0 ? "Sucursal creada correctamente." : "Sucursal actualizada correctamente.";
+            Telemetry.Track("branches", "save", "success", _form.Id == 0 ? "create" : "update");
             BackToList();
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("branches", "save", "error", ex.Message);
         }
         finally
         {
@@ -246,10 +267,12 @@ else
             await Api.PostAsync($"api/commerce/branches/{item.Id}/status", new { isActive = !item.IsActive });
             _success = item.IsActive ? "Sucursal desactivada." : "Sucursal activada.";
             await Load();
+            Telemetry.Track("branches", "toggle", "success", $"id={item.Id}");
         }
         catch (ApiClient.ApiClientException ex)
         {
             _error = ex.Message;
+            Telemetry.Track("branches", "toggle", "error", ex.Message);
         }
     }
 

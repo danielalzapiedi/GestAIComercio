@@ -4,9 +4,7 @@
 - Sin ítems críticos pendientes.
 
 ## 🧠 Producto
-- Formalizar la política única de pricing para venta rápida y venta completa (precio catálogo vs override permitido).
-- Estandarizar comportamiento de filtros y búsqueda en todos los listados para reducir fricción operativa.
-- Incorporar observabilidad funcional (eventos de error por formulario, abandono y tiempos de finalización por flujo).
+- Sin ítems de producto pendientes.
 
 ## 🧱 Técnica
 - Refactorizar `CommerceFeatures` en submódulos por bounded context para bajar complejidad y facilitar mantenimiento.
@@ -26,3 +24,6 @@
 - Definir baseline inicial de performance (objetivos p95/payload y estrategia de medición).
 - Homogeneizar mensajes de error/éxito en pantallas maestras pendientes (`branches`, `warehouses`, `customers`, `suppliers`) con `FormFeedback`.
 - Ajustar límite máximo de paginación en backend para endpoints de alto tráfico (cap global de `PageSize` a 50).
+- Formalizar política única de pricing entre venta rápida y venta estándar con regla explícita de catálogo vs override.
+- Estandarizar comportamiento de filtros/búsqueda en listados maestros con acciones consistentes de buscar/limpiar.
+- Incorporar observabilidad funcional mínima en módulos maestros (load/search/save/toggle) con telemetría de resultado.
