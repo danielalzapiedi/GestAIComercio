@@ -1,7 +1,11 @@
 @page "/products"
 @using GestAI.Web.Dtos
+@using GestAI.Web.Service
 @using System.Text.Json
 @inject ApiClient Api
+@inject GestAI.Web.Service.CommerceFormValidator FormValidator
+@inject ProductTelemetryService Telemetry
+@inject UnsavedChangesGuardService Guard
 @inject IJSRuntime JS
 
 <PageTitle>Productos</PageTitle>
@@ -193,6 +197,7 @@
                 else
                 {
                     <FormFeedback Error="@_error" Success="@_success" />
+                    <OperationalStateHint IsLoading="@(!_loaded)" HasError="@(!string.IsNullOrWhiteSpace(_error))" IsSaving="@_saving" IsDirty="@(IsDirty)" />
                     <div class="ui-form-section">
                         <div class="ui-form-section-title">Identidad comercial</div>
                         <div class="row g-3">
@@ -431,6 +436,7 @@
         if (validation.Count > 0)
         {
             _error = string.Join(" ", validation);
+            Telemetry.Track("products", "validate", "error", string.Join(" | ", validation));
             return;
         }
         _saving = true;
@@ -595,15 +601,7 @@
     private async Task NextPage() { if (_page < TotalPages) { _page++; await Load(); } }
 
     private List<string> ValidateEditor()
-    {
-        var issues = new List<string>();
-        if (string.IsNullOrWhiteSpace(_form.Name)) issues.Add("Ingresá el nombre del producto.");
-        if (_form.CategoryId <= 0) issues.Add("Seleccioná una categoría.");
-        if (_form.SalePrice < 0) issues.Add("El precio de venta no puede ser negativo.");
-        if (_form.Cost < 0) issues.Add("El costo no puede ser negativo.");
-        if (_form.MinimumStock < 0) issues.Add("El stock mínimo no puede ser negativo.");
-        return issues;
-    }
+        => FormValidator.ValidateProduct(_form.Name, _form.CategoryId, _form.SalePrice, _form.Cost, _form.MinimumStock);
 
     private string BuildSnapshot()
         => JsonSerializer.Serialize(new
@@ -644,8 +642,5 @@
     private void MarkClean() => _formSnapshot = BuildSnapshot();
 
     private async Task<bool> ConfirmDiscardIfDirtyAsync()
-    {
-        if (!IsDirty) return true;
-        return await JS.InvokeAsync<bool>("confirm", "Tenés cambios sin guardar. ¿Querés descartarlos?");
-    }
+        => await Guard.ConfirmDiscardAsync(JS, IsDirty, _saving);
 }

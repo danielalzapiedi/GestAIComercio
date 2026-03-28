@@ -1,4 +1,5 @@
 using GestAI.Application.Abstractions;
+using GestAI.Application.Common;
 using GestAI.Application.Commerce;
 using GestAI.Application.Saas;
 using GestAI.Domain.Entities;
@@ -114,6 +115,76 @@ public sealed class CommerceIntegrationTests
         Assert.Equal(quote.Id, sale.SourceQuoteId);
         Assert.Equal(90, sale.Total);
         Assert.Single(sale.Items);
+    }
+
+
+    [Fact]
+    public async Task Smoke_CriticalCommerceFlow_QuoteToSaleToInvoice_WorksEndToEnd()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-smoke@test");
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Smoke", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        var category = new ProductCategory { AccountId = fixture.Account.Id, Name = "General", IsActive = true };
+        db.Customers.Add(customer);
+        db.ProductCategories.Add(category);
+        await db.SaveChangesAsync();
+
+        var product = new Product
+        {
+            AccountId = fixture.Account.Id,
+            Name = "Producto Smoke",
+            InternalCode = "SMK-1",
+            Description = "Producto",
+            CategoryId = category.Id,
+            Brand = "Marca",
+            UnitOfMeasure = UnitOfMeasure.Unit,
+            Cost = 10,
+            SalePrice = 45,
+            MinimumStock = 0,
+            IsActive = true
+        };
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+
+        var createQuote = new CreateQuoteCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var quoteResult = await createQuote.Handle(new CreateQuoteCommand(customer.Id, QuoteStatus.Approved, DateTime.UtcNow, DateTime.UtcNow.AddDays(3), "Smoke", new[]
+        {
+            new CommercialLineInput(product.Id, null, null, 2, 45, 1)
+        }), CancellationToken.None);
+
+        Assert.True(quoteResult.Success);
+        Assert.NotNull(quoteResult.Data);
+
+        var convert = new ConvertQuoteToSaleCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var saleResult = await convert.Handle(new ConvertQuoteToSaleCommand(quoteResult.Data!, SaleStatus.Confirmed, DateTime.UtcNow, "Smoke convert"), CancellationToken.None);
+
+        Assert.True(saleResult.Success);
+        Assert.NotNull(saleResult.Data);
+
+        db.FiscalConfigurations.Add(new FiscalConfiguration
+        {
+            AccountId = fixture.Account.Id,
+            LegalName = "Smoke SA",
+            TaxIdentifier = "30712345678",
+            PointOfSale = 1,
+            DefaultInvoiceType = InvoiceType.InvoiceB,
+            IntegrationMode = FiscalIntegrationMode.Mock,
+            UseSandbox = true,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedByUserId = fixture.CurrentUser.UserId
+        });
+        await db.SaveChangesAsync();
+
+        var createInvoice = new CreateInvoiceCommandHandler(db, fixture.Access, fixture.CurrentUser, new TestAuditService());
+        var invoiceResult = await createInvoice.Handle(new CreateInvoiceCommand(saleResult.Data!, null, InvoiceType.InvoiceB, DateTime.UtcNow, 0.21m), CancellationToken.None);
+
+        Assert.True(invoiceResult.Success);
+        Assert.NotNull(invoiceResult.Data);
+
+        var invoice = await db.CommercialInvoices.SingleAsync(x => x.Id == invoiceResult.Data);
+        Assert.Equal(InvoiceStatus.Draft, invoice.Status);
     }
 
     [Fact]
@@ -1371,6 +1442,200 @@ public sealed class CommerceIntegrationTests
 
         Assert.True(p95 <= 500, $"p95 fuera de presupuesto: {p95}ms");
         Assert.True(payloadBytes <= 200_000, $"payload fuera de presupuesto: {payloadBytes} bytes");
+    }
+
+    [Fact]
+    public async Task GetCategoriesQuery_StaysWithinPerformanceBudget()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-perf-categories@test");
+
+        var categories = Enumerable.Range(1, 120)
+            .Select(i => new ProductCategory
+            {
+                AccountId = fixture.Account.Id,
+                Name = $"Categoría {i:D3}",
+                IsActive = i % 5 != 0
+            })
+            .ToList();
+        db.ProductCategories.AddRange(categories);
+        await db.SaveChangesAsync();
+
+        var handler = new GetCategoriesQueryHandler(db, fixture.Access);
+        var samples = new List<long>();
+        AppResult<PagedResult<CategoryListItemDto>>? result = null;
+
+        for (var i = 0; i < 15; i++)
+        {
+            var sw = Stopwatch.StartNew();
+            result = await handler.Handle(new GetCategoriesQuery(Page: 1, PageSize: 20), CancellationToken.None);
+            sw.Stop();
+            samples.Add(sw.ElapsedMilliseconds);
+        }
+
+        Assert.NotNull(result);
+        Assert.True(result!.Success);
+        Assert.NotNull(result.Data);
+
+        var ordered = samples.OrderBy(x => x).ToArray();
+        var p95 = ordered[(int)Math.Ceiling(ordered.Length * 0.95) - 1];
+        var payloadBytes = JsonSerializer.SerializeToUtf8Bytes(result.Data).Length;
+
+        Assert.True(p95 <= 500, $"p95 fuera de presupuesto categories: {p95}ms");
+        Assert.True(payloadBytes <= 200_000, $"payload fuera de presupuesto categories: {payloadBytes} bytes");
+    }
+
+    [Fact]
+    public async Task GetSalesQuery_StaysWithinPerformanceBudget()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-perf-sales@test");
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Perf", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        db.Customers.Add(customer);
+        await db.SaveChangesAsync();
+
+        var sales = Enumerable.Range(1, 90)
+            .Select(i => new Sale
+            {
+                AccountId = fixture.Account.Id,
+                Number = $"V-{i:D6}",
+                Status = i % 3 == 0 ? SaleStatus.Confirmed : SaleStatus.Draft,
+                CustomerId = customer.Id,
+                IssuedAtUtc = DateTime.UtcNow.AddDays(-i),
+                Subtotal = 100 + i,
+                Total = 100 + i,
+                CreatedByUserId = fixture.CurrentUser.UserId
+            })
+            .ToList();
+        db.Sales.AddRange(sales);
+        await db.SaveChangesAsync();
+
+        var handler = new GetSalesQueryHandler(db, fixture.Access);
+        var samples = new List<long>();
+        AppResult<PagedResult<SaleListItemDto>>? result = null;
+
+        for (var i = 0; i < 15; i++)
+        {
+            var sw = Stopwatch.StartNew();
+            result = await handler.Handle(new GetSalesQuery(Page: 1, PageSize: 20), CancellationToken.None);
+            sw.Stop();
+            samples.Add(sw.ElapsedMilliseconds);
+        }
+
+        Assert.NotNull(result);
+        Assert.True(result!.Success);
+        Assert.NotNull(result.Data);
+
+        var ordered = samples.OrderBy(x => x).ToArray();
+        var p95 = ordered[(int)Math.Ceiling(ordered.Length * 0.95) - 1];
+        var payloadBytes = JsonSerializer.SerializeToUtf8Bytes(result.Data).Length;
+
+        Assert.True(p95 <= 500, $"p95 fuera de presupuesto sales: {p95}ms");
+        Assert.True(payloadBytes <= 200_000, $"payload fuera de presupuesto sales: {payloadBytes} bytes");
+    }
+
+    [Fact]
+    public async Task GetQuotesQuery_StaysWithinPerformanceBudget()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-perf-quotes@test");
+
+        var customer = new Customer { AccountId = fixture.Account.Id, Name = "Cliente Perf", Phone = "123", Address = "Dir", City = "Ciudad", CustomerType = CustomerType.Mixed, IsActive = true };
+        db.Customers.Add(customer);
+        await db.SaveChangesAsync();
+
+        var quotes = Enumerable.Range(1, 90)
+            .Select(i => new Quote
+            {
+                AccountId = fixture.Account.Id,
+                Number = $"P-{i:D6}",
+                Status = i % 4 == 0 ? QuoteStatus.Approved : QuoteStatus.Draft,
+                CustomerId = customer.Id,
+                IssuedAtUtc = DateTime.UtcNow.AddDays(-i),
+                ValidUntilUtc = DateTime.UtcNow.AddDays(30 - i),
+                Subtotal = 120 + i,
+                Total = 120 + i,
+                CreatedByUserId = fixture.CurrentUser.UserId
+            })
+            .ToList();
+        db.Quotes.AddRange(quotes);
+        await db.SaveChangesAsync();
+
+        var handler = new GetQuotesQueryHandler(db, fixture.Access);
+        var samples = new List<long>();
+        AppResult<PagedResult<QuoteListItemDto>>? result = null;
+
+        for (var i = 0; i < 15; i++)
+        {
+            var sw = Stopwatch.StartNew();
+            result = await handler.Handle(new GetQuotesQuery(Page: 1, PageSize: 20), CancellationToken.None);
+            sw.Stop();
+            samples.Add(sw.ElapsedMilliseconds);
+        }
+
+        Assert.NotNull(result);
+        Assert.True(result!.Success);
+        Assert.NotNull(result.Data);
+
+        var ordered = samples.OrderBy(x => x).ToArray();
+        var p95 = ordered[(int)Math.Ceiling(ordered.Length * 0.95) - 1];
+        var payloadBytes = JsonSerializer.SerializeToUtf8Bytes(result.Data).Length;
+
+        Assert.True(p95 <= 500, $"p95 fuera de presupuesto quotes: {p95}ms");
+        Assert.True(payloadBytes <= 200_000, $"payload fuera de presupuesto quotes: {payloadBytes} bytes");
+    }
+
+    [Fact]
+    public async Task GetPurchasesQuery_StaysWithinPerformanceBudget()
+    {
+        await using var db = CreateDbContext();
+        var fixture = await SeedCommerceAccountAsync(db, "owner-perf-purchases@test");
+
+        var supplier = new Supplier { AccountId = fixture.Account.Id, Name = "Proveedor Perf", TaxId = "20123456789", Phone = "123", IsActive = true };
+        db.Suppliers.Add(supplier);
+        await db.SaveChangesAsync();
+
+        var purchases = Enumerable.Range(1, 90)
+            .Select(i => new PurchaseDocument
+            {
+                AccountId = fixture.Account.Id,
+                Number = $"OC-{i:D6}",
+                DocumentType = PurchaseDocumentType.PurchaseDocument,
+                Status = i % 2 == 0 ? PurchaseDocumentStatus.Issued : PurchaseDocumentStatus.Draft,
+                SupplierId = supplier.Id,
+                IssuedAtUtc = DateTime.UtcNow.AddDays(-i),
+                SupplierDocumentNumber = $"F-{i:D6}",
+                Subtotal = 90 + i,
+                Total = 90 + i,
+                CreatedByUserId = fixture.CurrentUser.UserId
+            })
+            .ToList();
+        db.PurchaseDocuments.AddRange(purchases);
+        await db.SaveChangesAsync();
+
+        var handler = new GetPurchasesQueryHandler(db, fixture.Access);
+        var samples = new List<long>();
+        AppResult<PagedResult<PurchaseListItemDto>>? result = null;
+
+        for (var i = 0; i < 15; i++)
+        {
+            var sw = Stopwatch.StartNew();
+            result = await handler.Handle(new GetPurchasesQuery(Page: 1, PageSize: 20), CancellationToken.None);
+            sw.Stop();
+            samples.Add(sw.ElapsedMilliseconds);
+        }
+
+        Assert.NotNull(result);
+        Assert.True(result!.Success);
+        Assert.NotNull(result.Data);
+
+        var ordered = samples.OrderBy(x => x).ToArray();
+        var p95 = ordered[(int)Math.Ceiling(ordered.Length * 0.95) - 1];
+        var payloadBytes = JsonSerializer.SerializeToUtf8Bytes(result.Data).Length;
+
+        Assert.True(p95 <= 500, $"p95 fuera de presupuesto purchases: {p95}ms");
+        Assert.True(payloadBytes <= 200_000, $"payload fuera de presupuesto purchases: {payloadBytes} bytes");
     }
 
     private sealed record CommerceFixture(Account Account, TestCurrentUser CurrentUser, UserAccessService Access);

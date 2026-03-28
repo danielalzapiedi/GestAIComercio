@@ -3,8 +3,10 @@
 @using GestAI.Web.Service
 @using System.Text.Json
 @inject ApiClient Api
+@inject GestAI.Web.Service.CommerceFormValidator FormValidator
 @inject NavigationManager Navigation
 @inject ProductTelemetryService Telemetry
+@inject UnsavedChangesGuardService Guard
 @inject IJSRuntime JS
 
 <PageTitle>Compras</PageTitle>
@@ -100,6 +102,7 @@
             else
             {
                 <FormFeedback Error="@_error" Success="@_success" />
+                    <OperationalStateHint IsLoading="@(!_loaded)" HasError="@(!string.IsNullOrWhiteSpace(_error))" IsSaving="@_saving" IsDirty="@(IsDirty)" />
                 <div class="ui-form-section">
                     <div class="ui-form-section-title">Cabecera</div>
                     <div class="row g-3">
@@ -299,6 +302,7 @@
         if (validation.Count > 0)
         {
             _error = string.Join(" ", validation);
+            Telemetry.Track("purchases", "validate", "error", string.Join(" | ", validation));
             return;
         }
         _saving = true;
@@ -367,15 +371,12 @@
     private static string SkuKey(int productId, int? variantId) => variantId.HasValue ? $"{productId}:{variantId}" : productId.ToString();
 
     private List<string> ValidateEditor()
-    {
-        var issues = new List<string>();
-        if (_form.SupplierId <= 0) issues.Add("Seleccioná un proveedor.");
-        if (_form.Items.Count == 0) issues.Add("Agregá al menos un ítem.");
-        if (_form.Items.Any(x => x.QuantityOrdered <= 0)) issues.Add("Las cantidades deben ser mayores a cero.");
-        if (_form.Items.Any(x => x.UnitCost < 0)) issues.Add("El costo unitario no puede ser negativo.");
-        if (_form.Items.Any(x => x.ProductId <= 0)) issues.Add("Seleccioná un SKU válido en todas las líneas.");
-        return issues;
-    }
+        => FormValidator.ValidatePurchaseLines(
+            _form.SupplierId,
+            _form.Items.Count,
+            _form.Items.Any(x => x.QuantityOrdered <= 0),
+            _form.Items.Any(x => x.UnitCost < 0),
+            _form.Items.Any(x => x.ProductId <= 0));
 
     private string BuildSnapshot()
         => JsonSerializer.Serialize(new
@@ -394,8 +395,5 @@
     private void MarkClean() => _formSnapshot = BuildSnapshot();
 
     private async Task<bool> ConfirmDiscardIfDirtyAsync()
-    {
-        if (!IsDirty) return true;
-        return await JS.InvokeAsync<bool>("confirm", "Tenés cambios sin guardar. ¿Querés descartarlos?");
-    }
+        => await Guard.ConfirmDiscardAsync(JS, IsDirty, _saving);
 }

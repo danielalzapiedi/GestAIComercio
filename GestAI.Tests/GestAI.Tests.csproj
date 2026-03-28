@@ -16,6 +16,7 @@
     <ProjectReference Include="..\GestAI.Domain\GestAI.Domain.csproj" />
     <ProjectReference Include="..\GestAI.Infrastructure\GestAI.Infrastructure.csproj" />
     <ProjectReference Include="..\GestAI.Infrastructure.Persistence\GestAI.Infrastructure.Persistence.csproj" />
+    <ProjectReference Include="..\GestAI.Api\GestAI.Api.csproj" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

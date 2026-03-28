@@ -1,0 +1,27 @@
+@if (IsLoading)
+{
+    <div class="alert alert-info py-2 mb-2">Estado: loading</div>
+}
+else if (HasError)
+{
+    <div class="alert alert-danger py-2 mb-2">Estado: error</div>
+}
+else if (IsSaving)
+{
+    <div class="alert alert-warning py-2 mb-2">Estado: disabled (guardando)</div>
+}
+else if (IsDirty)
+{
+    <div class="alert alert-secondary py-2 mb-2">Estado: success con cambios pendientes</div>
+}
+else
+{
+    <div class="alert alert-success py-2 mb-2">Estado: success</div>
+}
+
+@code {
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool HasError { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public bool IsDirty { get; set; }
+}

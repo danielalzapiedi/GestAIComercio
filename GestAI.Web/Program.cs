@@ -34,6 +34,8 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredServ
 builder.Services.AddScoped<LocalStorageService>(); // si lo usás en otras cosas
 builder.Services.AddScoped<PriceListEditorService>();
 builder.Services.AddScoped<CommerceMasterUiService>();
+builder.Services.AddScoped<CommerceFormValidator>();
+builder.Services.AddScoped<UnsavedChangesGuardService>();
 builder.Services.AddSingleton<AppState>();
 builder.Services.AddSingleton<ProductTelemetryService>();
 

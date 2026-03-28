@@ -15,6 +15,7 @@ using GestAI.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.ResponseCompression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using QuestPDF.Infrastructure;
@@ -73,7 +74,10 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddMaps(typeof(MappingProfile).Assembly);
 });
 
-builder.Services.AddControllers().AddJsonOptions(o =>
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<AppResultHttpMappingFilter>();
+}).AddJsonOptions(o =>
 {
     o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 });
@@ -84,6 +88,11 @@ builder.Services.AddPayPal(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "application/json" });
+});
 
 // Interfaces Application
 builder.Services.AddScoped<IIdentityService, IdentityService>();
@@ -102,6 +111,7 @@ QuestPDF.Settings.License = LicenseType.Community;
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseResponseCompression();
 app.UseCors("all");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -156,6 +166,14 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    if (!isDevelopment && logGeneratedSeedPasswords)
+    {
+        throw new InvalidOperationException("Seed:LogGeneratedPasswords=true no está permitido fuera de Development.");
+    }
+
+    ValidateSeedPasswordPolicy(seedAdminPassword, nameof(seedAdminPassword), isDevelopment);
+    ValidateSeedPasswordPolicy(seedDemoOwnerPassword, nameof(seedDemoOwnerPassword), isDevelopment);
+
     logger.LogInformation("Inicializando datos seed con credenciales configurables por entorno (Seed:*).");
 
     await DbInitializer.MigrateAndSeedAsync(
@@ -202,4 +220,23 @@ static string GenerateSeedPassword()
     }
 
     return new string(chars);
+}
+
+static void ValidateSeedPasswordPolicy(string? password, string name, bool isDevelopment)
+{
+    if (string.IsNullOrWhiteSpace(password))
+        return;
+
+    if (isDevelopment)
+        return;
+
+    var hasLower = password.Any(char.IsLower);
+    var hasUpper = password.Any(char.IsUpper);
+    var hasDigit = password.Any(char.IsDigit);
+    var hasSymbol = password.Any(ch => !char.IsLetterOrDigit(ch));
+
+    if (password.Length < 12 || !hasLower || !hasUpper || !hasDigit || !hasSymbol)
+    {
+        throw new InvalidOperationException($"La credencial {name} no cumple la política mínima para ambientes no Development.");
+    }
 }

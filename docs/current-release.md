@@ -1,31 +1,28 @@
-# Current Release Status
+# Current Delivery Status
 
-## Release actual
-- **ID:** R1 — Hardening UX + Calidad Operativa
+## Modo actual
+- **Modo:** Diagnóstico de producto continuo (sin releases activas)
 - **Estado:** En progreso
 - **Fecha de actualización:** 2026-03-28
 
-## Validación de pertenencia de tarea
-- **Tarea aplicada:** Cierre de ítems de Performance del backlog (medición automatizada de budget p95/payload en integración).
-- **¿Pertenece a la release actual?** Sí, por control preventivo de degradación en endpoints críticos.
+## Contexto
+- El equipo opera en evolución continua por backlog priorizado.
+- Se resolvieron ítems 🔥 Críticos, ⚡ Quick Wins, 🧠 Producto, 🧱 Técnica, 🎯 UX y 🚀 Performance.
 
-## Trabajo realizado en la release
-- Implementadas validaciones visuales resumidas previo al guardado en formularios críticos.
-- Implementada protección ante pérdida de cambios (dirty form guard + confirmación).
-- Unificado manejo de estados de error de carga en vistas transaccionales.
-- Extendidos los patrones UX a `Products` y `Categories` para completar el set crítico definido en backlog.
-- Optimizados listados críticos para evitar subconsultas duplicadas por fila en tenant/products.
-- Depurado `product-backlog.md` para remover del backlog activo los ítems ya implementados/cerrados.
-- Cerrados ítems de pendiente prioritario: homogeneización de feedback en pantallas maestras y control de paginación máxima en backend.
-- Cerrados ítems de Producto: política única de pricing, patrón de filtros/búsqueda consistente y telemetría funcional en maestros.
-- Cerrados ítems de Técnica: extracción de `CommercePartyFeatures` y servicio UI reutilizable para reducir duplicación en páginas maestras.
-- Cerrados ítems de Performance: budget automatizado para `GET /api/commerce/products` con validación de p95 y tamaño de payload.
+## Tarea aplicada en este ciclo
+- **Tarea:** Estabilización de acceso local en Development (credenciales seed explícitas) + correcciones de compilación/tests.
+- **¿Pertenece al modo actual?** Sí. Prioridad alta dentro del diagnóstico continuo.
 
-## Pendiente para cerrar release
-- Ejecutar y dejar en verde build + tests en pipeline CI.
-- Completar checklist de regresión QA de comercio.
-- Documentar evidencia final de aceptación funcional y UX.
-- Extender budgets automatizados a `sales`, `quotes`, `purchases` y `categories`.
+## Entregables generados
+- Se agrega `GestAI.Api/appsettings.Development.json` con `Seed:AdminPassword`, `Seed:DemoOwnerPassword`, `Seed:LogGeneratedPasswords` y `Cors:AllowedOrigins` para facilitar login local consistente.
+- `UnsavedChangesGuardService` corrige referencia a `IJSRuntime` con `using` explícito.
+- `CommercePartyFeatures` incorpora `using GestAI.Application.Common` y `using GestAI.Domain.Enums` para resolver `AppResult`/`PagedResult` y `SaasModule` en handlers MediatR.
+- `CommerceIntegrationTests` ajusta import de `AppResult`, compatibilidad de `quoteResult.Data` para ambos contextos de nullability (`int`/`int?`), setup fiscal para el smoke de facturación y estado esperado de la factura recién creada (`Draft`).
+- `SaasCoreTests` alinea el test de validator de productos al límite actual de `PageSize` (50).
+
+## Validación y QA
+- Se intentó ejecutar build/test, pero el entorno local no dispone de .NET SDK (`dotnet: command not found`).
+- Se deja pendiente validación completa en pipeline CI con `dotnet build` + `dotnet test`.
 
 ## Próximo paso recomendado
-- Consolidar QA de regresión en CI y cerrar R1 con checklist firmado.
+- Ejecutar pipeline CI para validar build y test suite completa; si aparece nueva regresión, corregir y re-ejecutar hasta verde.

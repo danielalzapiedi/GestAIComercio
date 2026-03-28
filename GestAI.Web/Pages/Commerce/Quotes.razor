@@ -3,8 +3,10 @@
 @using GestAI.Web.Service
 @using System.Text.Json
 @inject ApiClient Api
+@inject GestAI.Web.Service.CommerceFormValidator FormValidator
 @inject NavigationManager Navigation
 @inject ProductTelemetryService Telemetry
+@inject UnsavedChangesGuardService Guard
 @inject IJSRuntime JS
 
 <PageTitle>Presupuestos</PageTitle>
@@ -135,6 +137,7 @@
                 else
                 {
                     <FormFeedback Error="@_error" Success="@_success" />
+                    <OperationalStateHint IsLoading="@(!_loaded)" HasError="@(!string.IsNullOrWhiteSpace(_error))" IsSaving="@_saving" IsDirty="@(IsDirty)" />
                     <div class="ui-form-section">
                         <div class="ui-form-section-title">Cabecera</div>
                         <div class="row g-3">
@@ -391,6 +394,7 @@
         if (validation.Count > 0)
         {
             _error = string.Join(" ", validation);
+            Telemetry.Track("quotes", "validate", "error", string.Join(" | ", validation));
             return;
         }
         _saving = true;
@@ -511,36 +515,4 @@
         _ => "ui-badge ui-badge-neutral"
     };
 
-    private List<string> ValidateEditor()
-    {
-        var issues = new List<string>();
-        if (_form.CustomerId <= 0) issues.Add("Seleccioná un cliente.");
-        if (_form.Items.Count == 0) issues.Add("Agregá al menos un ítem.");
-        if (_form.Items.Any(x => x.Quantity <= 0)) issues.Add("Las cantidades deben ser mayores a cero.");
-        if (_form.Items.Any(x => x.UnitPrice < 0)) issues.Add("El precio no puede ser negativo.");
-        if (_form.Items.Any(x => string.IsNullOrWhiteSpace(x.Description))) issues.Add("Cada ítem debe tener descripción.");
-        if (_validUntilDate.HasValue && _validUntilDate.Value.Date < _issuedAtDate.Date) issues.Add("La fecha de vencimiento no puede ser anterior a la fecha de emisión.");
-        return issues;
-    }
-
-    private string BuildSnapshot()
-        => JsonSerializer.Serialize(new
-        {
-            _form.CustomerId,
-            _form.Status,
-            _issuedAtDate,
-            _validUntilDate,
-            _form.Observations,
-            Items = _form.Items.Select(x => new { x.ProductId, x.ProductVariantId, x.Description, x.InternalCode, x.Quantity, x.UnitPrice }).ToList()
-        });
-
-    private bool IsDirty => _showForm && _formSnapshot != BuildSnapshot();
-
-    private void MarkClean() => _formSnapshot = BuildSnapshot();
-
-    private async Task<bool> ConfirmDiscardIfDirtyAsync()
-    {
-        if (!IsDirty) return true;
-        return await JS.InvokeAsync<bool>("confirm", "Tenés cambios sin guardar. ¿Querés descartarlos?");
-    }
 }

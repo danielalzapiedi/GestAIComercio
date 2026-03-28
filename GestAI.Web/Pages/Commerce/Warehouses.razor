@@ -5,6 +5,7 @@
 @inject ApiClient Api
 @inject IJSRuntime JS
 @inject ProductTelemetryService Telemetry
+@inject UnsavedChangesGuardService Guard
 @inject CommerceMasterUiService Ui
 
 <PageTitle>Depósitos</PageTitle>
@@ -118,6 +119,7 @@ else
                 else
                 {
                     <FormFeedback Error="@_error" Success="@_success" />
+                    <OperationalStateHint IsLoading="@(!_loaded)" HasError="@(!string.IsNullOrWhiteSpace(_error))" IsSaving="@_saving" IsDirty="@_isDirty" />
                     <div class="row g-3">
                         <div class="col-12"><label class="form-label">Sucursal</label><select class="form-select" @bind="_form.BranchId" @bind:after="MarkDirty">@foreach (var branch in _branches){<option value="@branch.Id">@branch.Name</option>}</select></div>
                         <div class="col-12"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" @bind:after="MarkDirty" /></div>
@@ -313,10 +315,10 @@ else
 
     private async Task ConfirmInternalNavigation(LocationChangingContext context)
     {
-        if (!_showForm || !_isDirty || _saving)
+        if (!_showForm)
             return;
 
-        var leave = await JS.InvokeAsync<bool>("confirm", "Tenés cambios sin guardar. ¿Querés salir igual?");
+        var leave = await Guard.ConfirmDiscardAsync(JS, _isDirty, _saving, "Tenés cambios sin guardar. ¿Querés salir igual?");
         if (!leave)
             context.PreventNavigation();
     }

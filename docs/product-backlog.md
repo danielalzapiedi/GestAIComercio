@@ -1,31 +1,28 @@
 # Product Backlog
 
-## 🔥 Pendiente prioritario
-- Sin ítems críticos pendientes.
+## 🔥 Críticos
+- ✅ Unificar contrato de errores API/UI con taxonomía estable (mapeo automático de `AppResult` fallido a `ProblemDetails` + status HTTP).
+- ✅ Incorporar smoke de flujo crítico end-to-end de comercio (presupuesto → venta → factura) en test de integración.
+- ✅ Hardening de seguridad operativa en credenciales seed (política mínima en no-Development y bloqueo de log de passwords generadas fuera de Development).
+
+## ⚡ Quick Wins
+- ✅ Estandarizar validaciones de formularios con modelo compartido para evitar reglas duplicadas y divergentes.
+- ✅ Añadir tests de contrato API (status codes + schema + error envelope) para asegurar consistencia externa.
 
 ## 🧠 Producto
-- Sin ítems de producto pendientes.
+- ✅ Instrumentar telemetría funcional por flujo y por error de validación (abandono, error rate, latencia percibida).
+- ✅ Definir guía única de mensajes operativos y códigos de error de negocio para soporte y operación.
+- ✅ Crear tablero de salud técnica/producto (build, tests, cobertura, deuda, p95) para priorización continua.
 
 ## 🧱 Técnica
-- Sin ítems técnicos pendientes.
+- ✅ Descomponer páginas Razor de alto tamaño en componentes y view models testeables.
+- ✅ Reducir tamaño de módulos Application (features) por bounded context interno para bajar complejidad.
+- ✅ Separar `CommerceController` en controladores por dominio funcional manteniendo compatibilidad de rutas.
+
+## 🎯 UX
+- ✅ Aplicar dirty-guard transversal en todos los formularios críticos para evitar pérdida de cambios.
+- ✅ Normalizar estados UI en todas las grillas y formularios (loading/empty/error/success/disabled).
 
 ## 🚀 Performance
-- Sin ítems de performance pendientes.
-
-## ✅ Cerrado
-- Estandarizar manejo de errores en formularios críticos (ventas, productos, categorías, compras).
-- Endurecer CORS por entorno y dominio explícito en API.
-- Reducir acoplamiento crítico con separación de responsabilidades en controller/handlers.
-- Extender `ApiClientException` con errores por campo.
-- Definir checklist QA de regresión de comercio.
-- Estandarizar validaciones visuales + dirty guard + estados de interfaz en pantallas transaccionales.
-- Optimizar consultas con subqueries repetidas en listados críticos.
-- Definir baseline inicial de performance (objetivos p95/payload y estrategia de medición).
-- Homogeneizar mensajes de error/éxito en pantallas maestras pendientes (`branches`, `warehouses`, `customers`, `suppliers`) con `FormFeedback`.
-- Ajustar límite máximo de paginación en backend para endpoints de alto tráfico (cap global de `PageSize` a 50).
-- Formalizar política única de pricing entre venta rápida y venta estándar con regla explícita de catálogo vs override.
-- Estandarizar comportamiento de filtros/búsqueda en listados maestros con acciones consistentes de buscar/limpiar.
-- Incorporar observabilidad funcional mínima en módulos maestros (load/search/save/toggle) con telemetría de resultado.
-- Refactorizar `CommerceFeatures` en submódulos por bounded context para bajar complejidad y facilitar mantenimiento.
-- Reducir lógica incrustada en Razor de módulos maestros moviendo reglas de mensajes a servicio UI reutilizable.
-- Incorporar budget automatizado de p95/payload para `GET /api/commerce/products` mediante test de performance de integración.
+- ✅ Expandir budgets automatizados de performance a `sales`, `quotes`, `purchases` y `categories`.
+- ✅ Optimizar serialización/payload en listados de mayor cardinalidad para reducir latencia y consumo.

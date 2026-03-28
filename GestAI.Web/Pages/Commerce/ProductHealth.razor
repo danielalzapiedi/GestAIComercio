@@ -1,0 +1,126 @@
+@page "/commerce/product-health"
+@using GestAI.Web.Service
+@inject ProductTelemetryService Telemetry
+
+<PageTitle>Salud de producto</PageTitle>
+
+<section class="page-hero">
+    <div>
+        <div class="page-hero-title">Tablero de salud técnica y de producto</div>
+        <div class="page-hero-subtitle">Vista operativa rápida para monitorear eventos funcionales, errores y recomendaciones de seguimiento.</div>
+    </div>
+</section>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Eventos (24h)</div><div class="ui-stat-value">@Events24h.Count</div><div class="ui-stat-foot">Total de telemetría funcional reciente.</div></div></div></div>
+    <div class="col-md-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Errores (24h)</div><div class="ui-stat-value">@ErrorCount24h</div><div class="ui-stat-foot">Incluye validaciones fallidas y errores de operación.</div></div></div></div>
+    <div class="col-md-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Validaciones fallidas</div><div class="ui-stat-value">@ValidationErrorCount24h</div><div class="ui-stat-foot">Eventos con acción <code>validate</code> y resultado <code>error</code>.</div></div></div></div>
+    <div class="col-md-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Flows activos</div><div class="ui-stat-value">@Flows24h</div><div class="ui-stat-foot">Cantidad de flujos con eventos en la ventana.</div></div></div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="mb-3">Resumen por flujo (24h)</h5>
+        @if (FlowSummary.Count == 0)
+        {
+            <EmptyState Title="Sin eventos recientes" Description="Todavía no hay telemetría suficiente para construir el resumen." Icon="bi-activity" />
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>Flow</th><th>Total</th><th>Errores</th><th>% error</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in FlowSummary)
+                    {
+                        <tr>
+                            <td>@item.Flow</td>
+                            <td>@item.Total</td>
+                            <td>@item.Errors</td>
+                            <td>@item.ErrorRate.ToString("P0")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="mb-3">Errores de validación más frecuentes</h5>
+        @if (TopValidationErrors.Count == 0)
+        {
+            <EmptyState Title="Sin errores de validación" Description="No se registraron fallas de validación en la ventana de análisis." Icon="bi-check2-circle" />
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var entry in TopValidationErrors)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>@entry.Message</span>
+                        <span class="badge bg-danger">@entry.Count</span>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="mb-3">KPIs técnicos sugeridos (fuente CI)</h5>
+        <ul class="mb-0">
+            <li>Build verde por rama principal.</li>
+            <li>Tests verdes + tasa de regresión semanal.</li>
+            <li>Cobertura y deuda técnica por módulo.</li>
+            <li>p95 por endpoints críticos (`products`, `sales`, `quotes`, `purchases`, `categories`).</li>
+        </ul>
+    </div>
+</div>
+
+@code {
+    private readonly TimeSpan _window = TimeSpan.FromHours(24);
+
+    private IReadOnlyList<ProductTelemetryEvent> Events24h
+        => Telemetry.RecentEvents
+            .Where(x => x.OccurredAtUtc >= DateTime.UtcNow.Subtract(_window))
+            .OrderByDescending(x => x.OccurredAtUtc)
+            .ToList();
+
+    private int ErrorCount24h => Events24h.Count(x => x.Outcome.Equals("error", StringComparison.OrdinalIgnoreCase));
+
+    private int ValidationErrorCount24h => Events24h.Count(x =>
+        x.Action.Equals("validate", StringComparison.OrdinalIgnoreCase)
+        && x.Outcome.Equals("error", StringComparison.OrdinalIgnoreCase));
+
+    private int Flows24h => Events24h.Select(x => x.Flow).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+
+    private IReadOnlyList<(string Flow, int Total, int Errors, decimal ErrorRate)> FlowSummary
+        => Events24h
+            .GroupBy(x => x.Flow, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var total = g.Count();
+                var errors = g.Count(x => x.Outcome.Equals("error", StringComparison.OrdinalIgnoreCase));
+                var rate = total == 0 ? 0 : (decimal)errors / total;
+                return (Flow: g.Key, Total: total, Errors: errors, ErrorRate: rate);
+            })
+            .OrderByDescending(x => x.Errors)
+            .ThenByDescending(x => x.Total)
+            .ToList();
+
+    private IReadOnlyList<(string Message, int Count)> TopValidationErrors
+        => Events24h
+            .Where(x => x.Action.Equals("validate", StringComparison.OrdinalIgnoreCase)
+                        && x.Outcome.Equals("error", StringComparison.OrdinalIgnoreCase)
+                        && !string.IsNullOrWhiteSpace(x.Detail))
+            .SelectMany(x => x.Detail!.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .GroupBy(x => x, StringComparer.OrdinalIgnoreCase)
+            .Select(g => (Message: g.Key, Count: g.Count()))
+            .OrderByDescending(x => x.Count)
+            .Take(10)
+            .ToList();
+}

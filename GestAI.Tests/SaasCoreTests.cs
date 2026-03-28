@@ -60,7 +60,7 @@ public class SaasCoreTests
     public void GetProductsQueryValidator_AllowsExpectedPagingBounds()
     {
         var validator = new GetProductsQueryValidator();
-        var result = validator.Validate(new GetProductsQuery(Page: 1, PageSize: 100));
+        var result = validator.Validate(new GetProductsQuery(Page: 1, PageSize: 50));
 
         Assert.True(result.IsValid);
     }

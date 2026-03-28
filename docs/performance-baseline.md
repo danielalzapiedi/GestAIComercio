@@ -32,3 +32,6 @@ Definir métricas mínimas de seguimiento para endpoints críticos de Commerce y
 - Consolidación de datos de owner (nombre/email) en consultas de tenant para evitar subqueries repetidas por fila.
 - Join con conteo agregado de variantes activas en listado de productos para reducir costo de proyección por registro.
 - Test de integración con budget automatizado para `GET /api/commerce/products` (p95 <= 500ms, payload <= 200KB para `pageSize=20`).
+
+- Testes automatizados de budget incorporados para `GET /api/commerce/categories`, `GET /api/commerce/sales`, `GET /api/commerce/quotes` y `GET /api/commerce/purchases` con umbrales p95 <= 500ms y payload <= 200KB (`pageSize=20`).
+- Habilitada compresión de respuesta en API para `application/json` para reducir payload en listados de alta cardinalidad.

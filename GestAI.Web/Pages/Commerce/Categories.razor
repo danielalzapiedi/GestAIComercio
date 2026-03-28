@@ -1,7 +1,11 @@
 @page "/categories"
 @using GestAI.Web.Dtos
+@using GestAI.Web.Service
 @using System.Text.Json
 @inject ApiClient Api
+@inject GestAI.Web.Service.CommerceFormValidator FormValidator
+@inject ProductTelemetryService Telemetry
+@inject UnsavedChangesGuardService Guard
 @inject IJSRuntime JS
 
 <PageTitle>Categorías</PageTitle>
@@ -132,6 +136,7 @@
                 else
                 {
                     <FormFeedback Error="@_error" Success="@_success" />
+                    <OperationalStateHint IsLoading="@(!_loaded)" HasError="@(!string.IsNullOrWhiteSpace(_error))" IsSaving="@_saving" IsDirty="@(IsDirty)" />
                     <div class="row g-3">
                         <div class="col-12"><label class="form-label">Nombre</label><input class="form-control" @bind="_form.Name" /></div>
                         <div class="col-12"><label class="form-label">Padre</label><select class="form-select" @bind="_form.ParentCategoryId"><option value="">Sin padre</option>@foreach (var item in _allCategories.Where(x => x.Id != _form.Id)){<option value="@item.Id">@item.Name</option>}</select></div>
@@ -231,6 +236,7 @@
         if (validation.Count > 0)
         {
             _error = string.Join(" ", validation);
+            Telemetry.Track("categories", "validate", "error", string.Join(" | ", validation));
             return;
         }
         _saving = true;
@@ -278,14 +284,7 @@
     private async Task NextPage() { if (_page < TotalPages) { _page++; await Load(); } }
 
     private List<string> ValidateEditor()
-    {
-        var issues = new List<string>();
-        if (string.IsNullOrWhiteSpace(_form.Name))
-            issues.Add("Ingresá el nombre de la categoría.");
-        if (_form.ParentCategoryId.HasValue && _form.ParentCategoryId == _form.Id)
-            issues.Add("La categoría no puede tenerse como padre.");
-        return issues;
-    }
+        => FormValidator.ValidateCategory(_form.Name, _form.ParentCategoryId, _form.Id);
 
     private string BuildSnapshot()
         => JsonSerializer.Serialize(new
@@ -301,8 +300,5 @@
     private void MarkClean() => _formSnapshot = BuildSnapshot();
 
     private async Task<bool> ConfirmDiscardIfDirtyAsync()
-    {
-        if (!IsDirty) return true;
-        return await JS.InvokeAsync<bool>("confirm", "Tenés cambios sin guardar. ¿Querés descartarlos?");
-    }
+        => await Guard.ConfirmDiscardAsync(JS, IsDirty, _saving);
 }
