@@ -1,9 +1,11 @@
 @page "/quotes"
 @using GestAI.Web.Dtos
 @using GestAI.Web.Service
+@using System.Text.Json
 @inject ApiClient Api
 @inject NavigationManager Navigation
 @inject ProductTelemetryService Telemetry
+@inject IJSRuntime JS
 
 <PageTitle>Presupuestos</PageTitle>
 
@@ -35,6 +37,7 @@
         <div class="col-lg-1"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
     </div>
 </div></div>
+<FormFeedback Error="@_loadError" />
 
 <div class="ui-split-layout ui-split-layout-focus-editor">
     <div>
@@ -209,6 +212,7 @@
                         <div class="ui-table-stack text-end">
                             <span class="fw-semibold">Total @FormTotal.ToString("C")</span>
                             <span class="ui-table-meta">@(_form.Items.Count == 1 ? "1 ítem" : $"{_form.Items.Count} ítems")</span>
+                            <span class="ui-table-meta">@((IsDirty) ? "Cambios sin guardar" : "Sin cambios pendientes")</span>
                         </div>
                     </div>
                 }
@@ -254,6 +258,8 @@
     private bool _saving;
     private string? _error;
     private string? _success;
+    private string? _loadError;
+    private string _formSnapshot = string.Empty;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
     private int ConvertibleCount => _result?.Items.Count(x => x.CanConvertToSale) ?? 0;
@@ -283,10 +289,20 @@
     private async Task Load()
     {
         _loaded = false;
-        var status = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&status={_status}";
-        var customer = _customerId == 0 ? string.Empty : $"&customerId={_customerId}";
-        var convertible = string.IsNullOrWhiteSpace(_onlyConvertible) ? string.Empty : "&onlyConvertible=true";
-        _result = (await Api.GetAsync<AppResult<PagedResult<QuoteListItemDto>>>($"api/commerce/quotes?search={Uri.EscapeDataString(_search ?? string.Empty)}{status}{customer}{convertible}&page={_page}&pageSize={PageSize}"))?.Data;
+        _loadError = null;
+        try
+        {
+            var status = string.IsNullOrWhiteSpace(_status) ? string.Empty : $"&status={_status}";
+            var customer = _customerId == 0 ? string.Empty : $"&customerId={_customerId}";
+            var convertible = string.IsNullOrWhiteSpace(_onlyConvertible) ? string.Empty : "&onlyConvertible=true";
+            _result = (await Api.GetAsync<AppResult<PagedResult<QuoteListItemDto>>>($"api/commerce/quotes?search={Uri.EscapeDataString(_search ?? string.Empty)}{status}{customer}{convertible}&page={_page}&pageSize={PageSize}"))?.Data;
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _loadError = ex.Message;
+            Telemetry.Track("quotes", "load", "error", ex.Message);
+            _result = null;
+        }
         _loaded = true;
     }
 
@@ -326,6 +342,7 @@
         _quickSearch = string.Empty;
         _editingNumber = "borrador";
         _showForm = true;
+        MarkClean();
     }
 
     private async Task Edit(int id)
@@ -358,6 +375,7 @@
             _validUntilDate = detail.ValidUntilUtc;
             _editingNumber = detail.Number;
             _showForm = true;
+            MarkClean();
         }
         catch (ApiClient.ApiClientException ex)
         {
@@ -369,6 +387,12 @@
     {
         _error = null;
         _success = null;
+        var validation = ValidateEditor();
+        if (validation.Count > 0)
+        {
+            _error = string.Join(" ", validation);
+            return;
+        }
         _saving = true;
         try
         {
@@ -455,7 +479,12 @@
             _form.Items.RemoveAt(index);
     }
 
-    private void Cancel() => _showForm = false;
+    private async Task Cancel()
+    {
+        if (!await ConfirmDiscardIfDirtyAsync())
+            return;
+        _showForm = false;
+    }
     private void OpenDetail(int id) => Navigation.NavigateTo($"/quotes/{id}");
     private async Task PrevPage() { if (_page > 1) { _page--; await Load(); } }
     private async Task NextPage() { if (_page < TotalPages) { _page++; await Load(); } }
@@ -481,4 +510,37 @@
         QuoteStatus.Sent => "ui-badge ui-badge-neutral",
         _ => "ui-badge ui-badge-neutral"
     };
+
+    private List<string> ValidateEditor()
+    {
+        var issues = new List<string>();
+        if (_form.CustomerId <= 0) issues.Add("Seleccioná un cliente.");
+        if (_form.Items.Count == 0) issues.Add("Agregá al menos un ítem.");
+        if (_form.Items.Any(x => x.Quantity <= 0)) issues.Add("Las cantidades deben ser mayores a cero.");
+        if (_form.Items.Any(x => x.UnitPrice < 0)) issues.Add("El precio no puede ser negativo.");
+        if (_form.Items.Any(x => string.IsNullOrWhiteSpace(x.Description))) issues.Add("Cada ítem debe tener descripción.");
+        if (_validUntilDate.HasValue && _validUntilDate.Value.Date < _issuedAtDate.Date) issues.Add("La fecha de vencimiento no puede ser anterior a la fecha de emisión.");
+        return issues;
+    }
+
+    private string BuildSnapshot()
+        => JsonSerializer.Serialize(new
+        {
+            _form.CustomerId,
+            _form.Status,
+            _issuedAtDate,
+            _validUntilDate,
+            _form.Observations,
+            Items = _form.Items.Select(x => new { x.ProductId, x.ProductVariantId, x.Description, x.InternalCode, x.Quantity, x.UnitPrice }).ToList()
+        });
+
+    private bool IsDirty => _showForm && _formSnapshot != BuildSnapshot();
+
+    private void MarkClean() => _formSnapshot = BuildSnapshot();
+
+    private async Task<bool> ConfirmDiscardIfDirtyAsync()
+    {
+        if (!IsDirty) return true;
+        return await JS.InvokeAsync<bool>("confirm", "Tenés cambios sin guardar. ¿Querés descartarlos?");
+    }
 }

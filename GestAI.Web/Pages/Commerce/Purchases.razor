@@ -1,9 +1,11 @@
 @page "/purchases"
 @using GestAI.Web.Dtos
 @using GestAI.Web.Service
+@using System.Text.Json
 @inject ApiClient Api
 @inject NavigationManager Navigation
 @inject ProductTelemetryService Telemetry
+@inject IJSRuntime JS
 
 <PageTitle>Compras</PageTitle>
 
@@ -34,6 +36,7 @@
         <div class="col-lg-1"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
     </div>
 </div></div>
+<FormFeedback Error="@_loadError" />
 
 <div class="ui-split-layout ui-split-layout-focus-editor">
     <div>
@@ -134,7 +137,7 @@
 
                 <div class="ui-action-bar">
                     <div class="ui-inline-actions"><button class="btn btn-primary" type="button" @onclick="Save" disabled="@_saving">Guardar compra</button><button class="btn btn-outline-secondary" type="button" @onclick="Cancel" disabled="@_saving">Cancelar</button></div>
-                    <div class="text-muted">Total estimado <strong>@FormTotal.ToString("C")</strong></div>
+                    <div class="text-muted">Total estimado <strong>@FormTotal.ToString("C")</strong> · @((IsDirty) ? "Cambios sin guardar" : "Sin cambios pendientes")</div>
                 </div>
             }
         </div></div>
@@ -156,6 +159,8 @@
     private const int PageSize = 10;
     private string? _error;
     private string? _success;
+    private string? _loadError;
+    private string _formSnapshot = string.Empty;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
     private decimal VisibleTotal => _result?.Items.Sum(x => x.Total) ?? 0m;
@@ -198,9 +203,19 @@
     private async Task Load()
     {
         _loaded = false;
-        var status = _status.HasValue ? $"&status={_status}" : string.Empty;
-        var supplier = _supplierId > 0 ? $"&supplierId={_supplierId}" : string.Empty;
-        _result = (await Api.GetAsync<AppResult<PagedResult<PurchaseListItemDto>>>($"api/commerce/purchases?search={Uri.EscapeDataString(_search ?? string.Empty)}{status}{supplier}&page={_page}&pageSize={PageSize}"))?.Data;
+        _loadError = null;
+        try
+        {
+            var status = _status.HasValue ? $"&status={_status}" : string.Empty;
+            var supplier = _supplierId > 0 ? $"&supplierId={_supplierId}" : string.Empty;
+            _result = (await Api.GetAsync<AppResult<PagedResult<PurchaseListItemDto>>>($"api/commerce/purchases?search={Uri.EscapeDataString(_search ?? string.Empty)}{status}{supplier}&page={_page}&pageSize={PageSize}"))?.Data;
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _loadError = ex.Message;
+            Telemetry.Track("purchases", "load", "error", ex.Message);
+            _result = null;
+        }
         _loaded = true;
     }
 
@@ -212,6 +227,7 @@
         _form = new PurchaseUpsertCommand { Status = PurchaseDocumentStatus.Draft, IssuedAtUtc = DateTime.UtcNow };
         _form.Items.Add(new PurchaseLineFormModel());
         _showForm = true;
+        MarkClean();
     }
 
     private async Task Edit(int id)
@@ -249,6 +265,7 @@
             }).ToList()
         };
         _showForm = true;
+        MarkClean();
     }
 
     private void AddLine() => _form.Items.Add(new PurchaseLineFormModel());
@@ -278,6 +295,12 @@
     {
         _error = null;
         _success = null;
+        var validation = ValidateEditor();
+        if (validation.Count > 0)
+        {
+            _error = string.Join(" ", validation);
+            return;
+        }
         _saving = true;
         try
         {
@@ -312,7 +335,12 @@
         }
     }
 
-    private void Cancel() => _showForm = false;
+    private async Task Cancel()
+    {
+        if (!await ConfirmDiscardIfDirtyAsync())
+            return;
+        _showForm = false;
+    }
     private void OpenDetail(int id) => Navigation.NavigateTo($"/purchases/{id}");
     private async Task PrevPage() { if (_page > 1) { _page--; await Load(); } }
     private async Task NextPage() { if (_page < TotalPages) { _page++; await Load(); } }
@@ -337,4 +365,37 @@
         _ => "secondary"
     };
     private static string SkuKey(int productId, int? variantId) => variantId.HasValue ? $"{productId}:{variantId}" : productId.ToString();
+
+    private List<string> ValidateEditor()
+    {
+        var issues = new List<string>();
+        if (_form.SupplierId <= 0) issues.Add("Seleccioná un proveedor.");
+        if (_form.Items.Count == 0) issues.Add("Agregá al menos un ítem.");
+        if (_form.Items.Any(x => x.QuantityOrdered <= 0)) issues.Add("Las cantidades deben ser mayores a cero.");
+        if (_form.Items.Any(x => x.UnitCost < 0)) issues.Add("El costo unitario no puede ser negativo.");
+        if (_form.Items.Any(x => x.ProductId <= 0)) issues.Add("Seleccioná un SKU válido en todas las líneas.");
+        return issues;
+    }
+
+    private string BuildSnapshot()
+        => JsonSerializer.Serialize(new
+        {
+            _form.SupplierId,
+            _form.DocumentType,
+            _form.Status,
+            _form.IssuedAtUtc,
+            _form.SupplierDocumentNumber,
+            _form.Observations,
+            Items = _form.Items.Select(x => new { x.ProductId, x.ProductVariantId, x.Description, x.InternalCode, x.QuantityOrdered, x.UnitCost }).ToList()
+        });
+
+    private bool IsDirty => _showForm && _formSnapshot != BuildSnapshot();
+
+    private void MarkClean() => _formSnapshot = BuildSnapshot();
+
+    private async Task<bool> ConfirmDiscardIfDirtyAsync()
+    {
+        if (!IsDirty) return true;
+        return await JS.InvokeAsync<bool>("confirm", "Tenés cambios sin guardar. ¿Querés descartarlos?");
+    }
 }
