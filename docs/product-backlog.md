@@ -1,14 +1,8 @@
 # Product Backlog
 
-## 🔥 Críticos
-- Estandarizar el manejo de errores en formularios críticos (ventas, productos, categorías, compras) para evitar guardados silenciosos y mejorar la confiabilidad operativa.
-- Endurecer CORS por entorno y dominio explícito en API (eliminar configuración abierta global en ambientes productivos).
-- Reducir el riesgo de regresiones separando responsabilidades en componentes de alto acoplamiento (controlador de comercio y casos de uso concentrados).
-
-## ⚡ Quick Wins
-- Extender `ApiClientException` para exponer errores por campo y permitir feedback preciso en formularios.
-- Definir checklist QA de regresión por módulo comercial (smoke funcional mínimo por flujo crítico).
-- Homogeneizar mensajes de error y éxito en las pantallas que hoy no usan patrón consistente de feedback.
+## 🔥 Pendiente prioritario
+- Homogeneizar mensajes de error y éxito en las pantallas que aún no usan patrón consistente de feedback.
+- Revisar paginación y tamaño de respuesta en endpoints de alto tráfico para prevenir degradación temprana.
 
 ## 🧠 Producto
 - Formalizar la política única de pricing para venta rápida y venta completa (precio catálogo vs override permitido).
@@ -17,16 +11,17 @@
 
 ## 🧱 Técnica
 - Refactorizar `CommerceFeatures` en submódulos por bounded context para bajar complejidad y facilitar mantenimiento.
-- Descomponer `CommerceController` en controladores por dominio funcional para mejorar ownership y trazabilidad.
-- Mejorar trazabilidad de errores con contrato uniforme de error, códigos estables y correlation-id.
 - Reducir lógica de negocio incrustada en páginas Razor moviendo reglas y orquestación a servicios/view-models testeables.
 
-## 🎯 UX
-- Estandarizar validaciones visuales (por campo + resumen) en formularios críticos usando un patrón único.
-- Implementar guardado seguro con protección de cambios sin guardar (dirty form guard) en editores operativos.
-- Unificar estados de interfaz (loading, empty, error, success, disabled) en pantallas transaccionales.
-
 ## 🚀 Performance
-- Optimizar consultas con subqueries repetidas en proyecciones de listados para mejorar escalabilidad.
-- Definir baseline de performance (p95 por endpoint crítico, presupuesto de payload y tiempos objetivo).
-- Revisar paginación y tamaño de respuesta en endpoints de alto tráfico para prevenir degradación temprana.
+- Medir y publicar resultados reales de p95/payload por endpoint crítico para validar baseline en entorno integrado.
+
+## ✅ Cerrado
+- Estandarizar manejo de errores en formularios críticos (ventas, productos, categorías, compras).
+- Endurecer CORS por entorno y dominio explícito en API.
+- Reducir acoplamiento crítico con separación de responsabilidades en controller/handlers.
+- Extender `ApiClientException` con errores por campo.
+- Definir checklist QA de regresión de comercio.
+- Estandarizar validaciones visuales + dirty guard + estados de interfaz en pantallas transaccionales.
+- Optimizar consultas con subqueries repetidas en listados críticos.
+- Definir baseline inicial de performance (objetivos p95/payload y estrategia de medición).

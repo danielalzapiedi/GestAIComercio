@@ -15,6 +15,7 @@
 - Unificado manejo de estados de error de carga en vistas transaccionales.
 - Extendidos los patrones UX a `Products` y `Categories` para completar el set crítico definido en backlog.
 - Optimizados listados críticos para evitar subconsultas duplicadas por fila en tenant/products.
+- Depurado `product-backlog.md` para remover del backlog activo los ítems ya implementados/cerrados.
 
 ## Pendiente para cerrar release
 - Ejecutar y dejar en verde build + tests en pipeline CI.
