@@ -3,6 +3,7 @@
 @using GestAI.Web.Service
 @inject ApiClient Api
 @inject ProductTelemetryService Telemetry
+@inject PriceListEditorService EditorService
 
 <PageTitle>Listas de precios</PageTitle>
 
@@ -241,7 +242,7 @@ else
         {
             if (_form.Id == 0)
             {
-                var created = await Api.PostAsync<PriceListUpsertCommand, AppResult<int>>("api/commerce/price-lists", new PriceListUpsertCommand { Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
+                var created = await EditorService.CreateListAsync(new PriceListUpsertCommand { Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
                 _message = created?.Success == true ? "Lista creada correctamente." : created?.Message ?? "No se pudo crear la lista.";
                 if (created?.Success == true && created?.Data is int newId)
                 {
@@ -252,7 +253,7 @@ else
             }
             else
             {
-                var updated = await Api.PutAsync<PriceListUpsertCommand, AppResult>($"api/commerce/price-lists/{_form.Id}", new PriceListUpsertCommand { Id = _form.Id, Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
+                var updated = await EditorService.UpdateListAsync(_form.Id, new PriceListUpsertCommand { Id = _form.Id, Name = _form.Name, BaseMode = _form.BaseMode, TargetType = _form.TargetType, IsActive = _form.IsActive });
                 _message = updated?.Success == true ? "Lista actualizada correctamente." : updated?.Message ?? "No se pudo actualizar la lista.";
                 if (updated?.Success == true)
                 {
@@ -287,7 +288,7 @@ else
             _itemForm.PriceListId = _selectedList.Id;
             _itemForm.ProductId = productId;
             _itemForm.ProductVariantId = variantId;
-            var result = await Api.PostAsync<PriceListItemUpsertCommand, AppResult<int>>($"api/commerce/price-lists/{_selectedList.Id}/items", _itemForm);
+            var result = await EditorService.SaveItemAsync(_selectedList.Id, _itemForm);
             _message = result?.Success == true ? "Precio guardado correctamente." : result?.Message ?? "No se pudo guardar el precio.";
             if (result?.Success == true)
             {
@@ -316,7 +317,7 @@ else
         try
         {
             _bulkForm.PriceListId = _selectedList.Id;
-            var result = await Api.PostAsync<BulkPriceUpdateCommand, AppResult<BulkPriceUpdateResultDto>>($"api/commerce/price-lists/{_selectedList.Id}/bulk-update", _bulkForm);
+            var result = await EditorService.ApplyBulkAsync(_selectedList.Id, _bulkForm);
             _message = result?.Success == true ? result.Data?.Summary ?? "Actualización aplicada." : result?.Message ?? "No se pudo aplicar la actualización.";
             if (result?.Success == true)
             {
