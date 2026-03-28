@@ -795,8 +795,21 @@ public sealed class CreateDeliveryNoteCommandHandler(IAppDbContext db, IUserAcce
 
         await db.SaveChangesAsync(ct);
 
-        note.TotalQuantity = note.Items.Sum(x => x.QuantityDelivered);
-        var totalPending = sale.Items.Sum(x => x.Quantity - (sale.DeliveryNotes.SelectMany(d => d.Items).Where(i => i.SaleItemId == x.Id).Sum(i => i.QuantityDelivered) + note.Items.Where(i => i.SaleItemId == x.Id).Sum(i => i.QuantityDelivered)));
+        note.TotalQuantity = await db.DeliveryNoteItems
+            .Where(x => x.AccountId == scope.AccountId && x.DeliveryNoteId == note.Id)
+            .SumAsync(x => x.QuantityDelivered, ct);
+
+        var deliveredBySaleItem = await db.DeliveryNoteItems
+            .Where(x => x.AccountId == scope.AccountId && x.DeliveryNote.SaleId == sale.Id)
+            .GroupBy(x => x.SaleItemId)
+            .Select(g => new { SaleItemId = g.Key, Delivered = g.Sum(i => i.QuantityDelivered) })
+            .ToDictionaryAsync(x => x.SaleItemId, x => x.Delivered, ct);
+
+        var totalPending = sale.Items.Sum(x =>
+        {
+            var delivered = deliveredBySaleItem.TryGetValue(x.Id, out var value) ? value : 0m;
+            return Math.Max(0m, x.Quantity - delivered);
+        });
         note.PendingQuantity = totalPending;
         note.Status = totalPending > 0m ? DeliveryNoteStatus.PartiallyDelivered : DeliveryNoteStatus.Delivered;
         CommerceFeatureHelpers.TouchUpdate(note, current);

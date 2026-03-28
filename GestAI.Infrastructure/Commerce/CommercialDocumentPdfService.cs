@@ -12,6 +12,11 @@ public sealed class CommercialDocumentPdfService : ICommercialDocumentPdfService
 {
     private const string PdfContentType = "application/pdf";
 
+    static CommercialDocumentPdfService()
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+    }
+
     public Task<DocumentFileResult> BuildQuotePdfAsync(Quote quote, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();

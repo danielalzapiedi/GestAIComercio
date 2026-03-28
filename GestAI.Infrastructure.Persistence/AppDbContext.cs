@@ -54,6 +54,9 @@ public class AppDbContext : IdentityDbContext<User>, IAppDbContext
 
     public async Task<IDbContextTransactionAdapter> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken ct = default)
     {
+        if (string.Equals(Database.ProviderName, "Microsoft.EntityFrameworkCore.InMemory", StringComparison.Ordinal))
+            return NoOpTxAdapter.Instance;
+
         var tx = await Database.BeginTransactionAsync(isolationLevel, ct);
         return new EfTxAdapter(tx);
     }
@@ -68,6 +71,14 @@ public class AppDbContext : IdentityDbContext<User>, IAppDbContext
         public Task CommitAsync(CancellationToken ct = default) => _tx.CommitAsync(ct);
         public Task RollbackAsync(CancellationToken ct = default) => _tx.RollbackAsync(ct);
         public ValueTask DisposeAsync() => _tx.DisposeAsync();
+    }
+
+    private sealed class NoOpTxAdapter : IDbContextTransactionAdapter
+    {
+        public static NoOpTxAdapter Instance { get; } = new();
+        public Task CommitAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task RollbackAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
