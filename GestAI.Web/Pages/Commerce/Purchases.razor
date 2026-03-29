@@ -140,7 +140,7 @@
 
                 <div class="ui-action-bar">
                     <div class="ui-inline-actions"><button class="btn btn-primary" type="button" @onclick="Save" disabled="@_saving">Guardar compra</button><button class="btn btn-outline-secondary" type="button" @onclick="Cancel" disabled="@_saving">Cancelar</button></div>
-                    <div class="text-muted">Total estimado <strong>@FormTotal.ToString("C")</strong> · @((IsDirty) ? "Cambios sin guardar" : "Sin cambios pendientes")</div>
+                    <div class="text-muted">Total estimado <strong>@FormTotal.ToString("C")</strong> | @((IsDirty) ? "Cambios sin guardar" : "Sin cambios pendientes")</div>
                 </div>
             }
         </div></div>

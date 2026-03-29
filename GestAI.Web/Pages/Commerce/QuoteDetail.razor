@@ -73,8 +73,8 @@ else
             </div></div>
             <div class="card mt-3"><div class="card-body">
                 <div class="ui-card-header"><div><div class="ui-card-eyebrow">Auditoría básica</div><h5 class="ui-card-title">Seguimiento</h5></div></div>
-                <div class="ui-table-stack mb-3"><span class="fw-semibold">Creado</span><span class="ui-table-meta">@_detail.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") · @_detail.CreatedByUserId</span></div>
-                <div class="ui-table-stack mb-3"><span class="fw-semibold">Última modificación</span><span class="ui-table-meta">@(_detail.ModifiedAtUtc.HasValue ? $"{_detail.ModifiedAtUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm} · {_detail.ModifiedByUserId}" : "Sin cambios posteriores")</span></div>
+                <div class="ui-table-stack mb-3"><span class="fw-semibold">Creado</span><span class="ui-table-meta">@_detail.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") | @_detail.CreatedByUserId</span></div>
+                <div class="ui-table-stack mb-3"><span class="fw-semibold">Última modificación</span><span class="ui-table-meta">@(_detail.ModifiedAtUtc.HasValue ? $"{_detail.ModifiedAtUtc.Value.ToLocalTime():dd/MM/yyyy HH:mm} | {_detail.ModifiedByUserId}" : "Sin cambios posteriores")</span></div>
                 <div class="ui-table-stack"><span class="fw-semibold">Venta generada</span><span class="ui-table-meta">@(_detail.GeneratedSaleId.HasValue ? _detail.GeneratedSaleNumber : "Todavía no convertida")</span></div>
             </div></div>
         </div>

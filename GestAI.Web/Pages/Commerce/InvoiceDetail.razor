@@ -67,7 +67,7 @@ else
                 {
                     @foreach (var item in _detail.Submissions)
                     {
-                        <div class="ui-check-card mb-2"><i class="bi bi-arrow-left-right text-primary"></i><div><strong>Intento @item.AttemptNumber · @item.Status</strong><div class="ui-table-meta">@item.RequestedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div><div class="ui-table-meta">@item.ErrorMessage</div></div></div>
+                        <div class="ui-check-card mb-2"><i class="bi bi-arrow-left-right text-primary"></i><div><strong>Intento @item.AttemptNumber | @item.Status</strong><div class="ui-table-meta">@item.RequestedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div><div class="ui-table-meta">@item.ErrorMessage</div></div></div>
                     }
                 }
             </div></div>

@@ -45,7 +45,7 @@
                     @foreach (var item in _items)
                     {
                         <tr>
-                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.PartyName</span><span class="ui-table-meta">@item.TaxIdentifier · @item.OpenDocumentsCount documentos abiertos</span></div></td>
+                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.PartyName</span><span class="ui-table-meta">@item.TaxIdentifier | @item.OpenDocumentsCount documentos abiertos</span></div></td>
                             <td>@item.Debit.ToString("C")</td>
                             <td>@item.Credit.ToString("C")</td>
                             <td class="fw-semibold">@item.Balance.ToString("C")</td>

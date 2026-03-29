@@ -7,33 +7,34 @@
 
 ## Contexto
 - El equipo opera en evolución continua por backlog priorizado.
-- El foco vigente en este ciclo fue resolver ítems 🚀 de performance sin romper funcionalidad existente.
+- El foco vigente en este ciclo fue corregir issues visuales y de legibilidad reportados por usuario final.
 
 ## Tarea aplicada en este ciclo
-- **Tarea:** Implementación de mejoras de performance de `docs/product-backlog.md`:
-  1. optimización de queries críticas con baseline p95,
-  2. estrategia de pruebas de performance básica en CI.
-- **¿Pertenece al modo actual?** Sí. Alineado al objetivo de detectar degradación temprana y sostener tiempos de respuesta.
+- **Tarea:** Corrección visual transversal:
+  1. mostrar nombre/apellido real del usuario conectado en el menú superior,
+  2. eliminar textos con separadores conflictivos (`??`) en pantallas comerciales,
+  3. mejorar responsividad para pantallas tipo notebook.
+- **¿Pertenece al modo actual?** Sí. Impacta directamente experiencia de uso y percepción de calidad.
 
 ## Flujo del equipo (ejecutado)
-1. **Análisis funcional:** se identificó `cash dashboard` como flujo sensible por agregaciones sobre movimientos.
-2. **UX/UI:** sin cambios visibles directos; se priorizó mantener respuesta estable de endpoints críticos.
-3. **Diseño técnico:** mover agregaciones a SQL (`GroupBy`/`Sum`) y evitar carga completa en memoria.
-4. **Implementación:** optimización del handler + incorporación de smoke performance dedicado en CI.
-5. **Validación QA:** verificación estática y preparación de ejecución en pipeline para p95 continuo.
+1. **Análisis funcional:** relevamiento de síntomas visuales reportados en header, listados y layout.
+2. **UX/UI:** definición de criterios de corrección (identidad clara de sesión, legibilidad de textos, mejor adaptación en viewport intermedio).
+3. **Diseño técnico:** ajustes en `MainLayout`, reemplazo de separadores tipográficos en páginas commerce y tuning de CSS responsive.
+4. **Implementación:** cambios en layout, estilos y contenido textual de múltiples pantallas.
+5. **Validación QA:** revisión de consistencia de textos/estilos y checks de código.
 
 ## Entregables generados
-- `GestAI.Application/Commerce/FinancialFeatures.cs`
-  - `GetCashDashboardQueryHandler` deja de cargar todos los movimientos para calcular totales.
-  - se reemplaza por agregaciones SQL para totales generales y de sesión (`TotalIn/TotalOut`, `SessionIn/SessionOut`).
-- `.github/workflows/ci.yml`
-  - agrega paso `Performance smoke (p95 baseline)` ejecutando tests de performance por filtro (`PerformanceBudget` / `StaysWithinPerformanceBudget`).
-  - mantiene quality gates de formato + cobertura.
+- `GestAI.Web/MainLayout.razor`
+  - prioriza el nombre/apellido del usuario autenticado (claims JWT) en el área de sesión activa.
+- `GestAI.Web/Pages/Commerce/*.razor`
+  - normaliza separadores visuales para evitar caracteres ambiguos en distintos entornos de render.
+- `GestAI.Web/wwwroot/app-overrides.css`
+  - mejora truncado de nombre de usuario y ajustes responsive para ancho notebook (<=1366px).
 
 ## Validación y QA
 - Se intentó ejecutar build/test local para validación completa.
-- Si la pipeline CI detecta regresión o degradación de performance, se debe corregir y re-ejecutar hasta verde.
+- Si la pipeline CI detecta regresión, se debe corregir y re-ejecutar hasta verde.
 
 ## Próximo paso recomendado
-- Monitorear resultados de p95 en CI y ajustar presupuestos por endpoint según datos reales de producción.
-- Extender baseline p95 a endpoints adicionales de reportes y trazabilidad si aumenta la carga transaccional.
+- Ejecutar validación visual completa cross-device (desktop/notebook/mobile) sobre los módulos comerciales más usados.
+- Mantener checklist visual en QA para prevenir regresiones de legibilidad y layout.
