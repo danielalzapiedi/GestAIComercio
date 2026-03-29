@@ -50,6 +50,11 @@
 - **Detalle técnico:** se separó la proyección agrupada a tipo anónimo SQL-translatable y el mapeo a `TopProductReportDto` se hace en memoria después de `ToListAsync`.
 - **Impacto funcional:** el endpoint de reportes vuelve a responder sin `InvalidOperationException` en el ranking de productos.
 
+## Tarea aplicada (actualización 2026-03-29 - fix categorías paginación)
+- **Tarea:** Ajuste de `pageSize` en carga de categorías para selector de padre.
+- **Detalle técnico:** se redujo `ParentOptionsPageSize` de 100 a 50 para cumplir la validación `InclusiveBetween(1, 50)` del backend.
+- **Impacto funcional:** elimina la `ValidationException` al abrir Categorías y permite cargar opciones de categoría padre correctamente.
+
 ## Flujo del equipo (ejecutado)
 1. **Release Manager:** confirmó modo vigente (diagnóstico continuo) y validó pertenencia de la tarea.
 2. **Análisis funcional:** relevamiento de síntoma visual reportado (`0.ToString("C")` visible en UI).
