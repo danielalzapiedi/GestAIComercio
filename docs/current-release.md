@@ -35,6 +35,11 @@
 - **Detalle:** se removió “Base comercial de clientes” del bloque junto a los botones Buscar/Limpiar para mantener foco en acciones del filtro.
 - **Impacto UX:** mejora jerarquía visual y evita ruido semántico en la zona de interacción primaria.
 
+## Tarea aplicada (actualización 2026-03-29 - ajuste UX sucursales)
+- **Tarea:** Eliminación de texto contextual fuera de lugar en la barra de filtros de Sucursales.
+- **Detalle:** se removió “Gestión de estructura comercial” del bloque junto a los botones Buscar/Limpiar para mantener consistencia con el patrón UX.
+- **Impacto UX:** interfaz más limpia y menor distracción en la zona de acciones.
+
 ## Flujo del equipo (ejecutado)
 1. **Release Manager:** confirmó modo vigente (diagnóstico continuo) y validó pertenencia de la tarea.
 2. **Análisis funcional:** relevamiento de síntoma visual reportado (`0.ToString("C")` visible en UI).
