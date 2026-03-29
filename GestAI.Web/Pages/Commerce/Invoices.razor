@@ -17,7 +17,7 @@
         }
         else
         {
-            <span class="page-hero-chip"><i class="bi bi-file-earmark-medical"></i> @_result?.TotalCount ?? 0 facturas</span>
+            <span class="page-hero-chip"><i class="bi bi-file-earmark-medical"></i> @(_result?.TotalCount ?? 0) facturas</span>
             <a class="btn btn-outline-secondary" href="/fiscal-configuration"><i class="bi bi-gear me-2"></i>Configurar ARCA</a>
             <button class="btn btn-primary" type="button" @onclick="OpenCreateForm"><i class="bi bi-plus-circle me-2"></i>Generar factura</button>
         }

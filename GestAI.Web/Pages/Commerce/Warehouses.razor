@@ -22,7 +22,7 @@
         }
         else
         {
-            <span class="page-hero-chip"><i class="bi bi-box-seam"></i> @_result?.TotalCount ?? 0 depósitos</span>
+            <span class="page-hero-chip"><i class="bi bi-box-seam"></i> @(_result?.TotalCount ?? 0) depósitos</span>
             <button class="btn btn-primary" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nuevo depósito</button>
         }
     </div>

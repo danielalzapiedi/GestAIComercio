@@ -25,6 +25,11 @@
 - **Pantalla afectada:** Caja (`/cash`), chip de saldo en hero.
 - **Impacto funcional:** garantiza visualización de importe formateado incluso cuando no hay dashboard cargado (`0` como fallback).
 
+## Tarea aplicada (actualización 2026-03-29 - ajuste adicional)
+- **Tarea:** Corrección de expresiones Razor en chips de conteo para evitar que se renderice `??` como texto literal.
+- **Pantallas corregidas:** Clientes, Presupuestos, Ventas, Facturas, Remitos, Compras, Categorías, Sucursales, Depósitos y Proveedores.
+- **Impacto funcional:** los contadores ahora muestran correctamente `0` cuando no hay resultados y no exhiben texto técnico en UI.
+
 ## Flujo del equipo (ejecutado)
 1. **Release Manager:** confirmó modo vigente (diagnóstico continuo) y validó pertenencia de la tarea.
 2. **Análisis funcional:** relevamiento de síntoma visual reportado (`0.ToString("C")` visible en UI).

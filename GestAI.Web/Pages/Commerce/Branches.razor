@@ -25,7 +25,7 @@
         }
         else
         {
-            <span class="page-hero-chip"><i class="bi bi-shop"></i> @_result?.TotalCount ?? 0 sucursales</span>
+            <span class="page-hero-chip"><i class="bi bi-shop"></i> @(_result?.TotalCount ?? 0) sucursales</span>
             <button class="btn btn-primary" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nueva sucursal</button>
         }
     </div>

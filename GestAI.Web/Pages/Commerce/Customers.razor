@@ -25,7 +25,7 @@
         }
         else
         {
-            <span class="page-hero-chip"><i class="bi bi-person-vcard"></i> @_result?.TotalCount ?? 0 clientes</span>
+            <span class="page-hero-chip"><i class="bi bi-person-vcard"></i> @(_result?.TotalCount ?? 0) clientes</span>
             <button class="btn btn-primary" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nuevo cliente</button>
         }
     </div>

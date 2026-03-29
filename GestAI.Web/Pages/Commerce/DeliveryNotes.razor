@@ -17,7 +17,7 @@
         }
         else
         {
-            <span class="page-hero-chip"><i class="bi bi-truck-flatbed"></i> @_result?.TotalCount ?? 0 remitos</span>
+            <span class="page-hero-chip"><i class="bi bi-truck-flatbed"></i> @(_result?.TotalCount ?? 0) remitos</span>
             <button class="btn btn-primary" type="button" @onclick="OpenCreateForm"><i class="bi bi-plus-circle me-2"></i>Emitir remito</button>
         }
     </div>

@@ -16,7 +16,7 @@
         <div class="page-hero-subtitle">Ordená el catálogo con una jerarquía clara de categorías y subcategorías.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-diagram-3"></i> @_result?.TotalCount ?? 0 categorías</span>
+        <span class="page-hero-chip"><i class="bi bi-diagram-3"></i> @(_result?.TotalCount ?? 0) categorías</span>
         <button class="btn btn-primary" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nueva categoría</button>
     </div>
 </section>
