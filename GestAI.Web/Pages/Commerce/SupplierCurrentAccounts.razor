@@ -1,6 +1,7 @@
 @page "/supplier-current-accounts"
 @using GestAI.Web.Dtos
 @inject ApiClient Api
+@inject ProductTelemetryService Telemetry
 
 <PageTitle>Cuentas corrientes de proveedores</PageTitle>
 
@@ -15,10 +16,8 @@
     </div>
 </section>
 
-@if (!string.IsNullOrWhiteSpace(_message))
-{
-    <div class="alert @(_isError ? "alert-danger" : "alert-success")">@_message</div>
-}
+<FormFeedback Error="@_error" Success="@_success" ValidationErrors="@ValidationSummary" />
+<OperationalStateHint IsLoading="@_loading" HasError="@(!string.IsNullOrWhiteSpace(_error))" IsSaving="@_saving" IsDirty="false" />
 
 <div class="row g-3 ui-summary-grid mb-3">
     <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Saldo proveedor</div><div class="ui-stat-value">@_items.Sum(x => x.Balance).ToString("C")</div><div class="ui-stat-foot">Deuda comercial abierta.</div></div></div></div>
@@ -46,7 +45,7 @@
                     @foreach (var item in _items)
                     {
                         <tr>
-                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.PartyName</span><span class="ui-table-meta">@item.TaxIdentifier · @item.OpenDocumentsCount documentos abiertos</span></div></td>
+                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.PartyName</span><span class="ui-table-meta">@item.TaxIdentifier | @item.OpenDocumentsCount documentos abiertos</span></div></td>
                             <td>@item.Debit.ToString("C")</td>
                             <td>@item.Credit.ToString("C")</td>
                             <td class="fw-semibold">@item.Balance.ToString("C")</td>
@@ -70,7 +69,14 @@
                 <div class="border rounded-3 p-3 mb-3 bg-light-subtle"><div class="small text-muted">Saldo actual de @_selected.PartyName</div><div class="h4 mb-0">@_selected.Balance.ToString("C")</div></div>
                 <div class="row g-2 mb-3">
                     <div class="col-md-6"><label class="form-label">Fecha</label><input type="datetime-local" class="form-control" @bind="_paymentDate" /></div>
-                    <div class="col-md-6"><label class="form-label">Importe</label><input type="number" step="0.01" class="form-control" @bind="_payment.Amount" /></div>
+                    <div class="col-md-6">
+                        <label class="form-label">Importe</label>
+                        <input type="number" step="0.01" class="form-control @(HasValidationError(nameof(_payment.Amount)) ? "is-invalid" : null)" @bind="_payment.Amount" />
+                        @if (TryGetValidationMessage(nameof(_payment.Amount), out var amountError))
+                        {
+                            <div class="invalid-feedback d-block">@amountError</div>
+                        }
+                    </div>
                     <div class="col-md-6"><label class="form-label">Medio</label><select class="form-select" @bind="_payment.PaymentMethod">@foreach (var method in Enum.GetValues<PaymentMethod>()){<option value="@method">@PaymentMethodLabel(method)</option>}</select></div>
                     <div class="col-md-6"><label class="form-label">Impacta caja</label><select class="form-select" @bind="_payment.ImpactCash"><option value="true">Sí</option><option value="false">No</option></select></div>
                     <div class="col-12"><label class="form-label">Concepto</label><input class="form-control" @bind="_payment.Concept" /></div>
@@ -159,16 +165,35 @@
     private bool _onlyWithBalance = true;
     private CreateSupplierPaymentCommand _payment = new() { ImpactCash = true, Concept = "Pago a proveedor" };
     private DateTime _paymentDate = DateTime.UtcNow;
-    private string? _message;
-    private bool _isError;
+    private string? _error;
+    private string? _success;
+    private bool _loading = true;
+    private bool _saving;
+    private readonly Dictionary<string, string> _validation = new();
+    private IReadOnlyList<string> ValidationSummary => _validation.Values.ToList();
 
     protected override async Task OnInitializedAsync() => await Load();
 
     private async Task Load()
     {
-        _items = (await Api.GetAsync<AppResult<List<CurrentAccountListItemDto>>>($"api/commerce/supplier-current-accounts?search={Uri.EscapeDataString(_search ?? string.Empty)}&onlyWithBalance={_onlyWithBalance.ToString().ToLowerInvariant()}"))?.Data ?? new();
-        if (_selected is not null)
-            await Select(_selected.PartyId);
+        _loading = true;
+        _error = null;
+        try
+        {
+            _items = (await Api.GetAsync<AppResult<List<CurrentAccountListItemDto>>>($"api/commerce/supplier-current-accounts?search={Uri.EscapeDataString(_search ?? string.Empty)}&onlyWithBalance={_onlyWithBalance.ToString().ToLowerInvariant()}"))?.Data ?? new();
+            if (_selected is not null)
+                await Select(_selected.PartyId);
+            Telemetry.Track("supplier-current-accounts", "load", "success", $"items={_items.Count}");
+        }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+            Telemetry.Track("supplier-current-accounts", "load", "error", ex.Message);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
     private async Task Select(int supplierId)
@@ -204,19 +229,64 @@
 
     private async Task SavePayment()
     {
-        if (_selected is null) return;
+        _validation.Clear();
+
+        if (_selected is null)
+        {
+            _validation[nameof(_selected)] = "Seleccioná un proveedor antes de registrar el pago.";
+            Telemetry.Track("supplier-current-accounts", "validate", "error", _validation[nameof(_selected)]);
+            return;
+        }
+
+        if (_payment.Amount <= 0m)
+        {
+            _validation[nameof(_payment.Amount)] = "Ingresá un importe mayor a cero para registrar el pago.";
+            Telemetry.Track("supplier-current-accounts", "validate", "error", _validation[nameof(_payment.Amount)]);
+            return;
+        }
+
+        if (_payment.Allocations.Any(x => x.Amount < 0m))
+        {
+            _validation[nameof(_payment.Allocations)] = "Las imputaciones no pueden contener importes negativos.";
+            Telemetry.Track("supplier-current-accounts", "validate", "error", _validation[nameof(_payment.Allocations)]);
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+        _success = null;
         _payment.SupplierId = _selected.PartyId;
         _payment.PaidAtUtc = DateTime.SpecifyKind(_paymentDate, DateTimeKind.Local).ToUniversalTime();
         _payment.Allocations = _payment.Allocations.Where(x => x.Amount > 0m).ToList();
-        var result = await Api.PostAsync<CreateSupplierPaymentCommand, AppResult<int>>("api/commerce/supplier-payments", _payment);
-        _isError = !(result?.Success ?? false);
-        _message = result?.Message ?? (_isError ? "No se pudo registrar el pago." : "Pago registrado correctamente.");
-        if (!_isError)
+        try
         {
+            var result = await Api.PostAsync<CreateSupplierPaymentCommand, AppResult<int>>("api/commerce/supplier-payments", _payment);
+            var hasError = !(result?.Success ?? false);
+            if (hasError)
+            {
+                _error = result?.Message ?? "No se pudo registrar el pago.";
+                Telemetry.Track("supplier-current-accounts", "save", "error", _error);
+                return;
+            }
+
+            _success = result?.Message ?? "Pago registrado correctamente.";
+            Telemetry.Track("supplier-current-accounts", "save", "success", $"supplierId={_selected.PartyId}");
             await Load();
             await Select(_selected.PartyId);
         }
+        catch (ApiClient.ApiClientException ex)
+        {
+            _error = ex.Message;
+            Telemetry.Track("supplier-current-accounts", "save", "error", ex.Message);
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
+
+    private bool HasValidationError(string key) => _validation.ContainsKey(key);
+    private bool TryGetValidationMessage(string key, out string message) => _validation.TryGetValue(key, out message!);
 
     private static string PaymentMethodLabel(PaymentMethod method) => method switch
     {

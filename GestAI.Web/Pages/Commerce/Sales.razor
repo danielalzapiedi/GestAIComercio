@@ -17,7 +17,7 @@
         <div class="page-hero-subtitle">Registrá ventas simples pero con base correcta para crecer hacia comprobantes y cobranzas futuras.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-receipt-cutoff"></i> @_result?.TotalCount ?? 0 ventas</span>
+        <span class="page-hero-chip"><i class="bi bi-receipt-cutoff"></i> @(_result?.TotalCount ?? 0) ventas</span>
         <a class="btn btn-outline-secondary" href="/sales/quick"><i class="bi bi-lightning-charge me-2"></i>Carga rápida</a>
         <button class="btn btn-primary" type="button" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nueva venta</button>
     </div>

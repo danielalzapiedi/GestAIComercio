@@ -17,7 +17,7 @@
         }
         else
         {
-            <span class="page-hero-chip"><i class="bi bi-file-earmark-medical"></i> @_result?.TotalCount ?? 0 facturas</span>
+            <span class="page-hero-chip"><i class="bi bi-file-earmark-medical"></i> @(_result?.TotalCount ?? 0) facturas</span>
             <a class="btn btn-outline-secondary" href="/fiscal-configuration"><i class="bi bi-gear me-2"></i>Configurar ARCA</a>
             <button class="btn btn-primary" type="button" @onclick="OpenCreateForm"><i class="bi bi-plus-circle me-2"></i>Generar factura</button>
         }
@@ -51,7 +51,7 @@
                     @foreach (var item in _result?.Items ?? Enumerable.Empty<CommercialInvoiceListItemDto>())
                     {
                         <tr>
-                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.Number</span><span class="ui-table-meta">PV @item.PointOfSale · @item.InvoiceType</span></div></td>
+                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.Number</span><span class="ui-table-meta">PV @item.PointOfSale | @item.InvoiceType</span></div></td>
                             <td>@item.CustomerName</td>
                             <td>@item.SaleNumber</td>
                             <td>@item.IssuedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</td>
@@ -110,7 +110,7 @@
     private int PendingCount => _result?.Items.Count(x => x.Status != InvoiceStatus.Authorized && x.Status != InvoiceStatus.Cancelled) ?? 0;
     private decimal VisibleTotal => _result?.Items.Sum(x => x.Total) ?? 0m;
     private string FiscalModeLabel => _seed.FiscalConfiguration is null ? "Sin configurar" : $"{_seed.FiscalConfiguration.IntegrationMode} / PV {_seed.FiscalConfiguration.PointOfSale}";
-    private string FiscalConfigurationLabel => _seed.FiscalConfiguration is null ? "Primero configurá el punto de venta fiscal." : $"{_seed.FiscalConfiguration.LegalName} · CUIT {_seed.FiscalConfiguration.TaxIdentifier} · PV {_seed.FiscalConfiguration.PointOfSale}";
+    private string FiscalConfigurationLabel => _seed.FiscalConfiguration is null ? "Primero configurá el punto de venta fiscal." : $"{_seed.FiscalConfiguration.LegalName} | CUIT {_seed.FiscalConfiguration.TaxIdentifier} | PV {_seed.FiscalConfiguration.PointOfSale}";
 
     protected override async Task OnInitializedAsync()
     {

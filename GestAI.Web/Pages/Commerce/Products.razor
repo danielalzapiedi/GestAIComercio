@@ -111,7 +111,7 @@
                                         <td>
                                             <div class="ui-product-main">
                                                 <span class="ui-product-name">@item.Name</span>
-                                                <span class="ui-product-meta">Código @item.InternalCode@(string.IsNullOrWhiteSpace(item.Barcode) ? string.Empty : $" · EAN {item.Barcode}")</span>
+                                                <span class="ui-product-meta">Código @item.InternalCode@(string.IsNullOrWhiteSpace(item.Barcode) ? string.Empty : $" | EAN {item.Barcode}")</span>
                                             </div>
                                         </td>
                                         <td>
@@ -171,7 +171,7 @@
                 <div class="ui-list-stack">
                     <div class="ui-check-card"><i class="bi bi-check2-circle text-primary"></i><div><strong>Activos visibles</strong><div class="ui-table-meta">@ActiveProductsOnPage de @VisibleProductsInPage en esta página.</div></div></div>
                     <div class="ui-check-card"><i class="bi bi-boxes text-primary"></i><div><strong>Variantes visibles</strong><div class="ui-table-meta">@VisibleVariants asociadas a los productos listados.</div></div></div>
-                    <div class="ui-check-card"><i class="bi bi-funnel text-primary"></i><div><strong>Filtro vigente</strong><div class="ui-table-meta">@SelectedCategoryLabel · @StatusFilterLabel.</div></div></div>
+                    <div class="ui-check-card"><i class="bi bi-funnel text-primary"></i><div><strong>Filtro vigente</strong><div class="ui-table-meta">@SelectedCategoryLabel | @StatusFilterLabel.</div></div></div>
                 </div>
             </div>
         </div>
@@ -266,7 +266,7 @@
                                                 <td>
                                                     <div class="ui-product-main">
                                                         <span class="ui-product-name">@variant.Name</span>
-                                                        <span class="ui-product-meta">Código @variant.InternalCode@(string.IsNullOrWhiteSpace(variant.Barcode) ? string.Empty : $" · EAN {variant.Barcode}")</span>
+                                                        <span class="ui-product-meta">Código @variant.InternalCode@(string.IsNullOrWhiteSpace(variant.Barcode) ? string.Empty : $" | EAN {variant.Barcode}")</span>
                                                     </div>
                                                 </td>
                                                 <td>@variant.AttributesSummary</td>

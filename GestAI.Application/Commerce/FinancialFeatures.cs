@@ -468,17 +468,35 @@ public sealed class GetCashDashboardQueryHandler(IAppDbContext db, IUserAccessSe
             .Select(x => new CashMovementListItemDto(x.Id, x.Direction, x.OriginType, x.PaymentMethod, x.ReferenceNumber, x.OccurredAtUtc, x.Amount, x.Concept, x.Observations, x.CustomerId, x.Customer != null ? x.Customer.Name : null, x.SupplierId, x.Supplier != null ? x.Supplier.Name : null))
             .ToListAsync(ct);
 
-        var allMovements = await db.CashMovements.AsNoTracking().Where(x => x.AccountId == scope.AccountId && x.CashRegisterId == register.Id).ToListAsync(ct);
-        var totalIn = FinancialHelpers.RoundMoney(allMovements.Where(x => x.Direction == CashMovementDirection.In).Sum(x => x.Amount));
-        var totalOut = FinancialHelpers.RoundMoney(allMovements.Where(x => x.Direction == CashMovementDirection.Out).Sum(x => x.Amount));
+        var totals = await db.CashMovements.AsNoTracking()
+            .Where(x => x.AccountId == scope.AccountId && x.CashRegisterId == register.Id)
+            .GroupBy(_ => 1)
+            .Select(g => new
+            {
+                TotalIn = g.Where(x => x.Direction == CashMovementDirection.In).Sum(x => x.Amount),
+                TotalOut = g.Where(x => x.Direction == CashMovementDirection.Out).Sum(x => x.Amount)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        var totalIn = FinancialHelpers.RoundMoney(totals?.TotalIn ?? 0m);
+        var totalOut = FinancialHelpers.RoundMoney(totals?.TotalOut ?? 0m);
         var currentBalance = FinancialHelpers.RoundMoney(totalIn - totalOut);
 
         CashSessionSummaryDto? openSession = null;
         if (session is not null)
         {
-            var sessionMovements = allMovements.Where(x => x.CashSessionId == session.Id).ToList();
-            var sessionIn = FinancialHelpers.RoundMoney(sessionMovements.Where(x => x.Direction == CashMovementDirection.In).Sum(x => x.Amount));
-            var sessionOut = FinancialHelpers.RoundMoney(sessionMovements.Where(x => x.Direction == CashMovementDirection.Out).Sum(x => x.Amount));
+            var sessionTotals = await db.CashMovements.AsNoTracking()
+                .Where(x => x.AccountId == scope.AccountId && x.CashRegisterId == register.Id && x.CashSessionId == session.Id)
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    SessionIn = g.Where(x => x.Direction == CashMovementDirection.In).Sum(x => x.Amount),
+                    SessionOut = g.Where(x => x.Direction == CashMovementDirection.Out).Sum(x => x.Amount)
+                })
+                .FirstOrDefaultAsync(ct);
+
+            var sessionIn = FinancialHelpers.RoundMoney(sessionTotals?.SessionIn ?? 0m);
+            var sessionOut = FinancialHelpers.RoundMoney(sessionTotals?.SessionOut ?? 0m);
             openSession = new CashSessionSummaryDto(session.Id, session.Status, session.OpenedAtUtc, session.OpenedByUserId, session.OpeningBalance, FinancialHelpers.RoundMoney(sessionIn - sessionOut), sessionIn, sessionOut, session.ClosedAtUtc, session.ClosingBalanceExpected, session.ClosingBalanceDeclared, session.Note);
         }
 

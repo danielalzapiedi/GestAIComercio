@@ -112,6 +112,10 @@ body {
 .ui-user-name {
     font-weight: 700;
     color: var(--ui-text-heading);
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .ui-role-pill {
@@ -175,6 +179,10 @@ body {
 .ui-user-dropdown-title {
     font-weight: 800;
     color: var(--ui-text-heading);
+    max-width: 190px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .ui-user-dropdown-subtitle {
@@ -1077,6 +1085,26 @@ body {
     .ui-split-layout .ui-form-card.ui-editor-open {
         inset: 84px 10px 10px;
         border-radius: 18px;
+    }
+}
+
+@media (max-width: 1366px) {
+    .ui-main {
+        margin-left: 286px !important;
+        width: calc(100% - 286px);
+    }
+
+    .ui-page-shell {
+        padding: 0 .85rem 1rem;
+    }
+
+    .ui-user-menu {
+        min-height: 46px;
+        gap: .5rem;
+    }
+
+    .ui-user-menu .ui-user-eyebrow {
+        display: none;
     }
 }
 

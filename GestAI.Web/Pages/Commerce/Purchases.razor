@@ -17,7 +17,7 @@
         <div class="page-hero-subtitle">Emití comprobantes de compra, seguí recepciones pendientes y dejá lista la trazabilidad hacia stock, costo y deuda con proveedores.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-bag-check"></i> @_result?.TotalCount ?? 0 compras</span>
+        <span class="page-hero-chip"><i class="bi bi-bag-check"></i> @(_result?.TotalCount ?? 0) compras</span>
         <button class="btn btn-primary" type="button" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nueva compra</button>
     </div>
 </section>
@@ -140,7 +140,7 @@
 
                 <div class="ui-action-bar">
                     <div class="ui-inline-actions"><button class="btn btn-primary" type="button" @onclick="Save" disabled="@_saving">Guardar compra</button><button class="btn btn-outline-secondary" type="button" @onclick="Cancel" disabled="@_saving">Cancelar</button></div>
-                    <div class="text-muted">Total estimado <strong>@FormTotal.ToString("C")</strong> · @((IsDirty) ? "Cambios sin guardar" : "Sin cambios pendientes")</div>
+                    <div class="text-muted">Total estimado <strong>@FormTotal.ToString("C")</strong> | @((IsDirty) ? "Cambios sin guardar" : "Sin cambios pendientes")</div>
                 </div>
             }
         </div></div>

@@ -181,8 +181,14 @@
     private CurrentUserAccessDto? _access;
     private bool _loadingAccess = true;
     private bool _sidebarOpen;
+    private string? _signedUserName;
     private string UserRoleLabel => _access?.IsPlatformAdmin == true ? "Super Admin" : _access?.Role?.ToString() ?? "Usuario";
-    private string UserDisplayName => _access?.IsPlatformAdmin == true ? "Administrador de plataforma" : _access?.Role == InternalUserRole.Owner ? "Owner del tenant" : _access?.Role == InternalUserRole.Employee ? "Usuario del tenant" : "Mi cuenta";
+    private string UserDisplayName => !string.IsNullOrWhiteSpace(_signedUserName)
+        ? _signedUserName!
+        : _access?.IsPlatformAdmin == true ? "Administrador de plataforma"
+        : _access?.Role == InternalUserRole.Owner ? "Owner del tenant"
+        : _access?.Role == InternalUserRole.Employee ? "Usuario del tenant"
+        : "Mi cuenta";
     private string UserInitial => string.IsNullOrWhiteSpace(UserDisplayName) ? "A" : UserDisplayName.Trim()[0].ToString().ToUpperInvariant();
 
     protected override async Task OnInitializedAsync()
@@ -199,6 +205,16 @@
         {
             var result = await Api.GetAsync<AppResult<CurrentUserAccessDto>>("api/saas/me/access");
             _access = result?.Data;
+            var auth = await Auth.GetAuthenticationStateAsync();
+            var user = auth.User;
+            var fullName = user.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                var given = user.Claims.FirstOrDefault(c => c.Type == "given_name")?.Value ?? string.Empty;
+                var family = user.Claims.FirstOrDefault(c => c.Type == "family_name")?.Value ?? string.Empty;
+                fullName = $"{given} {family}".Trim();
+            }
+            _signedUserName = string.IsNullOrWhiteSpace(fullName) ? null : fullName;
             if (_access is not null)
             {
                 AppState.SetAccess(_access);

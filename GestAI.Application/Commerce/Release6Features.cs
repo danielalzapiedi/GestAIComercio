@@ -840,12 +840,26 @@ public sealed class GetOperationalReportQueryHandler(IAppDbContext db, IUserAcce
         var purchases = await db.PurchaseDocuments.AsNoTracking().Where(x => x.AccountId == scope.AccountId && x.IssuedAtUtc >= fromUtc && x.IssuedAtUtc < toUtc && x.Status != PurchaseDocumentStatus.Cancelled)
             .Select(x => new { x.IssuedAtUtc, x.Total })
             .ToListAsync(ct);
-        var topProducts = await db.SaleItems.AsNoTracking().Where(x => x.AccountId == scope.AccountId && x.Sale.IssuedAtUtc >= fromUtc && x.Sale.IssuedAtUtc < toUtc && x.Sale.Status != SaleStatus.Cancelled)
+        var topProductsData = await db.SaleItems.AsNoTracking().Where(x => x.AccountId == scope.AccountId && x.Sale.IssuedAtUtc >= fromUtc && x.Sale.IssuedAtUtc < toUtc && x.Sale.Status != SaleStatus.Cancelled)
             .GroupBy(x => new { x.ProductId, x.ProductVariantId, x.Description, x.InternalCode })
-            .Select(g => new TopProductReportDto(g.Key.ProductId, g.Key.ProductVariantId, g.Key.Description, g.Key.InternalCode, g.Sum(x => x.Quantity), g.Sum(x => x.LineSubtotal), g.Select(x => x.SaleId).Distinct().Count()))
-            .OrderByDescending(x => x.Quantity).ThenByDescending(x => x.Revenue)
+            .Select(g => new
+            {
+                g.Key.ProductId,
+                g.Key.ProductVariantId,
+                g.Key.Description,
+                g.Key.InternalCode,
+                Quantity = g.Sum(x => x.Quantity),
+                Revenue = g.Sum(x => x.LineSubtotal),
+                Documents = g.Select(x => x.SaleId).Distinct().Count()
+            })
+            .OrderByDescending(x => x.Quantity)
+            .ThenByDescending(x => x.Revenue)
             .Take(request.Top)
             .ToListAsync(ct);
+
+        var topProducts = topProductsData
+            .Select(x => new TopProductReportDto(x.ProductId, x.ProductVariantId, x.Description, x.InternalCode, x.Quantity, x.Revenue, x.Documents))
+            .ToList();
         var stock = await db.ProductWarehouseStocks.AsNoTracking().Where(x => x.AccountId == scope.AccountId)
             .OrderBy(x => x.Product.Name).ThenBy(x => x.ProductVariant != null ? x.ProductVariant.Name : x.Product.Name)
             .Select(x => new StockStatusReportDto(x.ProductId, x.ProductVariantId, x.ProductVariantId.HasValue ? x.Product.Name + " · " + x.ProductVariant!.Name : x.Product.Name, x.ProductVariantId.HasValue ? x.ProductVariant!.InternalCode : x.Product.InternalCode, x.Warehouse.Name, x.QuantityOnHand, x.Product.MinimumStock, x.QuantityOnHand <= x.Product.MinimumStock))

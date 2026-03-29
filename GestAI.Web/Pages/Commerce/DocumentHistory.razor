@@ -53,7 +53,7 @@ else
                 <div class="ui-list-stack">
                     @foreach (var item in _traceability.AuditTrail)
                     {
-                        <div class="ui-check-card"><i class="bi bi-journal-text text-primary"></i><div><strong>@item.EntityName · @item.Action</strong><div class="ui-table-meta">@item.Summary</div><div class="ui-table-meta">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") · @(item.UserName ?? "Sistema")</div></div></div>
+                        <div class="ui-check-card"><i class="bi bi-journal-text text-primary"></i><div><strong>@item.EntityName | @item.Action</strong><div class="ui-table-meta">@item.Summary</div><div class="ui-table-meta">@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") | @(item.UserName ?? "Sistema")</div></div></div>
                     }
                 </div>
             </div></div>

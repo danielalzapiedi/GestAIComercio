@@ -40,7 +40,7 @@
                     @foreach (var item in _items)
                     {
                         <tr>
-                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.SupplierName</span><span class="ui-table-meta">@item.TaxId · @item.DocumentsCount compras</span></div></td>
+                            <td><div class="ui-table-stack"><span class="fw-semibold">@item.SupplierName</span><span class="ui-table-meta">@item.TaxId | @item.DocumentsCount compras</span></div></td>
                             <td><StatusBadge IsActive="@item.IsActive" /></td>
                             <td>@item.Debit.ToString("C")</td>
                             <td>@item.Credit.ToString("C")</td>

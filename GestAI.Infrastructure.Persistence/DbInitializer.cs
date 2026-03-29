@@ -26,6 +26,13 @@ public static class DbInitializer
         else
             await db.Database.EnsureCreatedAsync(ct);
 
+        await SeedAsync(db, userManager, roleManager, logger, options, ct);
+    }
+
+    public static async Task SeedAsync(AppDbContext db, UserManager<User> userManager, RoleManager<IdentityRole> roleManager, ILogger logger, SeedOptions options, CancellationToken ct = default)
+    {
+        var hasMigrations = db.Database.GetMigrations().Any();
+
         if (!await roleManager.RoleExistsAsync("SuperAdmin"))
             await roleManager.CreateAsync(new IdentityRole("SuperAdmin"));
 

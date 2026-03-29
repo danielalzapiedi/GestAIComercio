@@ -66,6 +66,28 @@ public class SaasCoreTests
     }
 
     [Fact]
+    public void GetQuotesQueryValidator_RejectsInvalidPaging()
+    {
+        var validator = new GetQuotesQueryValidator();
+        var result = validator.Validate(new GetQuotesQuery(Page: 0, PageSize: 200));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, x => x.PropertyName == nameof(GetQuotesQuery.Page));
+        Assert.Contains(result.Errors, x => x.PropertyName == nameof(GetQuotesQuery.PageSize));
+    }
+
+    [Fact]
+    public void GetSalesQueryValidator_RejectsInvalidPaging()
+    {
+        var validator = new GetSalesQueryValidator();
+        var result = validator.Validate(new GetSalesQuery(Page: -1, PageSize: 0));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, x => x.PropertyName == nameof(GetSalesQuery.Page));
+        Assert.Contains(result.Errors, x => x.PropertyName == nameof(GetSalesQuery.PageSize));
+    }
+
+    [Fact]
     public void GetTenantListQueryValidator_RejectsInvalidPageSize()
     {
         var validator = new GetTenantListQueryValidator();

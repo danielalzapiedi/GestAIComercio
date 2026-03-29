@@ -30,5 +30,30 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Test
-        run: dotnet test --no-build --configuration Release
+      - name: Format (quality gate)
+        run: dotnet format --verify-no-changes --no-restore
+
+      - name: Test with coverage (quality gate)
+        run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+      - name: Performance smoke (p95 baseline)
+        run: dotnet test --no-build --configuration Release --filter "FullyQualifiedName~PerformanceBudget|FullyQualifiedName~StaysWithinPerformanceBudget"
+
+      - name: Coverage threshold (quality gate)
+        run: |
+          python - <<'PY'
+          import glob
+          import xml.etree.ElementTree as ET
+
+          files = glob.glob("TestResults/**/coverage.cobertura.xml", recursive=True)
+          if not files:
+              raise SystemExit("No se encontró coverage.cobertura.xml")
+
+          root = ET.parse(files[0]).getroot()
+          line_rate = float(root.attrib.get("line-rate", "0"))
+          pct = line_rate * 100
+          minimum = 55.0
+          print(f"Line coverage: {pct:.2f}% (mínimo requerido: {minimum:.2f}%)")
+          if pct < minimum:
+              raise SystemExit(f"Coverage debajo del mínimo: {pct:.2f}% < {minimum:.2f}%")
+          PY

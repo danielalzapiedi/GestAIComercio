@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace GestAI.Web;
 
@@ -22,17 +23,24 @@ public sealed class ApiClient
 
     public sealed class ApiClientException : Exception
     {
-        public ApiClientException(string message, HttpStatusCode statusCode, string? errorCode = null, IReadOnlyDictionary<string, string[]>? fieldErrors = null)
+        public ApiClientException(
+            string message,
+            HttpStatusCode statusCode,
+            string? errorCode = null,
+            IReadOnlyDictionary<string, string[]>? fieldErrors = null,
+            string? correlationId = null)
             : base(message)
         {
             StatusCode = statusCode;
             ErrorCode = errorCode;
             FieldErrors = fieldErrors;
+            CorrelationId = correlationId;
         }
 
         public HttpStatusCode StatusCode { get; }
         public string? ErrorCode { get; }
         public IReadOnlyDictionary<string, string[]>? FieldErrors { get; }
+        public string? CorrelationId { get; }
     }
 
     private static string Normalize(string url)
@@ -174,6 +182,7 @@ public sealed class ApiClient
         if (response.IsSuccessStatusCode)
             return;
 
+        var correlationFromHeader = TryReadCorrelationIdHeader(response);
         var payload = await response.Content.ReadAsStringAsync(ct);
         if (!string.IsNullOrWhiteSpace(payload))
         {
@@ -181,36 +190,97 @@ public sealed class ApiClient
             {
                 var parsed = JsonSerializer.Deserialize<ApiErrorEnvelope>(payload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (parsed is not null && !string.IsNullOrWhiteSpace(parsed.Message))
-                    throw new ApiClientException(parsed.Message!, response.StatusCode, parsed.ErrorCode);
+                    throw new ApiClientException(
+                        BuildUserMessage(parsed.Message!, parsed.ErrorCode, parsed.CorrelationId ?? correlationFromHeader),
+                        response.StatusCode,
+                        parsed.ErrorCode,
+                        correlationId: parsed.CorrelationId ?? correlationFromHeader);
 
                 var problem = JsonSerializer.Deserialize<ApiProblemDetails>(payload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (problem is not null)
                 {
+                    var errorCode = problem.ErrorCode;
+                    var correlationId = problem.CorrelationId ?? correlationFromHeader;
+
                     if (problem.Errors is { Count: > 0 })
                     {
                         var first = problem.Errors.FirstOrDefault(x => x.Value is { Length: > 0 });
                         if (first.Value is { Length: > 0 })
-                            throw new ApiClientException(first.Value[0], response.StatusCode, first.Key, problem.Errors);
+                            throw new ApiClientException(
+                                BuildUserMessage(first.Value[0], errorCode ?? first.Key, correlationId),
+                                response.StatusCode,
+                                errorCode ?? first.Key,
+                                problem.Errors,
+                                correlationId);
                     }
 
                     if (!string.IsNullOrWhiteSpace(problem.Detail))
-                        throw new ApiClientException(problem.Detail!, response.StatusCode);
+                        throw new ApiClientException(
+                            BuildUserMessage(problem.Detail!, errorCode, correlationId),
+                            response.StatusCode,
+                            errorCode,
+                            correlationId: correlationId);
 
                     if (!string.IsNullOrWhiteSpace(problem.Title))
-                        throw new ApiClientException(problem.Title!, response.StatusCode);
+                        throw new ApiClientException(
+                            BuildUserMessage(problem.Title!, errorCode, correlationId),
+                            response.StatusCode,
+                            errorCode,
+                            correlationId: correlationId);
                 }
             }
             catch (JsonException)
             {
                 var plain = payload.Trim();
                 if (!string.IsNullOrWhiteSpace(plain))
-                    throw new ApiClientException(plain.Length > 250 ? plain[..250] : plain, response.StatusCode);
+                    throw new ApiClientException(
+                        BuildUserMessage(plain.Length > 250 ? plain[..250] : plain, null, correlationFromHeader),
+                        response.StatusCode,
+                        correlationId: correlationFromHeader);
             }
         }
 
-        throw new ApiClientException($"Error HTTP {(int)response.StatusCode}.", response.StatusCode);
+        throw new ApiClientException(
+            BuildUserMessage($"Error HTTP {(int)response.StatusCode}.", null, correlationFromHeader),
+            response.StatusCode,
+            correlationId: correlationFromHeader);
     }
 
-    private sealed record ApiErrorEnvelope(bool Success, string? ErrorCode, string? Message);
-    private sealed record ApiProblemDetails(string? Title, string? Detail, Dictionary<string, string[]>? Errors);
+    private static string? TryReadCorrelationIdHeader(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("X-Correlation-ID", out var values))
+            return null;
+
+        var correlationId = values.FirstOrDefault()?.Trim();
+        return string.IsNullOrWhiteSpace(correlationId) ? null : correlationId;
+    }
+
+    private static string BuildUserMessage(string message, string? errorCode, string? correlationId)
+    {
+        var suffixParts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(errorCode))
+            suffixParts.Add($"Código: {errorCode}");
+
+        if (!string.IsNullOrWhiteSpace(correlationId))
+            suffixParts.Add($"ID: {correlationId}");
+
+        if (suffixParts.Count == 0)
+            return message;
+
+        return $"{message} ({string.Join(" · ", suffixParts)})";
+    }
+
+    private sealed record ApiErrorEnvelope(
+        bool Success,
+        [property: JsonPropertyName("errorCode")] string? ErrorCode,
+        [property: JsonPropertyName("message")] string? Message,
+        [property: JsonPropertyName("correlationId")] string? CorrelationId);
+
+    private sealed record ApiProblemDetails(
+        string? Title,
+        string? Detail,
+        Dictionary<string, string[]>? Errors,
+        [property: JsonPropertyName("errorCode")] string? ErrorCode,
+        [property: JsonPropertyName("correlationId")] string? CorrelationId);
 }

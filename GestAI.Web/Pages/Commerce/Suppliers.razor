@@ -25,7 +25,7 @@
         }
         else
         {
-            <span class="page-hero-chip"><i class="bi bi-truck"></i> @_result?.TotalCount ?? 0 proveedores</span>
+            <span class="page-hero-chip"><i class="bi bi-truck"></i> @(_result?.TotalCount ?? 0) proveedores</span>
             <button class="btn btn-primary" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nuevo proveedor</button>
         }
     </div>
@@ -83,7 +83,6 @@ else
             <div class="col-md-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
             <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="Search">Buscar</button></div>
             <div class="col-md-1"><button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">Limpiar</button></div>
-            <div class="col-md-2 text-md-end ui-table-meta">Red de abastecimiento</div>
         </div>
     </div></div>
 

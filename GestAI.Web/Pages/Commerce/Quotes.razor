@@ -17,7 +17,7 @@
         <div class="page-hero-subtitle">Armá propuestas comerciales reales, con cliente, vigencia, estados claros y conversión posterior a venta.</div>
     </div>
     <div class="page-hero-meta">
-        <span class="page-hero-chip"><i class="bi bi-file-earmark-text"></i> @_result?.TotalCount ?? 0 presupuestos</span>
+        <span class="page-hero-chip"><i class="bi bi-file-earmark-text"></i> @(_result?.TotalCount ?? 0) presupuestos</span>
         <button class="btn btn-primary" type="button" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nuevo presupuesto</button>
     </div>
 </section>

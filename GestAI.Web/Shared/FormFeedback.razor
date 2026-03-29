@@ -1,4 +1,16 @@
-@if (!string.IsNullOrWhiteSpace(Error))
+@if (ValidationErrors is { Count: > 0 })
+{
+    <div class="alert alert-warning" role="alert">
+        <div class="fw-semibold mb-1">Revisá estos datos antes de continuar:</div>
+        <ul class="mb-0 ps-3">
+            @foreach (var item in ValidationErrors)
+            {
+                <li>@item</li>
+            }
+        </ul>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(Error))
 {
     <div class="alert alert-danger" role="alert">@Error</div>
 }
@@ -10,4 +22,5 @@ else if (!string.IsNullOrWhiteSpace(Success))
 @code {
     [Parameter] public string? Error { get; set; }
     [Parameter] public string? Success { get; set; }
+    [Parameter] public IReadOnlyList<string>? ValidationErrors { get; set; }
 }

@@ -127,10 +127,31 @@ using (var scope = app.Services.CreateScope())
     var userMgr = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
     var roleMgr = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DbInitializer");
+    var runMigrationsOnStartup = builder.Configuration.GetValue<bool?>("Database:RunMigrationsOnStartup") ?? app.Environment.IsDevelopment();
+    var runSeedOnStartup = builder.Configuration.GetValue<bool?>("Seed:Enabled") ?? app.Environment.IsDevelopment();
     var seedAdminPassword = builder.Configuration["Seed:AdminPassword"];
     var seedDemoOwnerPassword = builder.Configuration["Seed:DemoOwnerPassword"];
     var isDevelopment = app.Environment.IsDevelopment();
     var logGeneratedSeedPasswords = builder.Configuration.GetValue<bool>("Seed:LogGeneratedPasswords");
+
+    if (runMigrationsOnStartup)
+    {
+        var hasMigrations = db.Database.GetMigrations().Any();
+        if (hasMigrations)
+            await db.Database.MigrateAsync();
+        else
+            await db.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        logger.LogInformation("Database:RunMigrationsOnStartup=false. Se omite migración automática al iniciar.");
+    }
+
+    if (!runSeedOnStartup)
+    {
+        logger.LogInformation("Seed:Enabled=false. Se omite seed automático al iniciar.");
+        return;
+    }
 
     if (string.IsNullOrWhiteSpace(seedAdminPassword) || string.IsNullOrWhiteSpace(seedDemoOwnerPassword))
     {
@@ -176,7 +197,7 @@ using (var scope = app.Services.CreateScope())
 
     logger.LogInformation("Inicializando datos seed con credenciales configurables por entorno (Seed:*).");
 
-    await DbInitializer.MigrateAndSeedAsync(
+    await DbInitializer.SeedAsync(
         db,
         userMgr,
         roleMgr,

@@ -1,28 +1,25 @@
 # Product Backlog
 
 ## 🔥 Críticos
-- ✅ Unificar contrato de errores API/UI con taxonomía estable (mapeo automático de `AppResult` fallido a `ProblemDetails` + status HTTP).
-- ✅ Incorporar smoke de flujo crítico end-to-end de comercio (presupuesto → venta → factura) en test de integración.
-- ✅ Hardening de seguridad operativa en credenciales seed (política mínima en no-Development y bloqueo de log de passwords generadas fuera de Development).
+- **Unificar contrato de errores frontend/backend por código estable** (incluyendo exposición y uso consistente de `errorCode` + `correlationId` en toda la UX operativa).
+- **Plan de pruebas de regresión por módulo (funcional + permisos)**, priorizando escenarios negativos, de borde y control de accesos.
+- **Endurecer estrategia de migraciones/seed en startup por entorno** para reducir riesgo operativo en despliegues no controlados.
 
 ## ⚡ Quick Wins
-- ✅ Estandarizar validaciones de formularios con modelo compartido para evitar reglas duplicadas y divergentes.
-- ✅ Añadir tests de contrato API (status codes + schema + error envelope) para asegurar consistencia externa.
+- **Homologar estados UI en todos los formularios de commerce**, reutilizando el mismo patrón de feedback y operación.
 
 ## 🧠 Producto
-- ✅ Instrumentar telemetría funcional por flujo y por error de validación (abandono, error rate, latencia percibida).
-- ✅ Definir guía única de mensajes operativos y códigos de error de negocio para soporte y operación.
-- ✅ Crear tablero de salud técnica/producto (build, tests, cobertura, deuda, p95) para priorización continua.
+- **Observabilidad funcional mínima por flujo** para priorizar backlog con evidencia real de errores/incidentes.
+- **Mejorar accesibilidad y feedback de acciones críticas** con mensajes accionables y comportamiento consistente.
 
 ## 🧱 Técnica
-- ✅ Descomponer páginas Razor de alto tamaño en componentes y view models testeables.
-- ✅ Reducir tamaño de módulos Application (features) por bounded context interno para bajar complejidad.
-- ✅ Separar `CommerceController` en controladores por dominio funcional manteniendo compatibilidad de rutas.
+- **Particionar `CommerceController` por dominio funcional** para reducir acoplamiento y mejorar mantenibilidad.
+- **Dividir archivos `*Features.cs` en slices por caso de uso** para bajar complejidad y riesgo de regresión colateral.
+- **Definir quality gates automáticos** (cobertura mínima, complejidad y pruebas smoke obligatorias).
 
 ## 🎯 UX
-- ✅ Aplicar dirty-guard transversal en todos los formularios críticos para evitar pérdida de cambios.
-- ✅ Normalizar estados UI en todas las grillas y formularios (loading/empty/error/success/disabled).
+- **Estandarizar validaciones visibles por campo + resumen global** con criterios de interacción homogéneos.
 
 ## 🚀 Performance
-- ✅ Expandir budgets automatizados de performance a `sales`, `quotes`, `purchases` y `categories`.
-- ✅ Optimizar serialización/payload en listados de mayor cardinalidad para reducir latencia y consumo.
+- **Optimización de queries críticas y baseline p95 por endpoint** en módulos de mayor uso transaccional.
+- **Estrategia de pruebas de performance básica en CI** para detectar degradación de forma temprana.
