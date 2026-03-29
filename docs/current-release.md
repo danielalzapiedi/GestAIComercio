@@ -40,6 +40,11 @@
 - **Detalle:** se removió “Gestión de estructura comercial” del bloque junto a los botones Buscar/Limpiar para mantener consistencia con el patrón UX.
 - **Impacto UX:** interfaz más limpia y menor distracción en la zona de acciones.
 
+## Tarea aplicada (actualización 2026-03-29 - ajuste UX depósitos/proveedores)
+- **Tarea:** Eliminación de textos contextuales fuera de lugar en barras de filtros.
+- **Detalle:** se removieron “Operación logística” (Depósitos) y “Red de abastecimiento” (Proveedores) del bloque junto a Buscar/Limpiar.
+- **Impacto UX:** mayor limpieza visual y consistencia entre pantallas maestras.
+
 ## Flujo del equipo (ejecutado)
 1. **Release Manager:** confirmó modo vigente (diagnóstico continuo) y validó pertenencia de la tarea.
 2. **Análisis funcional:** relevamiento de síntoma visual reportado (`0.ToString("C")` visible en UI).
