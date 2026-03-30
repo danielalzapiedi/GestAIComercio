@@ -494,6 +494,12 @@ body {
     min-height: 40px;
 }
 
+.ui-filter-btn {
+    min-height: 42px;
+    padding: .58rem .7rem;
+    font-size: .9rem;
+}
+
 .ui-badge {
     display: inline-flex;
     align-items: center;

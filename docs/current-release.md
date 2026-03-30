@@ -121,6 +121,12 @@
   2. en Presupuestos se reforzó el dropdown de acciones con `dropstart` + `z-index` alto y contenedor sin clipping para evitar que el menú de tres puntos quede oculto.
 - **Impacto UX:** Clientes vuelve a verse armónico y el menú de acciones en Presupuestos se despliega de forma más confiable.
 
+## Tarea aplicada (actualización 2026-03-30 - ajuste final botones filtros)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección de overflow de texto en botones Buscar/Limpiar.
+- **Detalle técnico:** se redistribuyeron columnas de filtros en Presupuestos para dar mayor ancho a acciones y se creó `ui-filter-btn` con padding/tamaño de fuente más compacto; en Clientes se removieron íconos de acción para preservar legibilidad dentro del botón.
+- **Impacto UX:** botones en una sola línea y contenido contenido dentro del ancho visual del control, sin desborde.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.
