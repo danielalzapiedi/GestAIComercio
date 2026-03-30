@@ -55,6 +55,21 @@
 - **Detalle técnico:** se redujo `ParentOptionsPageSize` de 100 a 50 para cumplir la validación `InclusiveBetween(1, 50)` del backend.
 - **Impacto funcional:** elimina la `ValidationException` al abrir Categorías y permite cargar opciones de categoría padre correctamente.
 
+## Tarea aplicada (actualización 2026-03-30 - hotfix depósitos/sucursales)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección de validación en Depósitos al cargar sucursales para filtros/formulario.
+- **Síntoma reportado:** `FluentValidation.ValidationException` en `GetBranches` por `PageSize=100` fuera de rango (`1..50`).
+- **Detalle técnico:** en `Warehouses.razor` se reemplazó el literal `pageSize=100` por la constante `BranchOptionsPageSize = 50` para alinear UI con contrato del backend.
+- **Impacto funcional:** elimina la excepción al abrir Depósitos y restaura la carga de sucursales en filtro y alta/edición.
+
+## Flujo de trabajo aplicado (modo bugs)
+1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
+2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.
+3. **UX:** validó criterio de robustez: los combos deben cargar sin exponer errores técnicos al usuario.
+4. **Architect:** definió corrección mínima y de bajo riesgo (alinear `pageSize` al límite del backend, sin romper contratos).
+5. **Developer:** implementó constante explícita y reemplazo de query hardcodeada.
+6. **QA:** validó build/tests y chequeo de regresión focal en pantalla de Depósitos.
+
 ## Flujo del equipo (ejecutado)
 1. **Release Manager:** confirmó modo vigente (diagnóstico continuo) y validó pertenencia de la tarea.
 2. **Análisis funcional:** relevamiento de síntoma visual reportado (`0.ToString("C")` visible en UI).

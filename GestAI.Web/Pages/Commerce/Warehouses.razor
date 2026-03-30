@@ -149,6 +149,7 @@ else
     private bool _isDirty;
     private int _page = 1;
     private const int PageSize = 10;
+    private const int BranchOptionsPageSize = 50;
     private WarehouseUpsertCommand _form = new();
     private string? _error;
     private string? _success;
@@ -167,7 +168,7 @@ else
         {
             _error = null;
             _success = null;
-            _branches = (await Api.GetAsync<AppResult<PagedResult<BranchListItemDto>>>("api/commerce/branches?pageSize=100"))?.Data?.Items.Select(x => new LookupDto(x.Id, x.Name)).ToList() ?? new();
+            _branches = (await Api.GetAsync<AppResult<PagedResult<BranchListItemDto>>>($"api/commerce/branches?pageSize={BranchOptionsPageSize}"))?.Data?.Items.Select(x => new LookupDto(x.Id, x.Name)).ToList() ?? new();
             Telemetry.Track("warehouses", "load-branches", "success");
         }
         catch (ApiClient.ApiClientException ex)
