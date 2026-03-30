@@ -466,3 +466,13 @@
 - **Síntoma:** `CS0246` en `ApiClient.cs` por no resolver `IAppResultEnvelope` y `AppResult`.
 - **Detalle técnico:** se agregó `using GestAI.Web.Dtos;` en `GestAI.Web/ApiClient.cs` para vincular explícitamente los tipos de envelope.
 - **Impacto:** restaura compilación del proyecto web en entornos locales/CI que no tengan global usings equivalentes.
+
+## Tarea aplicada (actualización 2026-03-30 - fix icono en select desplegables)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** recuperar la señal visual de desplegable en controles `select`.
+- **Síntoma reportado:** los `select` se percibían como inputs comunes porque no mostraban el icono de flecha.
+- **Causa raíz:** en `app-overrides.css`, la regla compartida de `.form-control, .form-select` usaba `background` shorthand, lo que sobreescribía `background-image` de Bootstrap para `form-select`.
+- **Detalle técnico:**
+  1. se reemplazó `background` por `background-color` en la regla compartida,
+  2. se agregó regla explícita de `.form-select` para respetar `--bs-form-select-bg-img` y asegurar posición/tamaño/padding del ícono.
+- **Impacto UX:** los selects vuelven a ser identificables visualmente como desplegables, mejorando escaneabilidad y usabilidad de formularios/filtros.

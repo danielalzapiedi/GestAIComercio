@@ -431,7 +431,15 @@ body {
 .form-select {
     min-height: 46px;
     border-color: #d9e4f2;
-    background: rgba(255,255,255,.92);
+    background-color: rgba(255,255,255,.92);
+}
+
+.form-select {
+    background-image: var(--bs-form-select-bg-img);
+    background-repeat: no-repeat;
+    background-position: right .85rem center;
+    background-size: 16px 12px;
+    padding-right: 2.35rem;
 }
 
 .form-control::placeholder {
