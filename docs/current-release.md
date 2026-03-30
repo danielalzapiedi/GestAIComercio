@@ -55,6 +55,128 @@
 - **Detalle técnico:** se redujo `ParentOptionsPageSize` de 100 a 50 para cumplir la validación `InclusiveBetween(1, 50)` del backend.
 - **Impacto funcional:** elimina la `ValidationException` al abrir Categorías y permite cargar opciones de categoría padre correctamente.
 
+## Tarea aplicada (actualización 2026-03-30 - hotfix depósitos/sucursales)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección de validación en Depósitos al cargar sucursales para filtros/formulario.
+- **Síntoma reportado:** `FluentValidation.ValidationException` en `GetBranches` por `PageSize=100` fuera de rango (`1..50`).
+- **Detalle técnico:** en `Warehouses.razor` se reemplazó el literal `pageSize=100` por la constante `BranchOptionsPageSize = 50` para alinear UI con contrato del backend.
+- **Impacto funcional:** elimina la excepción al abrir Depósitos y restaura la carga de sucursales en filtro y alta/edición.
+
+## Tarea aplicada (actualización 2026-03-30 - mejoras UX/UI clientes)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Ajustes de usabilidad y armonía visual en la pantalla de Clientes.
+- **Detalle técnico:**
+  1. se agregó estado explícito de error de carga con acción de reintento,
+  2. se reequilibró la grilla de filtros y se añadió búsqueda por tecla Enter,
+  3. se mejoró legibilidad de tabla con truncado seguro en celdas largas,
+  4. se migraron acciones por fila a menú contextual de tres puntos cuando hay múltiples acciones disponibles, con estilo moderno no invasivo (ícono sin apariencia de botón tradicional).
+- **Impacto UX:** mayor claridad entre estados (error vs vacío), mejor ritmo visual en filtros y tabla, menor fricción operativa en búsquedas.
+
+## Tarea aplicada (actualización 2026-03-30 - ajuste estado visual editor)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección de `OperationalStateHint` para evitar mostrar “Estado: success” de forma permanente en formularios de alta/edición.
+- **Detalle técnico:** se eliminó el estado success por default del componente compartido; ahora sólo renderiza cuando aplica un estado operativo real (`loading`, `error`, `guardando` o `con cambios pendientes`).
+- **Impacto UX:** desaparece el mensaje de éxito falso en editor de Clientes (y pantallas que reutilizan el componente), reduciendo ruido y confusión.
+
+## Tarea aplicada (actualización 2026-03-30 - fix navegación nuevo cliente)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección de navegación y estado en `Clientes` para alta nueva.
+- **Síntoma reportado:** en algunos casos el botón “Nuevo cliente” requería doble click y, tras editar un cliente, al crear uno nuevo se arrastraban datos del último editado.
+- **Detalle técnico:** se cambió el enrutado a parámetro explícito (`@page "/customers/{Mode}"`) para que la transición `"/customers"` → `"/customers/new"` dispare siempre actualización de parámetros; `IsNewRoute` ahora depende de `Mode == "new"` y `IsEditRoute` de `EditId`. Además, `NewItem()` inicializa `_form` antes de navegar.
+- **Impacto UX/funcional:** apertura consistente con un solo click y formulario de alta siempre limpio, sin datos residuales de edición.
+
+## Tarea aplicada (actualización 2026-03-30 - presupuestos alineado a premisas de clientes)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Aplicación de las mismas premisas UX/funcionales en pantalla de Presupuestos.
+- **Detalle técnico:**
+  1. búsqueda por Enter en filtros,
+  2. estado explícito de error de carga con CTA de reintento,
+  3. fallback seguro de `_result` ante error para evitar estados nulos frágiles,
+  4. migración de acciones por fila a menú contextual de tres puntos,
+  5. truncado visual en celdas largas de comprobante/cliente.
+- **Impacto UX:** mayor consistencia con Clientes, menor ruido visual en grilla y mejor robustez ante fallos de API.
+
+## Tarea aplicada (actualización 2026-03-30 - refinamiento UX presupuestos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Implementación de quick wins UX sobre Presupuestos tras revisión visual.
+- **Detalle técnico:**
+  1. se eliminó la duplicación de feedback de error de carga para evitar mensajes repetidos,
+  2. se ajustó microcopy del estado vacío para lenguaje orientado a negocio (sin referencias internas),
+  3. se reforzó jerarquía visual de tabla destacando total y estado.
+- **Impacto UX:** pantalla más limpia, menor ruido cognitivo y lectura más rápida de información clave.
+
+## Tarea aplicada (actualización 2026-03-30 - ajuste filtros/menú acciones grillas)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección visual en botones Buscar/Limpiar y visibilidad de dropdown en acciones por fila.
+- **Detalle técnico:**
+  1. se aplicó `text-nowrap` y nueva distribución responsive en filtros (Clientes/Presupuestos) para evitar quiebre de texto en botones,
+  2. se habilitó contenedor de tabla apto para dropdown (`ui-table-responsive-actions`) y cards con overflow visible (`ui-data-card-actions`) para que el menú de tres puntos no quede recortado por scroll/overflow.
+- **Impacto UX:** acciones más legibles y menú contextual completamente visible al abrir, sin clipping dentro de la grilla.
+
+## Tarea aplicada (actualización 2026-03-30 - ajuste fino post-feedback cliente/presupuestos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección visual tras feedback de usuario final.
+- **Detalle técnico:**
+  1. se retiró el comportamiento de overflow extendido en la grilla de Clientes para recuperar estética original de la card,
+  2. en Presupuestos se reforzó el dropdown de acciones con `dropstart` + `z-index` alto y contenedor sin clipping para evitar que el menú de tres puntos quede oculto.
+- **Impacto UX:** Clientes vuelve a verse armónico y el menú de acciones en Presupuestos se despliega de forma más confiable.
+
+## Tarea aplicada (actualización 2026-03-30 - ajuste final botones filtros)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección de overflow de texto en botones Buscar/Limpiar.
+- **Detalle técnico:** se redistribuyeron columnas de filtros en Presupuestos para dar mayor ancho a acciones y se creó `ui-filter-btn` con padding/tamaño de fuente más compacto; en Clientes se removieron íconos de acción para preservar legibilidad dentro del botón.
+- **Impacto UX:** botones en una sola línea y contenido contenido dentro del ancho visual del control, sin desborde.
+
+## Tarea aplicada (actualización 2026-03-30 - ajuste fino visual grilla clientes/filtros)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Reducir peso visual de botones de filtros y corregir apariencia de filas en grilla de Clientes.
+- **Detalle técnico:** se compactó `ui-filter-btn` (menor altura/padding/tamaño de fuente) para liberar espacio a filtros y en Clientes se removió `table-striped` para evitar cortes visuales del fondo gris por fila.
+- **Impacto UX:** filtros con mayor aire útil y tabla de Clientes con lectura más limpia/sólida.
+
+## Tarea aplicada (actualización 2026-03-30 - ajuste padding botones filtro)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Reducción adicional de tamaño visual en botones Buscar/Limpiar.
+- **Detalle técnico:** en `.ui-filter-btn` se eliminó padding interno (`padding: 0`) y se redujo altura mínima para compactar controles.
+- **Impacto UX:** acciones menos pesadas visualmente y mayor protagonismo para campos de filtro.
+
+## Tarea aplicada (actualización 2026-03-30 - corrección layout filtros presupuestos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Ajuste final de distribución horizontal de filtros/acciones en Presupuestos.
+- **Detalle técnico:** se revirtió el tweak de `font-size/padding` en botones y se normalizó la grilla a seis columnas `col-xl-2` para evitar compresión desigual (el problema original estaba en `col-xl-1`).
+- **Impacto UX:** botones conservan estilo estándar y layout más equilibrado en desktop.
+
+## Tarea aplicada (actualización 2026-03-30 - unificación estilo moderno de grillas)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Homogeneización visual de grillas principales en Clientes y Presupuestos.
+- **Detalle técnico:** se creó el estilo compartido `ui-modern-grid` (cabecera moderna, zebra suave, hover consistente) y se aplicó en ambas tablas principales para eliminar diferencias de apariencia.
+- **Impacto UX:** percepción uniforme, moderna y consistente entre pantallas maestras comerciales.
+
+## Tarea aplicada (actualización 2026-03-30 - alineación filas grilla clientes)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección de desalineación visual entre columnas por fila en Clientes.
+- **Detalle técnico:** se estandarizó el contenido de celdas con `ui-table-stack` en todas las columnas de datos y se fijó altura mínima homogénea por celda en `ui-modern-grid`.
+- **Impacto UX:** filas alineadas de forma consistente, con altura y ritmo visual equivalentes a Presupuestos.
+
+## Tarea aplicada (actualización 2026-03-30 - simplificación KPIs en Presupuestos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Remoción de card no relevante “Carga rápida” en cabecera de Presupuestos.
+- **Detalle técnico:** se eliminó la métrica de conteo de SKUs (`Productos + Variantes`) por no aportar valor operativo directo en la vista principal; la grilla superior pasó de 4 a 3 cards con ancho equilibrado (`col-xl-4`).
+- **Impacto UX:** cabecera más clara, menos ruido y foco en indicadores útiles para decisión comercial.
+
+## Tarea aplicada (actualización 2026-03-30 - fix selección menú importación/productos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Evitar doble marcado de navegación al ingresar a Importación.
+- **Detalle técnico:** en `MainLayout.razor` se configuró `Match=\"NavLinkMatch.All\"` para el link `/products`, evitando que quede activo por prefijo cuando la ruta actual es `/products/import`.
+- **Impacto UX:** al abrir Importación queda activo solo ese menú, sin resaltar también Productos.
+
+## Flujo de trabajo aplicado (modo bugs)
+1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
+2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.
+3. **UX:** validó criterio de robustez: los combos deben cargar sin exponer errores técnicos al usuario.
+4. **Architect:** definió corrección mínima y de bajo riesgo (alinear `pageSize` al límite del backend, sin romper contratos).
+5. **Developer:** implementó constante explícita y reemplazo de query hardcodeada.
+6. **QA:** validó build/tests y chequeo de regresión focal en pantalla de Depósitos.
+
 ## Flujo del equipo (ejecutado)
 1. **Release Manager:** confirmó modo vigente (diagnóstico continuo) y validó pertenencia de la tarea.
 2. **Análisis funcional:** relevamiento de síntoma visual reportado (`0.ToString("C")` visible en UI).

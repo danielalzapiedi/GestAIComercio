@@ -1,6 +1,7 @@
 @page "/quotes"
 @using GestAI.Web.Dtos
 @using GestAI.Web.Service
+@using Microsoft.AspNetCore.Components.Web
 @using System.Text.Json
 @inject ApiClient Api
 @inject GestAI.Web.Service.CommerceFormValidator FormValidator
@@ -23,34 +24,49 @@
 </section>
 
 <div class="row g-3 ui-summary-grid mb-1">
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Convertibles</div><div class="ui-stat-value">@ConvertibleCount</div><div class="ui-stat-foot">Presupuestos válidos y no convertidos en la página.</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Total visible</div><div class="ui-stat-value">@VisibleTotal.ToString("C")</div><div class="ui-stat-foot">Total comercial acumulado de la página actual.</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Cliente filtro</div><div class="ui-stat-value">@SelectedCustomerLabel</div><div class="ui-stat-foot">@StatusFilterLabel</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Carga rápida</div><div class="ui-stat-value">@_seed.Products.Count + @_seed.Variants.Count</div><div class="ui-stat-foot">SKUs listos para agregar al detalle.</div></div></div></div>
+    <div class="col-sm-6 col-xl-4"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Convertibles</div><div class="ui-stat-value">@ConvertibleCount</div><div class="ui-stat-foot">Presupuestos válidos y no convertidos en la página.</div></div></div></div>
+    <div class="col-sm-6 col-xl-4"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Total visible</div><div class="ui-stat-value">@VisibleTotal.ToString("C")</div><div class="ui-stat-foot">Total comercial acumulado de la página actual.</div></div></div></div>
+    <div class="col-sm-6 col-xl-4"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Cliente filtro</div><div class="ui-stat-value">@SelectedCustomerLabel</div><div class="ui-stat-foot">@StatusFilterLabel</div></div></div></div>
 </div>
 
 <div class="card ui-filter-card"><div class="card-body">
     <div class="row g-2 align-items-end">
-        <div class="col-lg-3"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, cliente" /></div>
-        <div class="col-lg-3"><label class="form-label">Cliente</label><select class="form-select" @bind="_customerId"><option value="0">Todos</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
-        <div class="col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<QuoteStatus>()){<option value="@status">@QuoteStatusLabel(status)</option>}</select></div>
-        <div class="col-lg-2"><label class="form-label">Conversión</label><select class="form-select" @bind="_onlyConvertible"><option value="">Todos</option><option value="true">Solo convertibles</option></select></div>
-        <div class="col-lg-1"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
-        <div class="col-lg-1"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
+        <div class="col-xl-2 col-lg-6"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" @onkeydown="HandleSearchKeyDown" placeholder="Número, cliente" /></div>
+        <div class="col-xl-2 col-lg-6"><label class="form-label">Cliente</label><select class="form-select" @bind="_customerId"><option value="0">Todos</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
+        <div class="col-xl-2 col-lg-4"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<QuoteStatus>()){<option value="@status">@QuoteStatusLabel(status)</option>}</select></div>
+        <div class="col-xl-2 col-lg-4"><label class="form-label">Conversión</label><select class="form-select" @bind="_onlyConvertible"><option value="">Todos</option><option value="true">Solo convertibles</option></select></div>
+        <div class="col-xl-2 col-lg-2"><button class="btn btn-outline-primary w-100 text-nowrap" type="button" @onclick="Search">Buscar</button></div>
+        <div class="col-xl-2 col-lg-2"><button class="btn btn-outline-secondary w-100 text-nowrap" type="button" @onclick="ClearFilters">Limpiar</button></div>
     </div>
 </div></div>
-<FormFeedback Error="@_loadError" />
-
 <div class="ui-split-layout ui-split-layout-focus-editor">
     <div>
         @if (!_loaded)
         {
             <div class="card"><div class="card-body">Cargando presupuestos...</div></div>
         }
+        else if (HasLoadError)
+        {
+            <div class="card ui-data-card">
+                <div class="card-body">
+                    <div class="ui-card-header">
+                        <div>
+                            <div class="ui-card-eyebrow">Error de carga</div>
+                            <h5 class="ui-card-title">No pudimos obtener los presupuestos</h5>
+                            <div class="ui-card-subtitle">Revisá la conexión o intentá nuevamente para continuar.</div>
+                        </div>
+                    </div>
+                    <FormFeedback Error="@_loadError" />
+                    <div class="ui-action-bar">
+                        <button class="btn btn-outline-primary" type="button" @onclick="Load"><i class="bi bi-arrow-clockwise me-2"></i>Reintentar</button>
+                    </div>
+                </div>
+            </div>
+        }
         else if (_result?.Items.Count == 0 && !_showForm)
         {
             <EmptyState Title="No hay presupuestos"
-                        Description="Creá el primer presupuesto comercial para empezar el circuito del Release 3."
+                        Description="Creá el primer presupuesto comercial para iniciar el circuito de cotización y cierre."
                         Icon="bi-file-earmark-text">
                 <button class="btn btn-primary" type="button" @onclick="NewItem">Crear presupuesto</button>
             </EmptyState>
@@ -67,7 +83,7 @@
             }
             else
             {
-                <div class="card ui-data-card @(_showForm ? "d-none" : string.Empty)"><div class="card-body">
+                <div class="card ui-data-card ui-data-card-actions @(_showForm ? "d-none" : string.Empty)"><div class="card-body">
                     <div class="ui-card-header">
                         <div>
                             <div class="ui-card-eyebrow">Documentos comerciales</div>
@@ -75,27 +91,33 @@
                             <div class="ui-card-subtitle">Con seguimiento de estado, vigencia, cliente y pasaje a venta.</div>
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-striped">
+                    <div class="table-responsive ui-table-responsive-actions">
+                        <table class="table ui-modern-grid">
                             <thead><tr><th>Comprobante</th><th>Cliente</th><th>Fechas</th><th>Items</th><th>Total</th><th>Estado</th><th></th></tr></thead>
                             <tbody>
                             @foreach (var item in _result!.Items)
                             {
                                 <tr>
-                                    <td><div class="ui-table-stack"><span class="fw-semibold">@item.Number</span><span class="ui-table-meta">Presupuesto comercial</span></div></td>
-                                    <td><div class="ui-table-stack"><span class="fw-semibold">@item.CustomerName</span><span class="ui-table-meta">Cliente asociado</span></div></td>
+                                    <td><div class="ui-table-stack"><span class="fw-semibold ui-cell-truncate" title="@item.Number">@item.Number</span><span class="ui-table-meta">Presupuesto comercial</span></div></td>
+                                    <td><div class="ui-table-stack"><span class="fw-semibold ui-cell-truncate" title="@item.CustomerName">@item.CustomerName</span><span class="ui-table-meta">Cliente asociado</span></div></td>
                                     <td><div class="ui-table-stack"><span class="fw-semibold">@item.IssuedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</span><span class="ui-table-meta">Vence @(item.ValidUntilUtc.HasValue ? item.ValidUntilUtc.Value.ToLocalTime().ToString("dd/MM/yyyy") : "sin fecha")</span></div></td>
                                     <td><StatusBadge Text="@(item.ItemsCount == 1 ? "1 ítem" : $"{item.ItemsCount} ítems")" CssClass="ui-badge ui-badge-neutral" /></td>
-                                    <td><div class="ui-table-stack"><span class="fw-semibold">@item.Total.ToString("C")</span><span class="ui-table-meta">Subtotal @item.Subtotal.ToString("C")</span></div></td>
-                                    <td><StatusBadge Text="@QuoteStatusLabel(item.Status)" CssClass="@QuoteStatusClass(item.Status)" /></td>
-                                    <td>
-                                        <div class="ui-inline-actions flex-wrap">
-                                            <button class="btn btn-sm btn-outline-primary" type="button" @onclick="() => Edit(item.Id)">Editar</button>
-                                            <button class="btn btn-sm btn-outline-secondary" type="button" @onclick="() => OpenDetail(item.Id)">Detalle</button>
-                                            @if (item.CanConvertToSale)
-                                            {
-                                                <button class="btn btn-sm btn-success" type="button" @onclick="() => Convert(item.Id)">Convertir</button>
-                                            }
+                                    <td><div class="ui-table-stack"><span class="fw-semibold ui-table-total">@item.Total.ToString("C")</span><span class="ui-table-meta">Subtotal @item.Subtotal.ToString("C")</span></div></td>
+                                    <td><StatusBadge Text="@QuoteStatusLabel(item.Status)" CssClass="@($"{QuoteStatusClass(item.Status)} ui-badge-emphasis")" /></td>
+                                    <td class="text-end">
+                                        <div class="dropdown dropstart table-actions">
+                                            <button class="ui-kebab-trigger" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Acciones">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                                <span class="visually-hidden">Acciones</span>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end ui-actions-menu">
+                                                <li><button class="dropdown-item" type="button" @onclick="() => Edit(item.Id)"><i class="bi bi-pencil-square me-2"></i>Editar</button></li>
+                                                <li><button class="dropdown-item" type="button" @onclick="() => OpenDetail(item.Id)"><i class="bi bi-eye me-2"></i>Detalle</button></li>
+                                                @if (item.CanConvertToSale)
+                                                {
+                                                    <li><button class="dropdown-item" type="button" @onclick="() => Convert(item.Id)"><i class="bi bi-arrow-left-right me-2"></i>Convertir</button></li>
+                                                }
+                                            </ul>
                                         </div>
                                     </td>
                                 </tr>
@@ -265,6 +287,7 @@
     private string _formSnapshot = string.Empty;
 
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
+    private bool HasLoadError => !_showForm && !string.IsNullOrWhiteSpace(_loadError);
     private int ConvertibleCount => _result?.Items.Count(x => x.CanConvertToSale) ?? 0;
     private decimal VisibleTotal => _result?.Items.Sum(x => x.Total) ?? 0m;
     private string SelectedCustomerLabel => _customerId == 0 ? "Todos" : _seed.Customers.FirstOrDefault(x => x.Id == _customerId)?.Name ?? "Cliente";
@@ -304,9 +327,15 @@
         {
             _loadError = ex.Message;
             Telemetry.Track("quotes", "load", "error", ex.Message);
-            _result = null;
+            _result = new PagedResult<QuoteListItemDto>(new List<QuoteListItemDto>(), 0, _page, PageSize);
         }
         _loaded = true;
+    }
+
+    private async Task HandleSearchKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+            await Search();
     }
 
     private async Task Search()
