@@ -16,30 +16,43 @@
                 ChipText="@($"{_result?.TotalCount ?? 0} compras")"
                 ChipIconClass="bi bi-bag-check">
     <Actions>
-        <button class="btn btn-primary" type="button" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nueva compra</button>
+        @if (_showForm)
+        {
+            <button class="btn btn-outline-secondary" type="button" @onclick="BackToList"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button>
+        }
+        else
+        {
+            <button class="btn btn-primary" type="button" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nueva compra</button>
+        }
     </Actions>
 </ListPageHeader>
 
-<div class="row g-3 ui-summary-grid mb-1">
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Monto visible</div><div class="ui-stat-value">@VisibleTotal.ToString("C")</div><div class="ui-stat-foot">Total de la página filtrada.</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Pendiente recepción</div><div class="ui-stat-value">@PendingReceipts</div><div class="ui-stat-foot">Compras emitidas o parciales.</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Recepción acumulada</div><div class="ui-stat-value">@ReceivedUnits</div><div class="ui-stat-foot">Unidades ya ingresadas en la página actual.</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Estrategia costo</div><div class="ui-stat-value text-capitalize">@(_seed?.CostStrategy?.Replace("_", " ") ?? "-")</div><div class="ui-stat-foot">@_seed?.CostStrategyDescription</div></div></div></div>
-</div>
-
-<ListPageFilters>
-    <div class="row g-2 align-items-end">
-        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, proveedor, comprobante proveedor" /></div>
-        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Proveedor</label><select class="form-select" @bind="_supplierId"><option value="0">Todos</option>@foreach (var supplier in _seed?.Suppliers ?? Array.Empty<LookupDto>()){<option value="@supplier.Id">@supplier.Name</option>}</select></div>
-        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<PurchaseDocumentStatus>()){<option value="@status">@StatusLabel(status)</option>}</select></div>
-        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
-        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
+@if (!_showForm)
+{
+    <div class="row g-3 ui-summary-grid mb-1">
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Monto visible</div><div class="ui-stat-value">@VisibleTotal.ToString("C")</div><div class="ui-stat-foot">Total de la página filtrada.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Pendiente recepción</div><div class="ui-stat-value">@PendingReceipts</div><div class="ui-stat-foot">Compras emitidas o parciales.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Recepción acumulada</div><div class="ui-stat-value">@ReceivedUnits</div><div class="ui-stat-foot">Unidades ya ingresadas en la página actual.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Estrategia costo</div><div class="ui-stat-value text-capitalize">@(_seed?.CostStrategy?.Replace("_", " ") ?? "-")</div><div class="ui-stat-foot">@_seed?.CostStrategyDescription</div></div></div></div>
     </div>
-</ListPageFilters>
-<FormFeedback Error="@_loadError" />
+}
+
+@if (!_showForm)
+{
+    <ListPageFilters>
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, proveedor, comprobante proveedor" /></div>
+            <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Proveedor</label><select class="form-select" @bind="_supplierId"><option value="0">Todos</option>@foreach (var supplier in _seed?.Suppliers ?? Array.Empty<LookupDto>()){<option value="@supplier.Id">@supplier.Name</option>}</select></div>
+            <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<PurchaseDocumentStatus>()){<option value="@status">@StatusLabel(status)</option>}</select></div>
+            <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
+            <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
+        </div>
+    </ListPageFilters>
+    <FormFeedback Error="@_loadError" />
+}
 
 <div class="ui-split-layout ui-split-layout-focus-editor">
-    <div>
+    <div class="@(_showForm ? "d-none" : string.Empty)">
         @if (!_loaded)
         {
             <div class="card"><div class="card-body">Cargando compras...</div></div>
@@ -89,7 +102,7 @@
         }
     </div>
 
-    <div class="ui-section-grid">
+    <div class="ui-section-grid @(_showForm ? "w-100" : string.Empty)">
         <div class="card ui-form-card @(_showForm ? "w-100 ui-editor-open" : "ui-editor-hidden")"><div class="card-body">
             <div class="ui-card-header"><div><div class="ui-card-eyebrow">Carga guiada</div><h5 class="ui-card-title">@(_form.Id == 0 ? "Nueva compra" : $"Editar {_editingNumber}")</h5><div class="ui-card-subtitle">Definí proveedor, estado y costos. La recepción y el impacto en stock se hacen desde el detalle.</div></div></div>
             @if (!_showForm)
@@ -342,6 +355,12 @@
     }
 
     private async Task Cancel()
+    {
+        if (!await ConfirmDiscardIfDirtyAsync())
+            return;
+        _showForm = false;
+    }
+    private async Task BackToList()
     {
         if (!await ConfirmDiscardIfDirtyAsync())
             return;

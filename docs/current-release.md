@@ -496,3 +496,13 @@
   2. `InvoiceDetail.razor`: se muestra tipo con etiqueta traducida (`Factura A/B/C`, `Nota de crédito ...`),
   3. `FiscalConfiguration.razor`: el selector de “Factura por defecto” ahora muestra etiquetas en español.
 - **Impacto UX:** lenguaje consistente para usuarios administrativos y menor exposición de nombres internos de enums.
+
+## Tarea aplicada (actualización 2026-03-30 - premisa de edición en pantalla completa en documentos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** alinear `Presupuestos` a la premisa UX de alta/edición en pantalla (no modo lateral tipo modal).
+- **Extensión aplicada:** se ajustó el mismo patrón en `Ventas` y `Compras` por compartir arquitectura de editor lateral.
+- **Detalle técnico:**
+  1. en `Quotes`, `Sales` y `Purchases` se agregó acción explícita “Volver al listado” cuando el editor está abierto,
+  2. al abrir editor (`_showForm=true`) ahora se ocultan KPIs/filtros/listado y el editor ocupa ancho completo,
+  3. se agregaron métodos `BackToList` con guard de cambios pendientes para mantener consistencia de navegación segura.
+- **Impacto UX:** nuevo/editar se percibe como flujo de pantalla dedicada dentro de la ruta, evitando sensación de modal lateral y mejorando foco operativo.

@@ -16,31 +16,44 @@
                 ChipText="@($"{_result?.TotalCount ?? 0} ventas")"
                 ChipIconClass="bi bi-receipt-cutoff">
     <Actions>
-        <a class="btn btn-outline-secondary" href="/sales/quick"><i class="bi bi-lightning-charge me-2"></i>Carga rápida</a>
-        <button class="btn btn-primary" type="button" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nueva venta</button>
+        @if (_showForm)
+        {
+            <button class="btn btn-outline-secondary" type="button" @onclick="BackToList"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button>
+        }
+        else
+        {
+            <a class="btn btn-outline-secondary" href="/sales/quick"><i class="bi bi-lightning-charge me-2"></i>Carga rápida</a>
+            <button class="btn btn-primary" type="button" @onclick="NewItem"><i class="bi bi-plus-circle me-2"></i>Nueva venta</button>
+        }
     </Actions>
 </ListPageHeader>
 
-<div class="row g-3 ui-summary-grid mb-1">
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Total visible</div><div class="ui-stat-value">@VisibleTotal.ToString("C")</div><div class="ui-stat-foot">Importe acumulado de la página.</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Con origen</div><div class="ui-stat-value">@SalesWithSourceQuote</div><div class="ui-stat-foot">Ventas que nacieron desde un presupuesto.</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Cliente filtro</div><div class="ui-stat-value">@SelectedCustomerLabel</div><div class="ui-stat-foot">@StatusFilterLabel</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">SKUs</div><div class="ui-stat-value">@_skuIndex.Count</div><div class="ui-stat-foot">Productos y variantes disponibles para venta.</div></div></div></div>
-</div>
-
-<ListPageFilters>
-    <div class="row g-2 align-items-end">
-        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, cliente, presupuesto origen" /></div>
-        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Cliente</label><select class="form-select" @bind="_customerId"><option value="0">Todos</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
-        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<SaleStatus>()){<option value="@status">@SaleStatusLabel(status)</option>}</select></div>
-        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
-        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
+@if (!_showForm)
+{
+    <div class="row g-3 ui-summary-grid mb-1">
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Total visible</div><div class="ui-stat-value">@VisibleTotal.ToString("C")</div><div class="ui-stat-foot">Importe acumulado de la página.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Con origen</div><div class="ui-stat-value">@SalesWithSourceQuote</div><div class="ui-stat-foot">Ventas que nacieron desde un presupuesto.</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Cliente filtro</div><div class="ui-stat-value">@SelectedCustomerLabel</div><div class="ui-stat-foot">@StatusFilterLabel</div></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">SKUs</div><div class="ui-stat-value">@_skuIndex.Count</div><div class="ui-stat-foot">Productos y variantes disponibles para venta.</div></div></div></div>
     </div>
-</ListPageFilters>
-<FormFeedback Error="@_loadError" />
+}
+
+@if (!_showForm)
+{
+    <ListPageFilters>
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, cliente, presupuesto origen" /></div>
+            <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Cliente</label><select class="form-select" @bind="_customerId"><option value="0">Todos</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
+            <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<SaleStatus>()){<option value="@status">@SaleStatusLabel(status)</option>}</select></div>
+            <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
+            <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
+        </div>
+    </ListPageFilters>
+    <FormFeedback Error="@_loadError" />
+}
 
 <div class="ui-split-layout ui-split-layout-focus-editor">
-    <div>
+    <div class="@(_showForm ? "d-none" : string.Empty)">
         @if (!_loaded)
         {
             <div class="card"><div class="card-body">Cargando ventas...</div></div>
@@ -101,7 +114,7 @@
         }
     </div>
 
-    <div class="ui-section-grid">
+    <div class="ui-section-grid @(_showForm ? "w-100" : string.Empty)">
         <div class="card ui-form-card @(_showForm ? "w-100 ui-editor-open" : "ui-editor-hidden")" id="sales-editor"><div class="card-body">
             <div class="ui-card-header"><div><div class="ui-card-eyebrow">Carga guiada</div><h5 class="ui-card-title">@(_form.Id == 0 ? "Nueva venta" : $"Editar {_editingNumber}")</h5><div class="ui-card-subtitle">Completá cliente, fecha e ítems en un solo panel visible desde el primer click.</div></div></div>
             @if (!_showForm)
@@ -359,6 +372,12 @@
     }
     private void RemoveLine(int index) { if (index >= 0 && index < _form.Items.Count) _form.Items.RemoveAt(index); }
     private async Task Cancel()
+    {
+        if (!await ConfirmDiscardIfDirtyAsync())
+            return;
+        _showForm = false;
+    }
+    private async Task BackToList()
     {
         if (!await ConfirmDiscardIfDirtyAsync())
             return;
