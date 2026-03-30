@@ -323,6 +323,14 @@
 - **Detalle técnico:** en `.ui-list-page-filters .btn` se fijó altura de 38px alineada a controles de entrada, se ajustó tipografía/peso (`.9rem`, `600`) y se compactó padding/line-height.
 - **Impacto UX:** botones de acción con presencia visual equilibrada respecto de los campos de filtro, evitando sensación de desproporción.
 
+## Tarea aplicada (actualización 2026-03-30 - unificación estructural/escala de `ListPageHeader`)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** reforzar criterio común de `ListPageHeader` para que se perciba igual en todas las pantallas que lo usan, respetando particularidades de cada módulo.
+- **Detalle técnico:**
+  1. `ListPageHeader` ahora expone clases estructurales comunes (`ui-list-page-header`, `ui-list-page-header-main`, `ui-list-page-header-meta`),
+  2. se normalizó escala visual de botones/chips dentro del header (`38px`, tipografía `0.9rem`, peso `600`) para alinearlos con los controles de filtros.
+- **Impacto UX:** cabeceras más homogéneas entre pantallas, con acciones visualmente armónicas (sin botones sobredimensionados).
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.
