@@ -32,7 +32,7 @@ else
                 <div class="row g-3">
                     <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Cliente</span><span class="ui-table-meta">@_detail.CustomerName</span></div></div>
                     <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Venta origen</span><span class="ui-table-meta">@_detail.SaleNumber</span></div></div>
-                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Tipo</span><span class="ui-table-meta">@_detail.InvoiceType</span></div></div>
+                    <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Tipo</span><span class="ui-table-meta">@InvoiceTypeLabel(_detail.InvoiceType)</span></div></div>
                     <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Punto de venta</span><span class="ui-table-meta">@_detail.PointOfSale</span></div></div>
                     <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">CAE</span><span class="ui-table-meta">@(_detail.Cae ?? "Sin autorizar")</span></div></div>
                     <div class="col-md-4"><div class="ui-table-stack"><span class="fw-semibold">Vto. CAE</span><span class="ui-table-meta">@(_detail.CaeDueDateUtc.HasValue ? _detail.CaeDueDateUtc.Value.ToLocalTime().ToString("dd/MM/yyyy") : "-")</span></div></div>
@@ -114,5 +114,16 @@ else
         InvoiceStatus.PendingAuthorization => "ui-badge ui-badge-warning",
         InvoiceStatus.Rejected or InvoiceStatus.IntegrationError => "ui-badge ui-badge-danger",
         _ => "ui-badge ui-badge-neutral"
+    };
+
+    private static string InvoiceTypeLabel(InvoiceType type) => type switch
+    {
+        InvoiceType.InvoiceA => "Factura A",
+        InvoiceType.InvoiceB => "Factura B",
+        InvoiceType.InvoiceC => "Factura C",
+        InvoiceType.CreditNoteA => "Nota de crédito A",
+        InvoiceType.CreditNoteB => "Nota de crédito B",
+        InvoiceType.CreditNoteC => "Nota de crédito C",
+        _ => "Comprobante fiscal"
     };
 }

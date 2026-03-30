@@ -67,7 +67,7 @@ else
                             <select class="form-select" @bind="_form.DefaultInvoiceType">
                                 @foreach (var type in Enum.GetValues<InvoiceType>())
                                 {
-                                    <option value="@type">@type</option>
+                                    <option value="@type">@InvoiceTypeLabel(type)</option>
                                 }
                             </select>
                         </div>
@@ -316,4 +316,15 @@ else
             ApiBaseUrl = dto.ApiBaseUrl,
             Observations = dto.Observations
         };
+
+    private static string InvoiceTypeLabel(InvoiceType type) => type switch
+    {
+        InvoiceType.InvoiceA => "Factura A",
+        InvoiceType.InvoiceB => "Factura B",
+        InvoiceType.InvoiceC => "Factura C",
+        InvoiceType.CreditNoteA => "Nota de crédito A",
+        InvoiceType.CreditNoteB => "Nota de crédito B",
+        InvoiceType.CreditNoteC => "Nota de crédito C",
+        _ => "Comprobante fiscal"
+    };
 }

@@ -486,3 +486,13 @@
   3. `InvoiceDetail`: se tradujeron encabezados `Fiscal / compliance`, `Request / response` y texto `requests` en estado vacío,
   4. `Dashboard`: `PageTitle` traducido a `Tablero`.
 - **Impacto UX:** mayor consistencia idiomática (español) en la experiencia cotidiana de navegación y lectura operativa.
+
+## Tarea aplicada (actualización 2026-03-30 - traducción de comprobantes en Facturación)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** eliminar nombres de comprobantes en inglés en módulo de Facturación.
+- **Síntoma reportado:** en listados y formularios se veía `InvoiceA/InvoiceB/CreditNote...` en texto técnico inglés.
+- **Detalle técnico:**
+  1. `Invoices.razor`: se incorporó `InvoiceTypeLabel(...)` para render en grilla y combo de tipo, y `IntegrationModeLabel(...)` para la card “Modo fiscal”,
+  2. `InvoiceDetail.razor`: se muestra tipo con etiqueta traducida (`Factura A/B/C`, `Nota de crédito ...`),
+  3. `FiscalConfiguration.razor`: el selector de “Factura por defecto” ahora muestra etiquetas en español.
+- **Impacto UX:** lenguaje consistente para usuarios administrativos y menor exposición de nombres internos de enums.
