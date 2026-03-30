@@ -30,11 +30,11 @@
 
 <ListPageFilters>
     <div class="row g-2 align-items-end">
-        <div class="col-lg-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, cliente, presupuesto origen" /></div>
-        <div class="col-lg-3"><label class="form-label">Cliente</label><select class="form-select" @bind="_customerId"><option value="0">Todos</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
-        <div class="col-lg-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<SaleStatus>()){<option value="@status">@SaleStatusLabel(status)</option>}</select></div>
-        <div class="col-lg-1"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
-        <div class="col-lg-1"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, cliente, presupuesto origen" /></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Cliente</label><select class="form-select" @bind="_customerId"><option value="0">Todos</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<SaleStatus>()){<option value="@status">@SaleStatusLabel(status)</option>}</select></div>
+        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
+        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
     </div>
 </ListPageFilters>
 <FormFeedback Error="@_loadError" />

@@ -30,10 +30,10 @@
 
 <ListPageFilters>
     <div class="row g-2 align-items-end">
-        <div class="col-lg-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Factura, venta o cliente" /></div>
-        <div class="col-lg-4"><label class="form-label">Venta origen</label><select class="form-select" @bind="_saleId"><option value="0">Todas</option>@foreach (var sale in _seed.Sales){<option value="@sale.Id">@sale.Name</option>}</select></div>
-        <div class="col-lg-3"><label class="form-label">Estado fiscal</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<InvoiceStatus>()){<option value="@status">@InvoiceStatusLabel(status)</option>}</select></div>
-        <div class="col-lg-1"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Factura, venta o cliente" /></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Venta origen</label><select class="form-select" @bind="_saleId"><option value="0">Todas</option>@foreach (var sale in _seed.Sales){<option value="@sale.Id">@sale.Name</option>}</select></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Estado fiscal</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<InvoiceStatus>()){<option value="@status">@InvoiceStatusLabel(status)</option>}</select></div>
+        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
     </div>
 </ListPageFilters>
 

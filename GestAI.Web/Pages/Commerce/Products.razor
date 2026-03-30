@@ -53,11 +53,11 @@
 
 <ListPageFilters>
     <div class="row g-2 align-items-end">
-        <div class="col-lg-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre, código, marca" /></div>
-        <div class="col-md-4 col-lg-3"><label class="form-label">Categoría</label><select class="form-select" @bind="_selectedCategoryId"><option value="0">Todas</option>@foreach (var category in _seed.Categories){<option value="@category.Id">@category.Name</option>}</select></div>
-        <div class="col-md-4 col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
-        <div class="col-md-6 col-lg-1"><button class="btn btn-outline-primary w-100" @onclick="Search">Buscar</button></div>
-        <div class="col-md-6 col-lg-2 text-md-end ui-table-meta">Catálogo comercial y operativo</div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Nombre, código, marca" /></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Categoría</label><select class="form-select" @bind="_selectedCategoryId"><option value="0">Todas</option>@foreach (var category in _seed.Categories){<option value="@category.Id">@category.Name</option>}</select></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
+        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" @onclick="Search">Buscar</button></div>
+        <div class="col-12 col-md-6 col-lg-2 text-md-end ui-table-meta">Catálogo comercial y operativo</div>
     </div>
 </ListPageFilters>
 

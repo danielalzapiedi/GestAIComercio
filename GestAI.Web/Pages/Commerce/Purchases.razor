@@ -29,11 +29,11 @@
 
 <ListPageFilters>
     <div class="row g-2 align-items-end">
-        <div class="col-lg-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, proveedor, comprobante proveedor" /></div>
-        <div class="col-lg-3"><label class="form-label">Proveedor</label><select class="form-select" @bind="_supplierId"><option value="0">Todos</option>@foreach (var supplier in _seed?.Suppliers ?? Array.Empty<LookupDto>()){<option value="@supplier.Id">@supplier.Name</option>}</select></div>
-        <div class="col-lg-3"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<PurchaseDocumentStatus>()){<option value="@status">@StatusLabel(status)</option>}</select></div>
-        <div class="col-lg-1"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
-        <div class="col-lg-1"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Número, proveedor, comprobante proveedor" /></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Proveedor</label><select class="form-select" @bind="_supplierId"><option value="0">Todos</option>@foreach (var supplier in _seed?.Suppliers ?? Array.Empty<LookupDto>()){<option value="@supplier.Id">@supplier.Name</option>}</select></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<PurchaseDocumentStatus>()){<option value="@status">@StatusLabel(status)</option>}</select></div>
+        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
+        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
     </div>
 </ListPageFilters>
 <FormFeedback Error="@_loadError" />

@@ -35,11 +35,11 @@ else
 
     <ListPageFilters>
         <div class="row g-2 align-items-end">
-            <div class="col-lg-4"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Producto, variante o código" /></div>
-            <div class="col-md-4 col-lg-3"><label class="form-label">Depósito</label><select class="form-select" @bind="_selectedWarehouseId"><option value="0">Todos</option>@foreach (var warehouse in _seed.Warehouses){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
-            <div class="col-md-4 col-lg-3"><label class="form-label">SKU</label><select class="form-select" @bind="_selectedSkuKey"><option value="">Todos</option>@foreach (var sku in _seed.Skus){<option value="@ToSkuKey(sku)">@sku.Label</option>}</select></div>
-            <div class="col-md-6 col-lg-1"><button class="btn btn-outline-primary w-100" @onclick="SearchAsync">Buscar</button></div>
-            <div class="col-md-6 col-lg-1 text-md-end ui-table-meta">Stock y trazabilidad</div>
+            <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Producto, variante o código" /></div>
+            <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Depósito</label><select class="form-select" @bind="_selectedWarehouseId"><option value="0">Todos</option>@foreach (var warehouse in _seed.Warehouses){<option value="@warehouse.Id">@warehouse.Name</option>}</select></div>
+            <div class="col-12 col-md-6 col-lg-2"><label class="form-label">SKU</label><select class="form-select" @bind="_selectedSkuKey"><option value="">Todos</option>@foreach (var sku in _seed.Skus){<option value="@ToSkuKey(sku)">@sku.Label</option>}</select></div>
+            <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" @onclick="SearchAsync">Buscar</button></div>
+            <div class="col-12 col-md-6 col-lg-2 text-md-end ui-table-meta">Stock y trazabilidad</div>
         </div>
     </ListPageFilters>
 

@@ -33,14 +33,14 @@ else
 {
     <ListPageFilters>
         <div class="row g-2 align-items-end">
-            <div class="col-md-4">
+            <div class="col-12 col-md-6 col-lg-2">
                 <label class="form-label">Buscar</label>
                 <input class="form-control" @bind="_search" placeholder="Nombre o email del dueño" />
             </div>
-            <div class="col-md-2">
-                <button class="btn btn-outline-primary" @onclick="Search">Buscar</button>
+            <div class="col-12 col-md-6 col-lg-2">
+                <button class="btn btn-outline-primary w-100" @onclick="Search">Buscar</button>
             </div>
-            <div class="col-md-6 text-md-end ui-table-meta">
+            <div class="col-12 col-md-6 col-lg-2 text-md-end ui-table-meta">
                 Total visible: @(_result?.TotalCount ?? 0) tenants
             </div>
         </div>

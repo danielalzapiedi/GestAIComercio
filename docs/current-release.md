@@ -301,6 +301,14 @@
   2. se definieron reglas visuales compartidas para labels, `form-control`, `form-select` y botones dentro del contenedor (altura, radios, foco, tipografía, sombra).
 - **Impacto UX:** los filtros conservan campos propios por pantalla, pero con un lenguaje visual consistente entre módulos.
 
+## Tarea aplicada (actualización 2026-03-30 - grilla fija de filtros `col-lg-2`)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** aplicar la premisa de layout uniforme en `ListPageFilters`: todas las columnas internas pasan a `col-lg-2`.
+- **Detalle técnico:**
+  1. se normalizaron los bloques de filtros en listados comerciales/administrativos (`Invoices`, `Products`, `Branches`, `Inventory`, `Customers`, `Purchases`, `Quotes`, `Suppliers`, `Categories`, `Sales`, `Warehouses`, `Tenants`),
+  2. cada columna del row de filtros quedó con `col-lg-2` (manteniendo clases responsive para breakpoints menores cuando aplica).
+- **Impacto UX:** ancho consistente por columna de filtros entre pantallas y lectura visual homogénea del bloque de búsqueda.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.
