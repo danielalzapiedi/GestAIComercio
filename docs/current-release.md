@@ -139,6 +139,12 @@
 - **Detalle técnico:** en `.ui-filter-btn` se eliminó padding interno (`padding: 0`) y se redujo altura mínima para compactar controles.
 - **Impacto UX:** acciones menos pesadas visualmente y mayor protagonismo para campos de filtro.
 
+## Tarea aplicada (actualización 2026-03-30 - corrección layout filtros presupuestos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Ajuste final de distribución horizontal de filtros/acciones en Presupuestos.
+- **Detalle técnico:** se revirtió el tweak de `font-size/padding` en botones y se normalizó la grilla a seis columnas `col-xl-2` para evitar compresión desigual (el problema original estaba en `col-xl-1`).
+- **Impacto UX:** botones conservan estilo estándar y layout más equilibrado en desktop.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.
