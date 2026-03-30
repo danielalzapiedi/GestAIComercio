@@ -40,8 +40,6 @@
         <div class="col-lg-1"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
     </div>
 </div></div>
-<FormFeedback Error="@_loadError" />
-
 <div class="ui-split-layout ui-split-layout-focus-editor">
     <div>
         @if (!_loaded)
@@ -69,7 +67,7 @@
         else if (_result?.Items.Count == 0 && !_showForm)
         {
             <EmptyState Title="No hay presupuestos"
-                        Description="Creá el primer presupuesto comercial para empezar el circuito del Release 3."
+                        Description="Creá el primer presupuesto comercial para iniciar el circuito de cotización y cierre."
                         Icon="bi-file-earmark-text">
                 <button class="btn btn-primary" type="button" @onclick="NewItem">Crear presupuesto</button>
             </EmptyState>
@@ -105,8 +103,8 @@
                                     <td><div class="ui-table-stack"><span class="fw-semibold ui-cell-truncate" title="@item.CustomerName">@item.CustomerName</span><span class="ui-table-meta">Cliente asociado</span></div></td>
                                     <td><div class="ui-table-stack"><span class="fw-semibold">@item.IssuedAtUtc.ToLocalTime().ToString("dd/MM/yyyy")</span><span class="ui-table-meta">Vence @(item.ValidUntilUtc.HasValue ? item.ValidUntilUtc.Value.ToLocalTime().ToString("dd/MM/yyyy") : "sin fecha")</span></div></td>
                                     <td><StatusBadge Text="@(item.ItemsCount == 1 ? "1 ítem" : $"{item.ItemsCount} ítems")" CssClass="ui-badge ui-badge-neutral" /></td>
-                                    <td><div class="ui-table-stack"><span class="fw-semibold">@item.Total.ToString("C")</span><span class="ui-table-meta">Subtotal @item.Subtotal.ToString("C")</span></div></td>
-                                    <td><StatusBadge Text="@QuoteStatusLabel(item.Status)" CssClass="@QuoteStatusClass(item.Status)" /></td>
+                                    <td><div class="ui-table-stack"><span class="fw-semibold ui-table-total">@item.Total.ToString("C")</span><span class="ui-table-meta">Subtotal @item.Subtotal.ToString("C")</span></div></td>
+                                    <td><StatusBadge Text="@QuoteStatusLabel(item.Status)" CssClass="@($"{QuoteStatusClass(item.Status)} ui-badge-emphasis")" /></td>
                                     <td class="text-end">
                                         <div class="dropdown table-actions">
                                             <button class="ui-kebab-trigger" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Acciones">

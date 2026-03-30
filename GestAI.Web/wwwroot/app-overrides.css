@@ -998,6 +998,15 @@ body {
     font-size: .88rem;
 }
 
+.ui-table-total {
+    color: #0f172a;
+    font-size: 1rem;
+}
+
+.ui-badge-emphasis {
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
 .calendar-shell .card-body {
     padding: 1rem;
 }

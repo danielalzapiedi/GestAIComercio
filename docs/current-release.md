@@ -96,6 +96,15 @@
   5. truncado visual en celdas largas de comprobante/cliente.
 - **Impacto UX:** mayor consistencia con Clientes, menor ruido visual en grilla y mejor robustez ante fallos de API.
 
+## Tarea aplicada (actualización 2026-03-30 - refinamiento UX presupuestos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Implementación de quick wins UX sobre Presupuestos tras revisión visual.
+- **Detalle técnico:**
+  1. se eliminó la duplicación de feedback de error de carga para evitar mensajes repetidos,
+  2. se ajustó microcopy del estado vacío para lenguaje orientado a negocio (sin referencias internas),
+  3. se reforzó jerarquía visual de tabla destacando total y estado.
+- **Impacto UX:** pantalla más limpia, menor ruido cognitivo y lectura más rápida de información clave.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.
