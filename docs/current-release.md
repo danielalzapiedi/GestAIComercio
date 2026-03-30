@@ -78,6 +78,13 @@
 - **Detalle técnico:** se eliminó el estado success por default del componente compartido; ahora sólo renderiza cuando aplica un estado operativo real (`loading`, `error`, `guardando` o `con cambios pendientes`).
 - **Impacto UX:** desaparece el mensaje de éxito falso en editor de Clientes (y pantallas que reutilizan el componente), reduciendo ruido y confusión.
 
+## Tarea aplicada (actualización 2026-03-30 - fix navegación nuevo cliente)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección de navegación y estado en `Clientes` para alta nueva.
+- **Síntoma reportado:** en algunos casos el botón “Nuevo cliente” requería doble click y, tras editar un cliente, al crear uno nuevo se arrastraban datos del último editado.
+- **Detalle técnico:** se reemplazó la detección de ruta basada en `EndsWith` por una normalización robusta de URL (`ToBaseRelativePath` + limpieza de query/trailing slash), se separó `IsEditRoute`, y se inicializa `_form` en `NewItem()` antes de navegar.
+- **Impacto UX/funcional:** apertura consistente con un solo click y formulario de alta siempre limpio, sin datos residuales de edición.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.

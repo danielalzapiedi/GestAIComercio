@@ -173,8 +173,19 @@ else
     private string? _error;
     private string? _success;
 
-    private bool IsNewRoute => Nav.Uri.EndsWith("/customers/new", StringComparison.OrdinalIgnoreCase);
-    private bool IsEditorRoute => IsNewRoute || EditId.HasValue;
+    private string CurrentRoute
+    {
+        get
+        {
+            var relative = Nav.ToBaseRelativePath(Nav.Uri);
+            var withoutQuery = relative.Split('?', '#')[0];
+            return withoutQuery.TrimEnd('/').ToLowerInvariant();
+        }
+    }
+
+    private bool IsNewRoute => CurrentRoute == "customers/new";
+    private bool IsEditRoute => CurrentRoute.StartsWith("customers/edit/", StringComparison.Ordinal);
+    private bool IsEditorRoute => IsNewRoute || IsEditRoute;
     private bool HasLoadError => !IsEditorRoute && !string.IsNullOrWhiteSpace(_error) && (_result?.Items.Count ?? 0) == 0;
     private int TotalPages => _result is null || _result.TotalCount == 0 ? 1 : (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize);
 
@@ -266,7 +277,14 @@ else
         }
     }
 
-    private void NewItem() => Nav.NavigateTo("/customers/new");
+    private void NewItem()
+    {
+        _error = null;
+        _success = null;
+        _form = new CustomerUpsertCommand { IsActive = true, CustomerType = CustomerType.Mixed };
+        _isDirty = false;
+        Nav.NavigateTo("/customers/new");
+    }
 
     private void Edit(CustomerListItemDto item) => Nav.NavigateTo($"/customers/edit/{item.Id}");
 
