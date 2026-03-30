@@ -723,14 +723,6 @@ body {
     gap: .5rem;
 }
 
-.ui-row-actions {
-    justify-content: flex-end;
-}
-
-.ui-row-actions .btn {
-    min-width: 118px;
-}
-
 .ui-cell-truncate {
     max-width: 220px;
     white-space: nowrap;
