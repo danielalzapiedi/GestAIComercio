@@ -115,7 +115,7 @@
     </div>
 
     <div class="ui-section-grid @(_showForm ? "w-100" : string.Empty)">
-        <div class="card ui-form-card @(_showForm ? "w-100 ui-editor-open" : "ui-editor-hidden")" id="sales-editor"><div class="card-body">
+        <div class="card ui-form-card @(_showForm ? "w-100" : "d-none")" id="sales-editor"><div class="card-body">
             <div class="ui-card-header"><div><div class="ui-card-eyebrow">Carga guiada</div><h5 class="ui-card-title">@(_form.Id == 0 ? "Nueva venta" : $"Editar {_editingNumber}")</h5><div class="ui-card-subtitle">Completá cliente, fecha e ítems en un solo panel visible desde el primer click.</div></div></div>
             @if (!_showForm)
             {

@@ -526,3 +526,11 @@
   3. se migró la carga del editor a `OnParametersSetAsync` para sincronizar estado de formulario con navegación,
   4. se ajustó microcopy para remover referencia a “editor lateral”.
 - **Impacto UX:** nuevo/editar queda en flujo de pantalla dedicada real (por ruta), alineado a la premisa global del producto.
+
+## Tarea aplicada (actualización 2026-03-30 - eliminación de comportamiento visual tipo modal)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** remover efecto visual de modal lateral que persistía en editores con `_showForm`.
+- **Detalle técnico:**
+  1. en `Quotes`, `Sales`, `Purchases`, `Categories`, `Products` y `Warehouses` se dejó de usar clases `ui-editor-open/ui-editor-hidden`,
+  2. se reemplazó por visibilidad directa (`w-100` cuando edita, `d-none` cuando no) para evitar overlay/transición modal del CSS de `ui-split-layout`.
+- **Impacto UX:** edición realmente en pantalla enfocada, sin capa oscura ni percepción de modal superpuesto.
