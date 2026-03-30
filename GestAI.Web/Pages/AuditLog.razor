@@ -15,10 +15,10 @@
 
 <ListPageFilters CardCssClass="mb-3">
     <div class="row g-2 align-items-end">
-        <div class="col-lg-4"><label class="form-label">Entidad</label><input class="form-control" @bind="_entityName" placeholder="Sale, PurchaseDocument, CommercialInvoice..." /></div>
-        <div class="col-lg-4"><label class="form-label">Usuario</label><input class="form-control" @bind="_userName" placeholder="Nombre o email" /></div>
-        <div class="col-lg-2"><label class="form-label">Desde</label><input class="form-control" type="date" @bind-value="_from" /></div>
-        <div class="col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Load">Filtrar</button></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Entidad</label><input class="form-control" @bind="_entityName" placeholder="Sale, PurchaseDocument, CommercialInvoice..." /></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Usuario</label><input class="form-control" @bind="_userName" placeholder="Nombre o email" /></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Desde</label><input class="form-control" type="date" @bind-value="_from" /></div>
+        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Load">Filtrar</button></div>
     </div>
 </ListPageFilters>
 

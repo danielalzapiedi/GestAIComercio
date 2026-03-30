@@ -309,6 +309,14 @@
   2. cada columna del row de filtros quedó con `col-lg-2` (manteniendo clases responsive para breakpoints menores cuando aplica).
 - **Impacto UX:** ancho consistente por columna de filtros entre pantallas y lectura visual homogénea del bloque de búsqueda.
 
+## Tarea aplicada (actualización 2026-03-30 - cobertura extendida de filtros `col-lg-2`)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** completar pantallas remanentes para que la premisa `col-lg-2` se cumpla en todo `ListPageFilters`.
+- **Detalle técnico:**
+  1. se extendió la normalización a `AuditLog`, `DocumentHistory`, `Reports`, `CustomerCurrentAccounts`, `SupplierCurrentAccounts` y `SupplierAccounts`,
+  2. `SupplierAccounts` se migró de wrapper manual `ui-filter-card` a `ListPageFilters` para entrar en el mismo contrato visual.
+- **Impacto UX:** no quedan pantallas con `ListPageFilters` fuera de la grilla uniforme; todos los filtros comparten misma proporción en desktop.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.

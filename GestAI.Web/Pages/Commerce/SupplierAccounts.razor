@@ -21,13 +21,13 @@
     <div class="col-sm-6 col-xl-3"><div class="card ui-stat-card"><div class="card-body"><div class="ui-stat-label">Crédito registrado</div><div class="ui-stat-value">@_items.Sum(x => x.Credit).ToString("C")</div><div class="ui-stat-foot">Preparado para pagos futuros.</div></div></div></div>
 </div>
 
-<div class="card ui-filter-card mb-3"><div class="card-body">
+<ListPageFilters CardCssClass="mb-3">
     <div class="row g-2 align-items-end">
-        <div class="col-md-6"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Proveedor o CUIT" /></div>
-        <div class="col-md-3"><label class="form-label">Vista</label><select class="form-select" @bind="_onlyWithBalance"><option value="false">Todos</option><option value="true">Solo con saldo</option></select></div>
-        <div class="col-md-3"><button class="btn btn-outline-primary" type="button" @onclick="Load">Actualizar</button></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Proveedor o CUIT" /></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Vista</label><select class="form-select" @bind="_onlyWithBalance"><option value="false">Todos</option><option value="true">Solo con saldo</option></select></div>
+        <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Load">Actualizar</button></div>
     </div>
-</div></div>
+</ListPageFilters>
 
 <div class="row g-3">
     <div class="col-xl-7">
