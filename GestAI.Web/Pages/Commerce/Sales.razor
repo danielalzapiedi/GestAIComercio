@@ -160,13 +160,14 @@
                                 @for (var i = 0; i < _form.Items.Count; i++)
                                 {
                                     var line = _form.Items[i];
+                                    var rowIndex = i;
                                     <tr>
                                         <td><input class="form-control" @bind="line.Description" /></td>
                                         <td><input class="form-control" @bind="line.InternalCode" /></td>
                                         <td><input class="form-control" type="number" step="0.01" @bind="line.Quantity" /></td>
                                         <td><input class="form-control" type="number" step="0.01" @bind="line.UnitPrice" /></td>
                                         <td class="fw-semibold">@line.LineSubtotal.ToString("C")</td>
-                                        <td><button class="btn btn-sm btn-outline-danger" type="button" @onclick="() => RemoveLine(i)" title="Quitar línea" aria-label="Quitar línea"><i class="bi bi-trash"></i></button></td>
+                                        <td><button class="btn btn-sm btn-outline-danger" type="button" @onclick="() => RemoveLine(rowIndex)" title="Quitar línea" aria-label="Quitar línea"><i class="bi bi-trash"></i></button></td>
                                     </tr>
                                 }
                                 </tbody>

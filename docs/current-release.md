@@ -534,3 +534,11 @@
   1. en `Quotes`, `Sales`, `Purchases`, `Categories`, `Products` y `Warehouses` se dejó de usar clases `ui-editor-open/ui-editor-hidden`,
   2. se reemplazó por visibilidad directa (`w-100` cuando edita, `d-none` cuando no) para evitar overlay/transición modal del CSS de `ui-split-layout`.
 - **Impacto UX:** edición realmente en pantalla enfocada, sin capa oscura ni percepción de modal superpuesto.
+
+## Tarea aplicada (actualización 2026-03-30 - fix eliminación de líneas en ventas/presupuestos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** corregir imposibilidad de eliminar líneas de ítems en formularios de Venta y Presupuesto.
+- **Síntoma reportado:** el botón de eliminar no quitaba ninguna línea (ni preexistente ni nueva).
+- **Causa raíz:** captura de variable de índice del `for` en lambda (`@onclick="() => RemoveLine(i)"`), quedando el índice fuera de rango al ejecutar el evento.
+- **Detalle técnico:** en ambos formularios se introdujo variable local por iteración (`rowIndex`) y el click ahora invoca `RemoveLine(rowIndex)`.
+- **Impacto funcional:** vuelve a funcionar la eliminación de líneas de detalle en edición y alta.
