@@ -133,6 +133,12 @@
 - **Detalle técnico:** se compactó `ui-filter-btn` (menor altura/padding/tamaño de fuente) para liberar espacio a filtros y en Clientes se removió `table-striped` para evitar cortes visuales del fondo gris por fila.
 - **Impacto UX:** filtros con mayor aire útil y tabla de Clientes con lectura más limpia/sólida.
 
+## Tarea aplicada (actualización 2026-03-30 - ajuste padding botones filtro)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Reducción adicional de tamaño visual en botones Buscar/Limpiar.
+- **Detalle técnico:** en `.ui-filter-btn` se eliminó padding interno (`padding: 0`) y se redujo altura mínima para compactar controles.
+- **Impacto UX:** acciones menos pesadas visualmente y mayor protagonismo para campos de filtro.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.

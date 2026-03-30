@@ -495,8 +495,8 @@ body {
 }
 
 .ui-filter-btn {
-    min-height: 38px;
-    padding: .42rem .55rem;
+    min-height: 36px;
+    padding: 0;
     font-size: .84rem;
 }
 
