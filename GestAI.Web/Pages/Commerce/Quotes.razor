@@ -186,7 +186,7 @@
                             <button class="btn btn-sm btn-outline-primary" type="button" @onclick="AddBlankLine">Agregar línea</button>
                         </div>
                         <div class="row g-2 mb-3">
-                            <div class="col-12"><label class="form-label">Búsqueda rápida</label><input class="form-control" @bind="_quickSearch" placeholder="Buscar por nombre o código" /></div>
+                            <div class="col-12"><label class="form-label">Búsqueda rápida</label><input class="form-control" @bind="_quickSearch" @bind:event="oninput" placeholder="Buscar por nombre o código" /></div>
                             @if (HasQuickSearchText && !CanSearchQuickMatches)
                             {
                                 <div class="col-12">

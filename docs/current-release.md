@@ -552,3 +552,10 @@
   2. se agregó feedback explícito: “Escribí al menos 3 letras…” cuando aún no alcanza el mínimo,
   3. se agregó feedback “No encontramos productos…” cuando no hay matches con 3+ caracteres.
 - **Impacto UX:** interacción más predecible y descubrible; el usuario entiende cuándo se dispara el autocompletado y cómo elegir producto.
+
+## Tarea aplicada (actualización 2026-03-30 - autocompletar reactivo en tiempo de tipeo)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** corregir comportamiento “igual que antes” en búsqueda rápida de productos.
+- **Causa raíz:** los inputs estaban con `@bind` por defecto (`change`), por lo que el filtrado no reaccionaba letra a letra.
+- **Detalle técnico:** en `Quotes` y `Sales` se cambió el input de búsqueda rápida a `@bind:event="oninput"`.
+- **Impacto UX:** el listado sugerido se actualiza al escribir (sin perder foco), haciendo evidente dónde seleccionar producto.

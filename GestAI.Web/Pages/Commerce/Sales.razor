@@ -141,7 +141,7 @@
                 <div class="ui-form-section">
                     <div class="ui-variant-head"><div><div class="ui-form-section-title mb-1">Ítems</div><div class="ui-card-subtitle mt-0">Búsqueda por nombre o código y edición rápida de cantidades/precios.</div><div class="ui-table-meta">@PricingPolicy.StandardSalePolicyDescription</div></div><button class="btn btn-sm btn-outline-primary" type="button" @onclick="AddBlankLine">Agregar línea</button></div>
                     <div class="row g-2 mb-3">
-                        <div class="col-12"><label class="form-label">Búsqueda rápida</label><input class="form-control" @bind="_quickSearch" placeholder="Buscar por nombre o código" /></div>
+                        <div class="col-12"><label class="form-label">Búsqueda rápida</label><input class="form-control" @bind="_quickSearch" @bind:event="oninput" placeholder="Buscar por nombre o código" /></div>
                         @if (HasQuickSearchText && !CanSearchQuickMatches)
                         {
                             <div class="col-12"><div class="ui-table-meta">Escribí al menos 3 letras para ver coincidencias.</div></div>
