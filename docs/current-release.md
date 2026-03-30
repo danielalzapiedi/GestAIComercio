@@ -157,6 +157,12 @@
 - **Detalle técnico:** se estandarizó el contenido de celdas con `ui-table-stack` en todas las columnas de datos y se fijó altura mínima homogénea por celda en `ui-modern-grid`.
 - **Impacto UX:** filas alineadas de forma consistente, con altura y ritmo visual equivalentes a Presupuestos.
 
+## Tarea aplicada (actualización 2026-03-30 - simplificación KPIs en Presupuestos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Remoción de card no relevante “Carga rápida” en cabecera de Presupuestos.
+- **Detalle técnico:** se eliminó la métrica de conteo de SKUs (`Productos + Variantes`) por no aportar valor operativo directo en la vista principal; la grilla superior pasó de 4 a 3 cards con ancho equilibrado (`col-xl-4`).
+- **Impacto UX:** cabecera más clara, menos ruido y foco en indicadores útiles para decisión comercial.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.
