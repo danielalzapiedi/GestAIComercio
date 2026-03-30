@@ -113,6 +113,14 @@
   2. se habilitó contenedor de tabla apto para dropdown (`ui-table-responsive-actions`) y cards con overflow visible (`ui-data-card-actions`) para que el menú de tres puntos no quede recortado por scroll/overflow.
 - **Impacto UX:** acciones más legibles y menú contextual completamente visible al abrir, sin clipping dentro de la grilla.
 
+## Tarea aplicada (actualización 2026-03-30 - ajuste fino post-feedback cliente/presupuestos)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección visual tras feedback de usuario final.
+- **Detalle técnico:**
+  1. se retiró el comportamiento de overflow extendido en la grilla de Clientes para recuperar estética original de la card,
+  2. en Presupuestos se reforzó el dropdown de acciones con `dropstart` + `z-index` alto y contenedor sin clipping para evitar que el menú de tres puntos quede oculto.
+- **Impacto UX:** Clientes vuelve a verse armónico y el menú de acciones en Presupuestos se despliega de forma más confiable.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.

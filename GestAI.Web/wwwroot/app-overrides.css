@@ -736,8 +736,7 @@ body {
 }
 
 .ui-table-responsive-actions {
-    overflow-x: auto;
-    overflow-y: visible;
+    overflow: visible;
 }
 
 .ui-list-stack {
@@ -1662,6 +1661,7 @@ body {
     box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
     padding: .35rem;
     min-width: 180px;
+    z-index: 2200;
 }
 
 .ui-actions-menu .dropdown-item {
