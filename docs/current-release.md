@@ -476,3 +476,13 @@
   1. se reemplazó `background` por `background-color` en la regla compartida,
   2. se agregó regla explícita de `.form-select` para respetar `--bs-form-select-bg-img` y asegurar posición/tamaño/padding del ícono.
 - **Impacto UX:** los selects vuelven a ser identificables visualmente como desplegables, mejorando escaneabilidad y usabilidad de formularios/filtros.
+
+## Tarea aplicada (actualización 2026-03-30 - traducción visual a español en navegación y pantallas clave)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** reducir mezcla de idioma en UI visible para usuario final.
+- **Detalle técnico:**
+  1. `MainLayout`: se tradujeron labels visibles en navegación (`Dashboard`→`Tablero`, `Tenants`→`Comercios`) y descripciones de usuario (`Owner/tenant user`→`Titular/Usuario del comercio`),
+  2. `DocumentHistory`: se tradujo microcopy de placeholder y encabezado `Audit trail`,
+  3. `InvoiceDetail`: se tradujeron encabezados `Fiscal / compliance`, `Request / response` y texto `requests` en estado vacío,
+  4. `Dashboard`: `PageTitle` traducido a `Tablero`.
+- **Impacto UX:** mayor consistencia idiomática (español) en la experiencia cotidiana de navegación y lectura operativa.

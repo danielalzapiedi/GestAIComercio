@@ -86,13 +86,13 @@
                 <ul class="sidebar-nav ui-nav-list" id="sidebar-nav">
                     @if (CanAccess(SaasModule.Dashboard))
                     {
-                        <li class="nav-item"><NavLink class="nav-link" href="/dashboard" @onclick="CloseSidebar"><i class="bi bi-grid"></i><span>Dashboard</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/dashboard" @onclick="CloseSidebar"><i class="bi bi-grid"></i><span>Tablero</span></NavLink></li>
                     }
 
                     @if (_access?.IsPlatformAdmin == true)
                     {
                         <li class="nav-heading">Plataforma</li>
-                        <li class="nav-item"><NavLink class="nav-link" href="/platform/tenants" @onclick="CloseSidebar"><i class="bi bi-building-gear"></i><span>Tenants</span></NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/platform/tenants" @onclick="CloseSidebar"><i class="bi bi-building-gear"></i><span>Comercios</span></NavLink></li>
                     }
 
                     <li class="nav-heading">Operación diaria</li>
@@ -182,12 +182,12 @@
     private bool _loadingAccess = true;
     private bool _sidebarOpen;
     private string? _signedUserName;
-    private string UserRoleLabel => _access?.IsPlatformAdmin == true ? "Super Admin" : _access?.Role?.ToString() ?? "Usuario";
+    private string UserRoleLabel => _access?.IsPlatformAdmin == true ? "Administrador de plataforma" : _access?.Role?.ToString() ?? "Usuario";
     private string UserDisplayName => !string.IsNullOrWhiteSpace(_signedUserName)
         ? _signedUserName!
         : _access?.IsPlatformAdmin == true ? "Administrador de plataforma"
-        : _access?.Role == InternalUserRole.Owner ? "Owner del tenant"
-        : _access?.Role == InternalUserRole.Employee ? "Usuario del tenant"
+        : _access?.Role == InternalUserRole.Owner ? "Titular del comercio"
+        : _access?.Role == InternalUserRole.Employee ? "Usuario del comercio"
         : "Mi cuenta";
     private string UserInitial => string.IsNullOrWhiteSpace(UserDisplayName) ? "A" : UserDisplayName.Trim()[0].ToString().ToUpperInvariant();
 

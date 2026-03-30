@@ -50,7 +50,7 @@ else
         </div>
         <div class="col-lg-4">
             <div class="card"><div class="card-body">
-                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Fiscal / compliance</div><h5 class="ui-card-title">Estado ARCA</h5></div></div>
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Fiscal / cumplimiento</div><h5 class="ui-card-title">Estado ARCA</h5></div></div>
                 <div class="ui-list-stack">
                     <div class="ui-check-card"><i class="bi bi-patch-check text-primary"></i><div><strong>@InvoiceStatusLabel(_detail.Status)</strong><div class="ui-table-meta">@(_detail.FiscalStatusDetail ?? "Sin detalle fiscal")</div></div></div>
                     <div class="ui-check-card"><i class="bi bi-calculator text-primary"></i><div><strong>Total</strong><div class="ui-table-meta">@_detail.Total.ToString("C")</div></div></div>
@@ -58,10 +58,10 @@ else
                 </div>
             </div></div>
             <div class="card mt-3"><div class="card-body">
-                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Request / response</div><h5 class="ui-card-title">Trazabilidad fiscal</h5></div></div>
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Solicitud / respuesta</div><h5 class="ui-card-title">Trazabilidad fiscal</h5></div></div>
                 @if (_detail.Submissions.Count == 0)
                 {
-                    <EmptyState Title="Sin envíos todavía" Description="Todavía no se registraron requests a ARCA para esta factura." Icon="bi-cloud-slash" />
+                    <EmptyState Title="Sin envíos todavía" Description="Todavía no se registraron solicitudes a ARCA para esta factura." Icon="bi-cloud-slash" />
                 }
                 else
                 {

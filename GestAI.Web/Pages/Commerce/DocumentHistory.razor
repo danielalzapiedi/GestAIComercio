@@ -14,7 +14,7 @@
 
 <ListPageFilters CardCssClass="mb-3">
     <div class="row g-2 align-items-end">
-        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Entidad</label><input class="form-control" @bind="_entity" placeholder="Sale, PurchaseDocument, CommercialInvoice, DeliveryNote..." /></div>
+        <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Entidad</label><input class="form-control" @bind="_entity" placeholder="Venta, Compra, Factura, Remito..." /></div>
         <div class="col-12 col-md-6 col-lg-2"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" placeholder="Documento, resumen, texto libre" /></div>
         <div class="col-12 col-md-6 col-lg-2"><button class="btn btn-outline-primary w-100" type="button" @onclick="Load">Filtrar</button></div>
     </div>
@@ -48,7 +48,7 @@ else
         </div>
         <div class="col-xl-5">
             <div class="card ui-data-card h-100"><div class="card-body">
-                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Audit trail</div><h5 class="ui-card-title">Eventos de negocio legibles</h5></div></div>
+                <div class="ui-card-header"><div><div class="ui-card-eyebrow">Trazabilidad de auditoría</div><h5 class="ui-card-title">Eventos de negocio legibles</h5></div></div>
                 <div class="ui-list-stack">
                     @foreach (var item in _traceability.AuditTrail)
                     {
