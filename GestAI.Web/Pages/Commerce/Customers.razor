@@ -132,11 +132,11 @@ else
                         <td><StatusBadge IsActive="@item.IsActive" /></td>
                         <td class="text-end">
                             <div class="dropdown table-actions">
-                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Acciones">
+                                <button class="ui-kebab-trigger" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Acciones">
                                     <i class="bi bi-three-dots-vertical"></i>
                                     <span class="visually-hidden">Acciones</span>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
+                                <ul class="dropdown-menu dropdown-menu-end ui-actions-menu">
                                     <li><button class="dropdown-item" type="button" @onclick="() => Edit(item)"><i class="bi bi-pencil-square me-2"></i>Editar</button></li>
                                     <li><button class="dropdown-item" type="button" @onclick="() => Toggle(item)"><i class="@($"bi {(item.IsActive ? "bi-toggle-off" : "bi-toggle-on")} me-2")"></i>@(item.IsActive ? "Desactivar" : "Activar")</button></li>
                                 </ul>

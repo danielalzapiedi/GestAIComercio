@@ -1617,6 +1617,40 @@ body {
     flex-wrap: wrap;
 }
 
+.ui-kebab-trigger {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 10px;
+    display: inline-grid;
+    place-items: center;
+    color: #475569;
+    background: transparent;
+    transition: background-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.ui-kebab-trigger:hover,
+.ui-kebab-trigger:focus-visible {
+    background: #eef3ff;
+    color: #1d4ed8;
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.ui-actions-menu {
+    border-radius: 14px;
+    border: 1px solid #dbe6f5;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+    padding: .35rem;
+    min-width: 180px;
+}
+
+.ui-actions-menu .dropdown-item {
+    border-radius: 10px;
+    font-weight: 600;
+    padding: .5rem .65rem;
+}
+
 .table-search-inline {
     min-width: min(100%, 280px);
 }

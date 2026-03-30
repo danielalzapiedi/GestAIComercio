@@ -69,7 +69,7 @@
   1. se agregó estado explícito de error de carga con acción de reintento,
   2. se reequilibró la grilla de filtros y se añadió búsqueda por tecla Enter,
   3. se mejoró legibilidad de tabla con truncado seguro en celdas largas,
-  4. se migraron acciones por fila a menú contextual de tres puntos cuando hay múltiples acciones disponibles.
+  4. se migraron acciones por fila a menú contextual de tres puntos cuando hay múltiples acciones disponibles, con estilo moderno no invasivo (ícono sin apariencia de botón tradicional).
 - **Impacto UX:** mayor claridad entre estados (error vs vacío), mejor ritmo visual en filtros y tabla, menor fricción operativa en búsquedas.
 
 ## Flujo de trabajo aplicado (modo bugs)
