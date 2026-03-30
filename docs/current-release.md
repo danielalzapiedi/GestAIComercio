@@ -459,3 +459,10 @@
 4. **Architect:** definió contrato explícito común para envelopes de resultado.
 5. **Developer:** implementó interfaz compartida y simplificó validación en `ApiClient`.
 6. **QA:** validó coherencia de tipos y ausencia de cambios en contratos públicos de API.
+
+## Tarea aplicada (actualización 2026-03-30 - hotfix compilación ApiClient)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** corrección de error de compilación posterior al refactor de envelopes tipados.
+- **Síntoma:** `CS0246` en `ApiClient.cs` por no resolver `IAppResultEnvelope` y `AppResult`.
+- **Detalle técnico:** se agregó `using GestAI.Web.Dtos;` en `GestAI.Web/ApiClient.cs` para vincular explícitamente los tipos de envelope.
+- **Impacto:** restaura compilación del proyecto web en entornos locales/CI que no tengan global usings equivalentes.
