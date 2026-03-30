@@ -105,6 +105,14 @@
   3. se reforzó jerarquía visual de tabla destacando total y estado.
 - **Impacto UX:** pantalla más limpia, menor ruido cognitivo y lectura más rápida de información clave.
 
+## Tarea aplicada (actualización 2026-03-30 - ajuste filtros/menú acciones grillas)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** Corrección visual en botones Buscar/Limpiar y visibilidad de dropdown en acciones por fila.
+- **Detalle técnico:**
+  1. se aplicó `text-nowrap` y nueva distribución responsive en filtros (Clientes/Presupuestos) para evitar quiebre de texto en botones,
+  2. se habilitó contenedor de tabla apto para dropdown (`ui-table-responsive-actions`) y cards con overflow visible (`ui-data-card-actions`) para que el menú de tres puntos no quede recortado por scroll/overflow.
+- **Impacto UX:** acciones más legibles y menú contextual completamente visible al abrir, sin clipping dentro de la grilla.
+
 ## Flujo de trabajo aplicado (modo bugs)
 1. **Product Manager:** confirmó que la tarea pertenece al modo diagnóstico continuo (sin releases).
 2. **Analyst:** clasificó el incidente como bug funcional de integración UI/API por contrato de paginación.

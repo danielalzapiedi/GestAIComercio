@@ -684,6 +684,10 @@ body {
     overflow: hidden;
 }
 
+.ui-data-card.ui-data-card-actions {
+    overflow: visible;
+}
+
 .ui-card-header {
     display: flex;
     justify-content: space-between;
@@ -729,6 +733,11 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.ui-table-responsive-actions {
+    overflow-x: auto;
+    overflow-y: visible;
 }
 
 .ui-list-stack {

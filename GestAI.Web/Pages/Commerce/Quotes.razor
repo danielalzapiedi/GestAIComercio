@@ -32,12 +32,12 @@
 
 <div class="card ui-filter-card"><div class="card-body">
     <div class="row g-2 align-items-end">
-        <div class="col-lg-3"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" @onkeydown="HandleSearchKeyDown" placeholder="Número, cliente" /></div>
-        <div class="col-lg-3"><label class="form-label">Cliente</label><select class="form-select" @bind="_customerId"><option value="0">Todos</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
-        <div class="col-lg-2"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<QuoteStatus>()){<option value="@status">@QuoteStatusLabel(status)</option>}</select></div>
-        <div class="col-lg-2"><label class="form-label">Conversión</label><select class="form-select" @bind="_onlyConvertible"><option value="">Todos</option><option value="true">Solo convertibles</option></select></div>
-        <div class="col-lg-1"><button class="btn btn-outline-primary w-100" type="button" @onclick="Search">Buscar</button></div>
-        <div class="col-lg-1"><button class="btn btn-outline-secondary w-100" type="button" @onclick="ClearFilters">Limpiar</button></div>
+        <div class="col-xl-3 col-lg-6"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" @onkeydown="HandleSearchKeyDown" placeholder="Número, cliente" /></div>
+        <div class="col-xl-3 col-lg-6"><label class="form-label">Cliente</label><select class="form-select" @bind="_customerId"><option value="0">Todos</option>@foreach (var customer in _seed.Customers){<option value="@customer.Id">@customer.Name</option>}</select></div>
+        <div class="col-xl-2 col-lg-4"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option>@foreach (var status in Enum.GetValues<QuoteStatus>()){<option value="@status">@QuoteStatusLabel(status)</option>}</select></div>
+        <div class="col-xl-2 col-lg-4"><label class="form-label">Conversión</label><select class="form-select" @bind="_onlyConvertible"><option value="">Todos</option><option value="true">Solo convertibles</option></select></div>
+        <div class="col-xl-1 col-lg-2"><button class="btn btn-outline-primary w-100 text-nowrap" type="button" @onclick="Search">Buscar</button></div>
+        <div class="col-xl-1 col-lg-2"><button class="btn btn-outline-secondary w-100 text-nowrap" type="button" @onclick="ClearFilters">Limpiar</button></div>
     </div>
 </div></div>
 <div class="ui-split-layout ui-split-layout-focus-editor">
@@ -84,7 +84,7 @@
             }
             else
             {
-                <div class="card ui-data-card @(_showForm ? "d-none" : string.Empty)"><div class="card-body">
+                <div class="card ui-data-card ui-data-card-actions @(_showForm ? "d-none" : string.Empty)"><div class="card-body">
                     <div class="ui-card-header">
                         <div>
                             <div class="ui-card-eyebrow">Documentos comerciales</div>
@@ -92,7 +92,7 @@
                             <div class="ui-card-subtitle">Con seguimiento de estado, vigencia, cliente y pasaje a venta.</div>
                         </div>
                     </div>
-                    <div class="table-responsive">
+                    <div class="table-responsive ui-table-responsive-actions">
                         <table class="table table-striped">
                             <thead><tr><th>Comprobante</th><th>Cliente</th><th>Fechas</th><th>Items</th><th>Total</th><th>Estado</th><th></th></tr></thead>
                             <tbody>

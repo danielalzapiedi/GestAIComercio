@@ -103,12 +103,12 @@ else
         <div class="row g-2 align-items-end">
             <div class="col-lg-5 col-md-12"><label class="form-label">Buscar</label><input class="form-control" @bind="_search" @onkeydown="HandleSearchKeyDown" placeholder="Nombre, doc, teléfono" /></div>
             <div class="col-lg-3 col-md-6"><label class="form-label">Estado</label><select class="form-select" @bind="_status"><option value="">Todos</option><option value="true">Activos</option><option value="false">Inactivos</option></select></div>
-            <div class="col-lg-2 col-md-3"><button class="btn btn-outline-primary w-100" @onclick="Search"><i class="bi bi-search me-2"></i>Buscar</button></div>
-            <div class="col-lg-2 col-md-3"><button class="btn btn-outline-secondary w-100" @onclick="ClearFilters"><i class="bi bi-eraser me-2"></i>Limpiar</button></div>
+            <div class="col-lg-2 col-md-3"><button class="btn btn-outline-primary w-100 text-nowrap" @onclick="Search"><i class="bi bi-search me-2"></i>Buscar</button></div>
+            <div class="col-lg-2 col-md-3"><button class="btn btn-outline-secondary w-100 text-nowrap" @onclick="ClearFilters"><i class="bi bi-eraser me-2"></i>Limpiar</button></div>
         </div>
     </div></div>
 
-    <div class="card ui-data-card">
+    <div class="card ui-data-card ui-data-card-actions">
         <div class="card-body">
             <div class="ui-card-header">
                 <div>
@@ -117,7 +117,7 @@ else
                     <div class="ui-card-subtitle">Información principal y segmento comercial.</div>
                 </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive ui-table-responsive-actions">
             <table class="table table-striped">
                 <thead><tr><th>Nombre</th><th>Documento</th><th>Teléfono</th><th>Localidad</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
                 <tbody>
