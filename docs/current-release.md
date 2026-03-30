@@ -542,3 +542,13 @@
 - **Causa raíz:** captura de variable de índice del `for` en lambda (`@onclick="() => RemoveLine(i)"`), quedando el índice fuera de rango al ejecutar el evento.
 - **Detalle técnico:** en ambos formularios se introdujo variable local por iteración (`rowIndex`) y el click ahora invoca `RemoveLine(rowIndex)`.
 - **Impacto funcional:** vuelve a funcionar la eliminación de líneas de detalle en edición y alta.
+
+## Tarea aplicada (actualización 2026-03-30 - autocompletar de productos desde 3 letras)
+- **Modo:** Resolver bugs (diagnóstico continuo, sin releases activas).
+- **Tarea:** mejorar usabilidad de búsqueda de productos en formularios de `Presupuestos` y `Ventas`.
+- **Problema UX:** no quedaba claro cuándo se ejecutaba la búsqueda y dónde seleccionar resultados.
+- **Detalle técnico:**
+  1. la búsqueda rápida ahora activa coincidencias recién desde la tercera letra (`>= 3`),
+  2. se agregó feedback explícito: “Escribí al menos 3 letras…” cuando aún no alcanza el mínimo,
+  3. se agregó feedback “No encontramos productos…” cuando no hay matches con 3+ caracteres.
+- **Impacto UX:** interacción más predecible y descubrible; el usuario entiende cuándo se dispara el autocompletado y cómo elegir producto.

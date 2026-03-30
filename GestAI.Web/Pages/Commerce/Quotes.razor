@@ -187,7 +187,13 @@
                         </div>
                         <div class="row g-2 mb-3">
                             <div class="col-12"><label class="form-label">Búsqueda rápida</label><input class="form-control" @bind="_quickSearch" placeholder="Buscar por nombre o código" /></div>
-                            @if (QuickMatches.Count > 0)
+                            @if (HasQuickSearchText && !CanSearchQuickMatches)
+                            {
+                                <div class="col-12">
+                                    <div class="ui-table-meta">Escribí al menos 3 letras para ver coincidencias.</div>
+                                </div>
+                            }
+                            else if (QuickMatches.Count > 0)
                             {
                                 <div class="col-12">
                                     <div class="list-group ui-search-list">
@@ -199,6 +205,12 @@
                                             </button>
                                         }
                                     </div>
+                                </div>
+                            }
+                            else if (CanSearchQuickMatches)
+                            {
+                                <div class="col-12">
+                                    <div class="ui-table-meta">No encontramos productos con ese criterio.</div>
                                 </div>
                             }
                         </div>
@@ -306,9 +318,13 @@
     private string SelectedCustomerLabel => _customerId == 0 ? "Todos" : _seed.Customers.FirstOrDefault(x => x.Id == _customerId)?.Name ?? "Cliente";
     private string StatusFilterLabel => string.IsNullOrWhiteSpace(_status) ? "Sin filtro de estado" : QuoteStatusLabel(Enum.Parse<QuoteStatus>(_status));
     private decimal FormTotal => _form.Items.Sum(x => x.LineSubtotal);
+    private bool HasQuickSearchText => !string.IsNullOrWhiteSpace(_quickSearch);
+    private bool CanSearchQuickMatches => _quickSearch.Trim().Length >= 3;
     private List<CommercialSkuLookupDto> QuickMatches => string.IsNullOrWhiteSpace(_quickSearch)
         ? new()
-        : _skuIndex.Where(x => x.IsActive && (x.Label.Contains(_quickSearch, StringComparison.OrdinalIgnoreCase) || x.InternalCode.Contains(_quickSearch, StringComparison.OrdinalIgnoreCase))).Take(6).ToList();
+        : _quickSearch.Trim().Length < 3
+            ? new()
+            : _skuIndex.Where(x => x.IsActive && (x.Label.Contains(_quickSearch, StringComparison.OrdinalIgnoreCase) || x.InternalCode.Contains(_quickSearch, StringComparison.OrdinalIgnoreCase))).Take(6).ToList();
 
     protected override async Task OnParametersSetAsync()
     {

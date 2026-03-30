@@ -142,9 +142,17 @@
                     <div class="ui-variant-head"><div><div class="ui-form-section-title mb-1">Ítems</div><div class="ui-card-subtitle mt-0">Búsqueda por nombre o código y edición rápida de cantidades/precios.</div><div class="ui-table-meta">@PricingPolicy.StandardSalePolicyDescription</div></div><button class="btn btn-sm btn-outline-primary" type="button" @onclick="AddBlankLine">Agregar línea</button></div>
                     <div class="row g-2 mb-3">
                         <div class="col-12"><label class="form-label">Búsqueda rápida</label><input class="form-control" @bind="_quickSearch" placeholder="Buscar por nombre o código" /></div>
-                        @if (QuickMatches.Count > 0)
+                        @if (HasQuickSearchText && !CanSearchQuickMatches)
+                        {
+                            <div class="col-12"><div class="ui-table-meta">Escribí al menos 3 letras para ver coincidencias.</div></div>
+                        }
+                        else if (QuickMatches.Count > 0)
                         {
                             <div class="col-12"><div class="list-group ui-search-list">@foreach (var sku in QuickMatches){<button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" @onclick="() => AddSku(sku)"><span><strong>@sku.Label</strong><span class="ui-table-meta ms-2">@sku.InternalCode</span></span><span>@sku.SalePrice.ToString("C")</span></button>}</div></div>
+                        }
+                        else if (CanSearchQuickMatches)
+                        {
+                            <div class="col-12"><div class="ui-table-meta">No encontramos productos con ese criterio.</div></div>
                         }
                     </div>
                     @if (_form.Items.Count == 0)
@@ -219,7 +227,13 @@
     private string SelectedCustomerLabel => _customerId == 0 ? "Todos" : _seed.Customers.FirstOrDefault(x => x.Id == _customerId)?.Name ?? "Cliente";
     private string StatusFilterLabel => string.IsNullOrWhiteSpace(_status) ? "Sin filtro de estado" : SaleStatusLabel(Enum.Parse<SaleStatus>(_status));
     private decimal FormTotal => _form.Items.Sum(x => x.LineSubtotal);
-    private List<CommercialSkuLookupDto> QuickMatches => string.IsNullOrWhiteSpace(_quickSearch) ? new() : _skuIndex.Where(x => x.IsActive && (x.Label.Contains(_quickSearch, StringComparison.OrdinalIgnoreCase) || x.InternalCode.Contains(_quickSearch, StringComparison.OrdinalIgnoreCase))).Take(6).ToList();
+    private bool HasQuickSearchText => !string.IsNullOrWhiteSpace(_quickSearch);
+    private bool CanSearchQuickMatches => _quickSearch.Trim().Length >= 3;
+    private List<CommercialSkuLookupDto> QuickMatches => string.IsNullOrWhiteSpace(_quickSearch)
+        ? new()
+        : _quickSearch.Trim().Length < 3
+            ? new()
+            : _skuIndex.Where(x => x.IsActive && (x.Label.Contains(_quickSearch, StringComparison.OrdinalIgnoreCase) || x.InternalCode.Contains(_quickSearch, StringComparison.OrdinalIgnoreCase))).Take(6).ToList();
 
     protected override async Task OnInitializedAsync()
     {
